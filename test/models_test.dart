@@ -1,5 +1,6 @@
 import 'package:catan_rivals/data/basic_set_cards.dart';
 import 'package:catan_rivals/data/era_of_gold_cards.dart';
+import 'package:catan_rivals/data/era_of_progress_cards.dart';
 import 'package:catan_rivals/data/era_of_turmoil_cards.dart';
 import 'package:catan_rivals/data/starter_cards.dart';
 import 'package:catan_rivals/models/models.dart';
@@ -87,6 +88,48 @@ void main() {
         expect(card.actionKind, ActionKind.attack);
         expect(card.requirement, 'Hedge Tavern');
       }
+    });
+  });
+
+  group('EraOfProgressCards', () {
+    test('has 15 new card types', () {
+      expect(EraOfProgressCards.all, hasLength(15));
+    });
+
+    test('supply counts add up to the full 31-card set', () {
+      final totalCopies = EraOfProgressCards.supplyCounts.values.fold(0, (a, b) => a + b);
+
+      expect(totalCopies, 31);
+    });
+
+    test('every new card in the catalog has a supply count', () {
+      final idsWithoutCount = EraOfProgressCards.all
+          .map((card) => card.id)
+          .where((id) => !EraOfProgressCards.supplyCounts.containsKey(id));
+
+      expect(idsWithoutCount, isEmpty);
+    });
+
+    test('University is unique and requires Abbey or Library', () {
+      expect(EraOfProgressCards.university.isUnique, isTrue);
+      expect(EraOfProgressCards.university.requirement, 'Abbey or Library');
+    });
+
+    test('Chief Cannoneer is a unit, not a hero, and has no skill points', () {
+      expect(EraOfProgressCards.chiefCannoneer.expansionKind, ExpansionKind.otherUnit);
+      expect(EraOfProgressCards.chiefCannoneer.skillPoints, 0);
+    });
+  });
+
+  group('All four card sets combined', () {
+    test('the full catalog totals 180 cards, matching the rulebook', () {
+      const basicRegions = 24;
+      final basicNonRegions = BasicSetCards.supplyCounts.values.fold(0, (a, b) => a + b);
+      final gold = EraOfGoldCards.supplyCounts.values.fold(0, (a, b) => a + b);
+      final turmoil = EraOfTurmoilCards.supplyCounts.values.fold(0, (a, b) => a + b);
+      final progress = EraOfProgressCards.supplyCounts.values.fold(0, (a, b) => a + b);
+
+      expect(basicRegions + basicNonRegions + gold + turmoil + progress, 180);
     });
   });
 
