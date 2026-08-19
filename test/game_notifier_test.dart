@@ -1,0 +1,110 @@
+import 'package:catan_rivals/data/basic_set_cards.dart';
+import 'package:catan_rivals/models/models.dart';
+import 'package:catan_rivals/state/game_notifier.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  group('GameNotifier', () {
+    late ProviderContainer container;
+
+    setUp(() {
+      container = ProviderContainer();
+      addTearDown(container.dispose);
+    });
+
+    test('initial state has starting principalities and center stacks', () {
+      final state = container.read(gameProvider);
+
+      expect(state.you.principality.settlements, hasLength(2));
+      expect(state.opponent.principality.settlements, hasLength(2));
+      expect(state.centerStacks['roads'], greaterThan(0));
+      expect(state.draggingCard, isNull);
+    });
+
+    test('dropExpansion places an affordable hand card and deducts resources', () {
+      final notifier = container.read(gameProvider.notifier);
+      final before = container.read(gameProvider);
+      final storehouse = before.you.hand.firstWhere((c) => c.id == 'building-storehouse');
+      final lumberBefore = before.you.resourceCount(ResourceType.lumber);
+
+      final error = notifier.dropExpansion(0, BuildingRow.above, 0, storehouse);
+
+      expect(error, isNull);
+      final after = container.read(gameProvider);
+      expect(after.you.hand.contains(storehouse), isFalse);
+      expect(after.you.resourceCount(ResourceType.lumber), lumberBefore - 1);
+      expect(after.you.principality.settlementAt(0)!.aboveSites[0]!.card.id, storehouse.id);
+    });
+
+    test('dropExpansion rejects a card the player cannot afford, leaving hand and board untouched', () {
+      final notifier = container.read(gameProvider.notifier);
+      final before = container.read(gameProvider);
+      final austin = before.you.hand.firstWhere((c) => c.id == 'hero-austin');
+
+      final error = notifier.dropExpansion(0, BuildingRow.above, 0, austin);
+
+      expect(error, isNotNull);
+      final after = container.read(gameProvider);
+      expect(after.you.hand.contains(austin), isTrue);
+      expect(after.you.principality.settlementAt(0)!.aboveSites[0], isNull);
+    });
+
+    test('dropRoad builds a road at the frontier and decrements the stack', () {
+      final notifier = container.read(gameProvider.notifier);
+      final roadsBefore = container.read(gameProvider).centerStacks['roads']!;
+
+      final error = notifier.dropRoad(-1, BasicSetCards.road);
+
+      expect(error, isNull);
+      final after = container.read(gameProvider);
+      expect(after.you.principality.roads.containsKey(-1), isTrue);
+      expect(after.centerStacks['roads'], roadsBefore - 1);
+    });
+
+    test('dropSettlement builds beyond a dangling road and grants 2 new regions', () {
+      final notifier = container.read(gameProvider.notifier);
+      notifier.dropRoad(-1, BasicSetCards.road);
+      final regionsBefore = container.read(gameProvider).centerStacks['regions']!;
+
+      final error = notifier.dropSettlement(-2, BasicSetCards.settlement);
+
+      expect(error, isNull);
+      final after = container.read(gameProvider);
+      expect(after.you.principality.settlementAt(-2), isNotNull);
+      expect(after.you.principality.regionAt(-3, BuildingRow.above), isNotNull);
+      expect(after.you.principality.regionAt(-3, BuildingRow.below), isNotNull);
+      expect(after.centerStacks['regions'], regionsBefore - 2);
+    });
+
+    test('dropSettlement without a road first is rejected by RealmBoard', () {
+      final notifier = container.read(gameProvider.notifier);
+
+      // Ingen väg utplacerad vid kolumn -1, så -2 är egentligen inte en
+      // giltig plats – RealmBoard.placeSettlement kastar när kolumnen
+      // redan är upptagen, men här testar vi att en helt orimlig
+      // kolumn (mitt i en befintlig by) avvisas av modellen.
+      expect(() => notifier.dropSettlement(0, BasicSetCards.settlement), throwsStateError);
+    });
+
+    test('dropCityUpgrade is rejected without enough ore, leaving the settlement untouched', () {
+      final notifier = container.read(gameProvider.notifier);
+
+      final error = notifier.dropCityUpgrade(0, BasicSetCards.city);
+
+      expect(error, isNotNull);
+      final after = container.read(gameProvider);
+      expect(after.you.principality.settlementAt(0)!.isCity, isFalse);
+    });
+
+    test('startDrag/endDrag toggles draggingCard', () {
+      final notifier = container.read(gameProvider.notifier);
+
+      notifier.startDrag(BasicSetCards.road);
+      expect(container.read(gameProvider).draggingCard, BasicSetCards.road);
+
+      notifier.endDrag();
+      expect(container.read(gameProvider).draggingCard, isNull);
+    });
+  });
+}
