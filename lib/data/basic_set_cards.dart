@@ -75,6 +75,7 @@ class BasicSetCards {
     name: 'By',
     category: CardCategory.settlement,
     victoryPoints: 1,
+    buildingCost: {ResourceType.brick: 1, ResourceType.grain: 1, ResourceType.wool: 1, ResourceType.lumber: 1},
     imageAsset: 'assets/images/cards/settlement.png',
   );
 

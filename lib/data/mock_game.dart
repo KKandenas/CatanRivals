@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import '../models/models.dart';
 import 'basic_set_cards.dart';
 import 'starter_cards.dart';
@@ -21,7 +23,7 @@ class MockGame {
       ],
       resources: {
         ResourceType.lumber: 3,
-        ResourceType.brick: 1,
+        ResourceType.brick: 3,
         ResourceType.ore: 0,
         ResourceType.grain: 2,
         ResourceType.wool: 1,
@@ -63,4 +65,25 @@ class MockGame {
         'regions': 24 - 12,
         'event': 9,
       };
+
+  static final _regionTemplates = [
+    BasicSetCards.forest,
+    BasicSetCards.pasture,
+    BasicSetCards.fields,
+    BasicSetCards.hills,
+    BasicSetCards.mountains,
+    BasicSetCards.goldField,
+  ];
+  static var _regionDrawCounter = 0;
+  static final _rng = Random();
+
+  /// Drar en "slumpad" region från region-dragstapeln, med ett unikt
+  /// tärningstal likt de fysiska korten. Riktig regeldragstapel med
+  /// faktiska fysiska kort kommer i ett senare steg.
+  static GameCard drawRandomRegion() {
+    final template = _regionTemplates[_rng.nextInt(_regionTemplates.length)];
+    final number = _rng.nextInt(6) + 1;
+    _regionDrawCounter++;
+    return template.copyWith(id: '${template.id}-drawn-$_regionDrawCounter', productionNumber: number);
+  }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../data/basic_set_cards.dart';
+import '../../models/models.dart';
 import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
 
@@ -8,18 +10,27 @@ import '../theme/catan_colors.dart';
 /// precis som i det fysiska spelets uppställning, där dessa ligger
 /// mellan de två furstendömena (se regelhäftet s. 5).
 ///
-/// Rent visuellt – staplarna går inte att dra kort ifrån ännu.
+/// Vägar/byar/städer går att långtrycka-och-dra ut på det egna riket
+/// för att bygga direkt från stapeln, precis som i det fysiska spelet
+/// (regelhäftet s. 8: "you can build any available road or settlement
+/// center card directly by paying the building costs"). Region- och
+/// händelsestaplarna är inte dragbara – regioner delas ut automatiskt
+/// när en ny by byggs, och händelsekort dras vid tärningsslag.
 /// `stackCounts` är mock-data tills en riktig dragstapel-modell finns.
 class CenterStacksStrip extends StatelessWidget {
   final Map<String, int> stackCounts;
   final int lastProductionRoll;
   final bool isYourTurn;
+  final void Function(GameCard card)? onDragStarted;
+  final VoidCallback? onDragEnd;
 
   const CenterStacksStrip({
     super.key,
     required this.stackCounts,
     this.lastProductionRoll = 6,
     this.isYourTurn = true,
+    this.onDragStarted,
+    this.onDragEnd,
   });
 
   @override
@@ -33,9 +44,27 @@ class CenterStacksStrip extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _StackPile(asset: CatanAssets.backRoads, count: stackCounts['roads'] ?? 0),
-                _StackPile(asset: CatanAssets.backSettlements, count: stackCounts['settlements'] ?? 0),
-                _StackPile(asset: CatanAssets.backCities, count: stackCounts['cities'] ?? 0),
+                _StackPile(
+                  asset: CatanAssets.backRoads,
+                  count: stackCounts['roads'] ?? 0,
+                  card: BasicSetCards.road,
+                  onDragStarted: onDragStarted,
+                  onDragEnd: onDragEnd,
+                ),
+                _StackPile(
+                  asset: CatanAssets.backSettlements,
+                  count: stackCounts['settlements'] ?? 0,
+                  card: BasicSetCards.settlement,
+                  onDragStarted: onDragStarted,
+                  onDragEnd: onDragEnd,
+                ),
+                _StackPile(
+                  asset: CatanAssets.backCities,
+                  count: stackCounts['cities'] ?? 0,
+                  card: BasicSetCards.city,
+                  onDragStarted: onDragStarted,
+                  onDragEnd: onDragEnd,
+                ),
                 _StackPile(asset: CatanAssets.backRegions, count: stackCounts['regions'] ?? 0),
                 _StackPile(asset: CatanAssets.backEvent, count: stackCounts['event'] ?? 0),
               ],
@@ -55,25 +84,56 @@ class _StackPile extends StatelessWidget {
   final String asset;
   final int count;
 
-  const _StackPile({required this.asset, required this.count});
+  /// Kortmall att dra (t.ex. [BasicSetCards.road]). `null` = ej dragbar
+  /// stapel (regioner, händelse).
+  final GameCard? card;
+  final void Function(GameCard card)? onDragStarted;
+  final VoidCallback? onDragEnd;
+
+  const _StackPile({
+    required this.asset,
+    required this.count,
+    this.card,
+    this.onDragStarted,
+    this.onDragEnd,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final pile = AspectRatio(
+      aspectRatio: 1,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: card != null ? const Color(0xFF7CBF6A) : CatanColors.woodFrame, width: card != null ? 1.6 : 1),
+          ),
+          child: Image.asset(asset, fit: BoxFit.cover),
+        ),
+      ),
+    );
+
     return SizedBox(
       width: 40,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          AspectRatio(
-            aspectRatio: 1,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: Container(
-                decoration: BoxDecoration(border: Border.all(color: CatanColors.woodFrame, width: 1)),
-                child: Image.asset(asset, fit: BoxFit.cover),
+          if (card != null && count > 0)
+            LongPressDraggable<GameCard>(
+              data: card,
+              delay: const Duration(milliseconds: 180),
+              feedback: Material(
+                color: Colors.transparent,
+                child: SizedBox(width: 40, child: Transform.scale(scale: 1.3, child: pile)),
               ),
-            ),
-          ),
+              childWhenDragging: Opacity(opacity: 0.35, child: pile),
+              onDragStarted: () => onDragStarted?.call(card!),
+              onDragEnd: (_) => onDragEnd?.call(),
+              onDraggableCanceled: (_, __) => onDragEnd?.call(),
+              child: pile,
+            )
+          else
+            pile,
           const SizedBox(height: 2),
           Text('$count', style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w600)),
         ],
