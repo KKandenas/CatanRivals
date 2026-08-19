@@ -1,16 +1,27 @@
-/// De olika korttyperna som förekommer i Catan Duellen.
-enum CardType {
-  region, // Landskapskort (producerar resurser)
-  settlement, // By
-  city, // Stad
-  road, // Väg
-  building, // Byggnadskort (t.ex. hamn, kyrka, marknad)
-  unit, // Enhetskort (t.ex. riddare)
-  event, // Händelsekort (t.ex. handels-/politik-/kyrkofas)
+/// Vilken kategori ett kort tillhör – motsvarar färgen på kortets textruta
+/// i det fysiska spelet, och styr var/hur kortet får placeras.
+enum CardCategory {
+  region, // Landskapskort (center card)
+  settlement, // By (center card)
+  city, // Stad (center card)
+  road, // Väg (center card)
+  expansion, // By-/stadsutbyggnad: byggnad eller enhet (grön textruta)
+  cityExpansion, // Stadsutbyggnad, kräver befintlig stad (röd textruta)
+  regionExpansion, // Landskapsutbyggnad, placeras ovanför/under en region (brun textruta)
+  action, // Handlingskort, spelas från handen, kostar inget ("A")
+  event, // Händelsekort
 }
+
+/// Underkategori för kort med [CardCategory.expansion] – dessa delas i
+/// byggnader och enheter, där enheter i sin tur är antingen hjältar
+/// eller handelsskepp.
+enum ExpansionKind { building, hero, tradeShip }
 
 /// De resurstyper som finns i spelet.
 enum ResourceType { lumber, brick, ore, grain, wool, gold, none }
+
+/// Vilket set (grundspel eller temaset) ett kort hör till.
+enum ExpansionSet { basic, eraOfGold, eraOfTurmoil, eraOfProgress }
 
 /// Ett enskilt kort i spelet – motsvarar ett fysiskt spelkort.
 ///
@@ -21,7 +32,9 @@ enum ResourceType { lumber, brick, ore, grain, wool, gold, none }
 class GameCard {
   final String id;
   final String name;
-  final CardType type;
+  final CardCategory category;
+  final ExpansionKind? expansionKind;
+  final ExpansionSet expansionSet;
 
   /// Resurs kortet producerar. `ResourceType.none` för kort som inte
   /// producerar resurser (byar, byggnader, enheter, etc).
@@ -31,66 +44,127 @@ class GameCard {
   /// `null` för kort som inte reagerar på tärningsslag.
   final int? productionNumber;
 
+  /// Resurser som måste betalas för att bygga/placera kortet.
+  /// Tom map för handlingskort och center-kort (regioner byggs inte,
+  /// de dras och placeras gratis).
+  final Map<ResourceType, int> buildingCost;
+
+  /// Motsvarar "(1x)" i kortnamnet – du får bara ha ett exemplar av
+  /// kortet i ditt rike samtidigt.
+  final bool isUnique;
+
   final int victoryPoints;
+  final int strengthPoints; // yxsymbol
+  final int commercePoints; // vågsymbol
+  final int skillPoints; // harpsymbol (endast hjältar)
+  final int progressPoints; // boksymbol (fler handkort tillåtna)
+
+  /// Regeltext/effekt som visas på kortet.
+  final String? effectText;
 
   /// Sökväg till bild/ikon-asset, t.ex. 'assets/images/cards/hills.png'.
   final String imageAsset;
 
-  final String? description;
-
   const GameCard({
     required this.id,
     required this.name,
-    required this.type,
+    required this.category,
+    this.expansionKind,
+    this.expansionSet = ExpansionSet.basic,
     this.resource = ResourceType.none,
     this.productionNumber,
+    this.buildingCost = const {},
+    this.isUnique = false,
     this.victoryPoints = 0,
+    this.strengthPoints = 0,
+    this.commercePoints = 0,
+    this.skillPoints = 0,
+    this.progressPoints = 0,
+    this.effectText,
     required this.imageAsset,
-    this.description,
   });
 
   GameCard copyWith({
     String? id,
     String? name,
-    CardType? type,
+    CardCategory? category,
+    ExpansionKind? expansionKind,
+    ExpansionSet? expansionSet,
     ResourceType? resource,
     int? productionNumber,
+    Map<ResourceType, int>? buildingCost,
+    bool? isUnique,
     int? victoryPoints,
+    int? strengthPoints,
+    int? commercePoints,
+    int? skillPoints,
+    int? progressPoints,
+    String? effectText,
     String? imageAsset,
-    String? description,
   }) {
     return GameCard(
       id: id ?? this.id,
       name: name ?? this.name,
-      type: type ?? this.type,
+      category: category ?? this.category,
+      expansionKind: expansionKind ?? this.expansionKind,
+      expansionSet: expansionSet ?? this.expansionSet,
       resource: resource ?? this.resource,
       productionNumber: productionNumber ?? this.productionNumber,
+      buildingCost: buildingCost ?? this.buildingCost,
+      isUnique: isUnique ?? this.isUnique,
       victoryPoints: victoryPoints ?? this.victoryPoints,
+      strengthPoints: strengthPoints ?? this.strengthPoints,
+      commercePoints: commercePoints ?? this.commercePoints,
+      skillPoints: skillPoints ?? this.skillPoints,
+      progressPoints: progressPoints ?? this.progressPoints,
+      effectText: effectText ?? this.effectText,
       imageAsset: imageAsset ?? this.imageAsset,
-      description: description ?? this.description,
     );
   }
 
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
-        'type': type.name,
+        'category': category.name,
+        'expansionKind': expansionKind?.name,
+        'expansionSet': expansionSet.name,
         'resource': resource.name,
         'productionNumber': productionNumber,
+        'buildingCost':
+            buildingCost.map((type, amount) => MapEntry(type.name, amount)),
+        'isUnique': isUnique,
         'victoryPoints': victoryPoints,
+        'strengthPoints': strengthPoints,
+        'commercePoints': commercePoints,
+        'skillPoints': skillPoints,
+        'progressPoints': progressPoints,
+        'effectText': effectText,
         'imageAsset': imageAsset,
-        'description': description,
       };
 
   factory GameCard.fromJson(Map<String, dynamic> json) => GameCard(
         id: json['id'] as String,
         name: json['name'] as String,
-        type: CardType.values.byName(json['type'] as String),
+        category: CardCategory.values.byName(json['category'] as String),
+        expansionKind: (json['expansionKind'] as String?) == null
+            ? null
+            : ExpansionKind.values.byName(json['expansionKind'] as String),
+        expansionSet:
+            ExpansionSet.values.byName(json['expansionSet'] as String? ?? 'basic'),
         resource: ResourceType.values.byName(json['resource'] as String),
         productionNumber: json['productionNumber'] as int?,
+        buildingCost: (json['buildingCost'] as Map? ?? {}).map(
+          (type, amount) =>
+              MapEntry(ResourceType.values.byName(type as String), amount as int),
+        ),
+        isUnique: json['isUnique'] as bool? ?? false,
         victoryPoints: json['victoryPoints'] as int? ?? 0,
+        strengthPoints: json['strengthPoints'] as int? ?? 0,
+        commercePoints: json['commercePoints'] as int? ?? 0,
+        skillPoints: json['skillPoints'] as int? ?? 0,
+        progressPoints: json['progressPoints'] as int? ?? 0,
+        effectText: json['effectText'] as String?,
         imageAsset: json['imageAsset'] as String,
-        description: json['description'] as String?,
       );
 
   /// Två [GameCard] räknas som samma kort om de har samma id, eftersom

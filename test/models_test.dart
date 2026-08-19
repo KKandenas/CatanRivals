@@ -1,54 +1,57 @@
+import 'package:catan_rivals/data/starter_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('HexCoordinate', () {
-    test('has six neighbors at distance 1', () {
-      const center = HexCoordinate(0, 0);
-      expect(center.neighbors, hasLength(6));
-      for (final n in center.neighbors) {
-        expect(center.distanceTo(n), 1);
-      }
+  group('RealmBoard – starting principality', () {
+    test('has 2 settlements, 1 road and 6 regions worth 2 victory points', () {
+      final board = StarterCards.buildStartingPrincipality('p1');
+
+      expect(board.settlements, hasLength(2));
+      expect(board.roads, hasLength(1));
+      expect(board.regionsAbove, hasLength(3));
+      expect(board.regionsBelow, hasLength(3));
+      expect(board.totalVictoryPoints, 2); // 2 byar à 1 poäng
     });
-  });
 
-  group('RealmBoard', () {
-    test('placing a card twice on the same position throws', () {
-      final board = RealmBoard(ownerId: 'p1');
-      const position = HexCoordinate(0, 0);
-      const card = GameCard(
-        id: 'hills-1',
-        name: 'Kulle',
-        type: CardType.region,
-        resource: ResourceType.brick,
-        productionNumber: 6,
-        imageAsset: 'assets/images/cards/hills.png',
-      );
+    test('the two settlements share their corner regions via the road junction', () {
+      final board = StarterCards.buildStartingPrincipality('p1');
 
-      board.placeCard(position, const PlacedCard(card: card, position: position));
+      final rightCornersOfLeftSettlement = board.cornerRegions(0, BuildingRow.above)[1];
+      final leftCornersOfRightSettlement = board.cornerRegions(2, BuildingRow.above)[0];
+
+      expect(rightCornersOfLeftSettlement, isNotNull);
+      expect(rightCornersOfLeftSettlement, same(leftCornersOfRightSettlement));
+    });
+
+    test('placing a settlement on an occupied column throws', () {
+      final board = StarterCards.buildStartingPrincipality('p1');
 
       expect(
-        () => board.placeCard(position, const PlacedCard(card: card, position: position)),
+        () => board.placeSettlement(0, const PlacedCard(card: StarterCards.settlement)),
         throwsStateError,
       );
     });
 
+    test('upgrading to a city adds a second building site on each side', () {
+      final board = StarterCards.buildStartingPrincipality('p1');
+
+      board.upgradeToCity(0, const PlacedCard(card: StarterCards.city));
+      final node = board.settlementAt(0)!;
+
+      expect(node.isCity, isTrue);
+      expect(node.aboveSites, hasLength(2));
+      expect(node.belowSites, hasLength(2));
+      expect(board.totalVictoryPoints, 3); // 1 stad (2p) + 1 by (1p)
+    });
+
     test('round-trips through JSON', () {
-      final board = RealmBoard(ownerId: 'p1');
-      const position = HexCoordinate(1, -1);
-      const card = GameCard(
-        id: 'forest-1',
-        name: 'Skog',
-        type: CardType.region,
-        resource: ResourceType.lumber,
-        productionNumber: 8,
-        imageAsset: 'assets/images/cards/forest.png',
-      );
-      board.placeCard(position, const PlacedCard(card: card, position: position));
+      final board = StarterCards.buildStartingPrincipality('p1');
 
       final restored = RealmBoard.fromJson(board.toJson());
 
-      expect(restored.cardAt(position)?.card.id, 'forest-1');
+      expect(restored.settlements.keys.toSet(), board.settlements.keys.toSet());
+      expect(restored.totalVictoryPoints, board.totalVictoryPoints);
     });
   });
 
