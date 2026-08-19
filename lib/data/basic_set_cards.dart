@@ -107,7 +107,7 @@ class BasicSetCards {
     expansionSet: ExpansionSet.basic,
     effectText:
         'Play this card before rolling the dice. Choose the result of the production die roll.',
-    imageAsset: 'assets/images/cards/action_brigitta.png',
+    imageAsset: 'assets/images/cards/actions/action_fortune_teller_cards.png',
   );
 
   static const relocation = GameCard(
@@ -117,7 +117,7 @@ class BasicSetCards {
     effectText:
         'You may exchange 2 of your own regions or 2 of your own expansion cards. Resources '
         'stored on regions may not be changed and card placement rules must be followed.',
-    imageAsset: 'assets/images/cards/action_relocation.png',
+    imageAsset: 'assets/images/cards/actions/action_packing_tent.png',
   );
 
   static const scout = GameCard(
@@ -127,7 +127,7 @@ class BasicSetCards {
     effectText:
         'Play this card when building a settlement. Take 2 cards of your choice from the '
         'region card stack. Reshuffle the region card stack.',
-    imageAsset: 'assets/images/cards/action_scout.png',
+    imageAsset: 'assets/images/cards/actions/action_telescope_scout.png',
   );
 
   static const merchantCaravan = GameCard(
@@ -136,7 +136,7 @@ class BasicSetCards {
     category: CardCategory.action,
     effectText:
         'Discard exactly 2 of your resources and take any 2 resources of your choice in return.',
-    imageAsset: 'assets/images/cards/action_merchant_caravan.png',
+    imageAsset: 'assets/images/cards/actions/action_horse_wagons.png',
   );
 
   static const goldsmith = GameCard(
@@ -144,7 +144,7 @@ class BasicSetCards {
     name: 'Guldsmed',
     category: CardCategory.action,
     effectText: 'Discard 3 gold and take any 2 resources of your choice in return.',
-    imageAsset: 'assets/images/cards/action_goldsmith.png',
+    imageAsset: 'assets/images/cards/actions/action_blacksmith_forge.png',
   );
 
   // ---------------------------------------------------------------------
@@ -160,7 +160,7 @@ class BasicSetCards {
     buildingCost: {ResourceType.brick: 1, ResourceType.grain: 1, ResourceType.ore: 1},
     progressPoints: 1,
     effectText: 'Progress is not the only thing here; you also get red wine and lots of dark beer.',
-    imageAsset: 'assets/images/cards/building_abbey.png',
+    imageAsset: 'assets/images/cards/dioramas/diorama_church_building.png',
   );
 
   static const marketplace = GameCard(
@@ -175,7 +175,7 @@ class BasicSetCards {
         "If a production number is rolled that appears more frequently on your opponent's "
         'regions than yours, you receive 1 resource. Choose a resource your opponent can '
         'normally receive.',
-    imageAsset: 'assets/images/cards/building_marketplace.png',
+    imageAsset: 'assets/images/cards/dioramas/diorama_busy_market.png',
   );
 
   static const parishHall = GameCard(
@@ -186,7 +186,7 @@ class BasicSetCards {
     isUnique: true,
     buildingCost: {ResourceType.brick: 1, ResourceType.grain: 1},
     effectText: 'You pay only 1 resource for choosing a card from a draw stack.',
-    imageAsset: 'assets/images/cards/building_parish_hall.png',
+    imageAsset: 'assets/images/cards/dioramas/diorama_village_market_2.png',
   );
 
   static const storehouse = GameCard(
@@ -197,7 +197,7 @@ class BasicSetCards {
     buildingCost: {ResourceType.lumber: 1, ResourceType.wool: 1},
     effectText:
         'Do not count the resources on the 2 neighboring regions when the event Brigand Attack is rolled.',
-    imageAsset: 'assets/images/cards/building_storehouse.png',
+    imageAsset: 'assets/images/cards/buildings/storehouse.png',
   );
 
   static const tollBridge = GameCard(
@@ -208,7 +208,7 @@ class BasicSetCards {
     buildingCost: {ResourceType.lumber: 1, ResourceType.brick: 1},
     commercePoints: 1,
     effectText: 'Even: Plentiful Harvest: You receive 2 gold.',
-    imageAsset: 'assets/images/cards/building_toll_bridge.png',
+    imageAsset: 'assets/images/cards/buildings/toll_bridge.png',
   );
 
   static const brickFactory = GameCard(
@@ -218,7 +218,7 @@ class BasicSetCards {
     expansionKind: ExpansionKind.building,
     buildingCost: {ResourceType.brick: 1, ResourceType.ore: 1},
     effectText: 'Doubles the brick production of the neighboring hills.',
-    imageAsset: 'assets/images/cards/building_brick_factory.png',
+    imageAsset: 'assets/images/cards/buildings/forge_1.png',
   );
 
   static const grainMill = GameCard(
@@ -228,7 +228,7 @@ class BasicSetCards {
     expansionKind: ExpansionKind.building,
     buildingCost: {ResourceType.grain: 1, ResourceType.lumber: 1},
     effectText: 'Doubles the grain production of the neighboring fields.',
-    imageAsset: 'assets/images/cards/building_grain_mill.png',
+    imageAsset: 'assets/images/cards/buildings/water_mill_1.png',
   );
 
   static const ironFoundry = GameCard(
@@ -238,7 +238,7 @@ class BasicSetCards {
     expansionKind: ExpansionKind.building,
     buildingCost: {ResourceType.brick: 1, ResourceType.ore: 1},
     effectText: 'Doubles the ore production of the neighboring mountains.',
-    imageAsset: 'assets/images/cards/building_iron_foundry.png',
+    imageAsset: 'assets/images/cards/buildings/forge_2_active.png',
   );
 
   static const lumberCamp = GameCard(
@@ -248,7 +248,7 @@ class BasicSetCards {
     expansionKind: ExpansionKind.building,
     buildingCost: {ResourceType.lumber: 1, ResourceType.ore: 1},
     effectText: 'Doubles the lumber production of the neighboring forests.',
-    imageAsset: 'assets/images/cards/building_lumber_camp.png',
+    imageAsset: 'assets/images/cards/buildings/lumber_camp.png',
   );
 
   static const weaversShop = GameCard(
@@ -258,7 +258,7 @@ class BasicSetCards {
     expansionKind: ExpansionKind.building,
     buildingCost: {ResourceType.lumber: 1, ResourceType.wool: 1},
     effectText: 'Doubles the wool production of the neighboring pastures.',
-    imageAsset: 'assets/images/cards/building_weavers_shop.png',
+    imageAsset: 'assets/images/cards/buildings/storage_shed_2.png',
   );
 
   // ---------------------------------------------------------------------
@@ -275,11 +275,10 @@ class BasicSetCards {
     effectText:
         'You may trade 2 resources of the left or right neighboring region for any 1 other '
         'resource of your choice.',
-    imageAsset: 'assets/images/cards/unit_large_trade_ship.png',
+    imageAsset: 'assets/images/cards/heroes/trade_ship_dock_1.png',
   );
 
-  static GameCard _tradeShip(String resourceName, ResourceType resource, String imageFile) =>
-      GameCard(
+  static GameCard _tradeShip(String resourceName, ResourceType resource) => GameCard(
         id: 'unit-trade-ship-$resourceName',
         name: '${_swedishResourceName(resource)}skepp',
         category: CardCategory.expansion,
@@ -289,15 +288,15 @@ class BasicSetCards {
         commercePoints: 1,
         effectText:
             'During your turn, you may trade 2 $resourceName for any 1 other resource as often as you wish.',
-        imageAsset: 'assets/images/cards/$imageFile',
+        imageAsset: 'assets/images/cards/heroes/trade_ship_dock_2.png',
       );
 
-  static final grainShip = _tradeShip('grain', ResourceType.grain, 'unit_grain_ship.png');
-  static final lumberShip = _tradeShip('lumber', ResourceType.lumber, 'unit_lumber_ship.png');
-  static final brickShip = _tradeShip('brick', ResourceType.brick, 'unit_brick_ship.png');
-  static final woolShip = _tradeShip('wool', ResourceType.wool, 'unit_wool_ship.png');
-  static final goldShip = _tradeShip('gold', ResourceType.gold, 'unit_gold_ship.png');
-  static final oreShip = _tradeShip('ore', ResourceType.ore, 'unit_ore_ship.png');
+  static final grainShip = _tradeShip('grain', ResourceType.grain);
+  static final lumberShip = _tradeShip('lumber', ResourceType.lumber);
+  static final brickShip = _tradeShip('brick', ResourceType.brick);
+  static final woolShip = _tradeShip('wool', ResourceType.wool);
+  static final goldShip = _tradeShip('gold', ResourceType.gold);
+  static final oreShip = _tradeShip('ore', ResourceType.ore);
 
   // ---------------------------------------------------------------------
   // Enheter: hjältar ("Common heroes")
@@ -312,7 +311,7 @@ class BasicSetCards {
     strengthPoints: 1,
     skillPoints: 2,
     effectText: "If you hit my left cheek, don't even think you'll have time to hit the right one too.",
-    imageAsset: 'assets/images/cards/hero_austin.png',
+    imageAsset: 'assets/images/cards/heroes/hero_plain_man_1.png',
   );
 
   static const harald = GameCard(
@@ -324,7 +323,7 @@ class BasicSetCards {
     strengthPoints: 2,
     skillPoints: 1,
     effectText: 'I knock you out faster than you can carve the word "strategy" in this stone.',
-    imageAsset: 'assets/images/cards/hero_harald.png',
+    imageAsset: 'assets/images/cards/heroes/hero_plain_man_2.png',
   );
 
   static const inga = GameCard(
@@ -350,7 +349,7 @@ class BasicSetCards {
     effectText:
         'When it comes to gold and women, friendship stops. And it also stops when it comes to power. '
         'Actually, friendship never lasts very long.',
-    imageAsset: 'assets/images/cards/hero_osmund.png',
+    imageAsset: 'assets/images/cards/heroes/hero_man_with_lamb.png',
   );
 
   static const candamir = GameCard(
@@ -374,7 +373,7 @@ class BasicSetCards {
     strengthPoints: 2,
     skillPoints: 3,
     effectText: 'Turning men into heroes belittles the importance of being a hero.',
-    imageAsset: 'assets/images/cards/hero_siglind.png',
+    imageAsset: 'assets/images/cards/heroes/hero_pair_woman_man.png',
   );
 
   // ---------------------------------------------------------------------

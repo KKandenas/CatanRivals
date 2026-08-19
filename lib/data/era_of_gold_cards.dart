@@ -62,7 +62,7 @@ class EraOfGoldCards {
     effectText:
         'Play this card before rolling the dice and determine the event Celebration. You '
         'receive 1 additional resource for the Celebration.',
-    imageAsset: 'assets/images/cards/action_reiner_the_herald.png',
+    imageAsset: 'assets/images/cards/actions/action_elder_with_bird.png',
   );
 
   static const tradeMaster = GameCard(
@@ -106,7 +106,7 @@ class EraOfGoldCards {
     effectText:
         'Your opponent must remove 1 trade ship of his choice from his principality and place '
         'it on the discard pile. Event Plentiful Harvest: You receive 1 gold.',
-    imageAsset: 'assets/images/cards/unit_pirate_ship.png',
+    imageAsset: 'assets/images/cards/dioramas/diorama_two_ships.png',
   );
 
   // ---------------------------------------------------------------------
@@ -164,7 +164,7 @@ class EraOfGoldCards {
     commercePoints: 1,
     victoryPoints: 1,
     effectText: 'The Marketplace and the Harbor receive a second commerce point.',
-    imageAsset: 'assets/images/cards/city_expansion_trading_base.png',
+    imageAsset: 'assets/images/cards/dioramas/diorama_small_shop.png',
   );
 
   static const mint = GameCard(

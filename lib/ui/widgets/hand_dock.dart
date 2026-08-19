@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/models.dart';
 import '../theme/catan_colors.dart';
+import 'expansion_card_view.dart';
 
 /// Bottenfältet (~10%): halvtransparent docka med handkort samt en
 /// sammanfattande resursmätare.
@@ -94,23 +95,21 @@ class _CardFace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: _size,
       height: _size,
-      decoration: BoxDecoration(
-        color: CatanColors.parchment,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: playable ? const Color(0xFF7CBF6A) : CatanColors.woodFrame, width: playable ? 1.6 : 1),
-        boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 2, offset: Offset(0, 1))],
-      ),
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 3),
-      child: Text(
-        card.name,
-        textAlign: TextAlign.center,
-        maxLines: 3,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontSize: 9.5, color: CatanColors.ink, fontWeight: FontWeight.w600),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ExpansionCardView(card: card, showCost: playable),
+          if (playable)
+            DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: const Color(0xFF7CBF6A), width: 1.6),
+              ),
+            ),
+        ],
       ),
     );
   }

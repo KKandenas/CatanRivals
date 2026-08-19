@@ -10,6 +10,7 @@ class CatanAssets {
   static const String _resources = 'assets/images/cards/resources';
   static const String _backs = 'assets/images/cards/backs';
   static const String _locations = 'assets/images/cards/locations';
+  static const String _icons = 'assets/images/cards/icons';
 
   /// Landskapsfoto för en resurstyp, t.ex. ResourceType.wool -> wool.png.
   static String resourcePhoto(ResourceType type) => '$_resources/${type.name}.png';
@@ -26,4 +27,13 @@ class CatanAssets {
   static const String backEraGold = '$_backs/era_gold.png';
   static const String backEraTurmoil = '$_backs/era_turmoil.png';
   static const String backEraProgress = '$_backs/era_progress.png';
+
+  /// Liten kostnadsikon (hexagon) för en resurstyp – för att visa
+  /// byggkostnad kompakt på hand-/stapelkort.
+  static String resourceCostIcon(ResourceType type) => '$_icons/icon_${type.name}.png';
+
+  static const String pointStrength = '$_icons/icon_strength.png';
+  static const String pointCommerce = '$_icons/icon_commerce.png';
+  static const String pointSkill = '$_icons/icon_skill.png';
+  static const String pointProgress = '$_icons/icon_progress.png';
 }

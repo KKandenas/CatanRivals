@@ -33,3 +33,8 @@ flutter:
     - assets/images/cards/resources/
     - assets/images/cards/backs/
     - assets/images/cards/locations/
+    - assets/images/cards/buildings/
+    - assets/images/cards/heroes/
+    - assets/images/cards/actions/
+    - assets/images/cards/dioramas/
+    - assets/images/cards/icons/

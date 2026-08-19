@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/models.dart';
 import '../theme/catan_colors.dart';
+import 'expansion_card_view.dart';
 import 'region_card_view.dart';
 import 'settlement_card_view.dart';
 
@@ -267,24 +268,6 @@ class PrincipalityGrid extends StatelessWidget {
   }
 
   Widget _expansionCard(PlacedCard placed) {
-    // Enkel platshållare för bygg-/enhetskort tills en dedikerad vy finns.
-    return AspectRatio(
-      aspectRatio: 1,
-      child: Container(
-        decoration: BoxDecoration(
-          color: CatanColors.woodFrame,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        alignment: Alignment.center,
-        padding: const EdgeInsets.all(4),
-        child: Text(
-          placed.card.name,
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 9, color: Colors.white),
-        ),
-      ),
-    );
+    return ExpansionCardView(card: placed.card, showCost: false);
   }
 }
