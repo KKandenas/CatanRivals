@@ -1,8 +1,32 @@
+import 'package:catan_rivals/data/basic_set_cards.dart';
 import 'package:catan_rivals/data/starter_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  group('BasicSetCards', () {
+    test('has 44 distinct card types', () {
+      expect(BasicSetCards.all, hasLength(44));
+    });
+
+    test('supply counts plus the 24 region cards add up to the full 94-card set', () {
+      final nonRegionCopies = BasicSetCards.supplyCounts.values.fold(0, (a, b) => a + b);
+      const regionTypeCount = 6;
+      const copiesPerRegionType = 4;
+
+      expect(nonRegionCopies + regionTypeCount * copiesPerRegionType, 94);
+    });
+
+    test('every catalog id has a supply count, except the 6 region templates', () {
+      final idsWithoutCount = BasicSetCards.all
+          .where((card) => card.category != CardCategory.region)
+          .map((card) => card.id)
+          .where((id) => !BasicSetCards.supplyCounts.containsKey(id));
+
+      expect(idsWithoutCount, isEmpty);
+    });
+  });
+
   group('RealmBoard – starting principality', () {
     test('has 2 settlements, 1 road and 6 regions worth 2 victory points', () {
       final board = StarterCards.buildStartingPrincipality('p1');
@@ -28,7 +52,7 @@ void main() {
       final board = StarterCards.buildStartingPrincipality('p1');
 
       expect(
-        () => board.placeSettlement(0, const PlacedCard(card: StarterCards.settlement)),
+        () => board.placeSettlement(0, const PlacedCard(card: BasicSetCards.settlement)),
         throwsStateError,
       );
     });
@@ -36,7 +60,7 @@ void main() {
     test('upgrading to a city adds a second building site on each side', () {
       final board = StarterCards.buildStartingPrincipality('p1');
 
-      board.upgradeToCity(0, const PlacedCard(card: StarterCards.city));
+      board.upgradeToCity(0, const PlacedCard(card: BasicSetCards.city));
       final node = board.settlementAt(0)!;
 
       expect(node.isCity, isTrue);
