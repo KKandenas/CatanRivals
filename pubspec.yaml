@@ -1,0 +1,32 @@
+name: catan_rivals
+description: >
+  Digital 2D-implementation av Catan Duellen (Rivals for Catan) byggd med
+  Flutter Web, optimerad för iPad i Safari.
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management: separerar spelregler/board-state från UI-widgets.
+  flutter_riverpod: ^2.5.1
+
+  # Multiplayer-synk mellan de två iPads via Firebase Realtime Database.
+  firebase_core: ^3.6.0
+  firebase_database: ^11.1.4
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
