@@ -5,20 +5,36 @@ import '../theme/catan_colors.dart';
 import 'region_card_view.dart';
 import 'settlement_card_view.dart';
 
+/// Anropas när ett kort släpps på en tom byggplats.
+typedef ExpansionDropCallback = void Function(
+  int column,
+  BuildingRow row,
+  int slotIndex,
+  GameCard card,
+);
+
 /// Ritar ut ett [RealmBoard] enligt kolumnmodellen: byar/städer i en rad,
 /// vägar mellan dem, och regioner delade diagonalt i hörnen ovanför och
 /// nedanför (se "Rikets koordinatsystem"-skissen). Zoombart/panorerbart
 /// via [InteractiveViewer]. Alla kort är kvadratiska.
 ///
-/// Rent visuellt just nu – ingen interaktion (drag-and-drop, tryck för
-/// detaljvy) ännu. `resourceStorage` är mock-data för pip-visningen tills
-/// spelstate finns. `unit` styr kortstorleken – ett mindre värde används
-/// för motståndarens kompakta rike.
+/// `resourceStorage` är mock-data för pip-visningen tills spelstate
+/// finns. `unit` styr kortstorleken – ett mindre värde används för
+/// motståndarens kompakta rike.
+///
+/// Sätt `interactive: true` (bara för ditt eget rike) för att göra tomma
+/// byggplatser till drop-mål för bygg-/enhetskort. `draggingCard`
+/// (kortet som just nu dras, om något) används för att tända alla tomma
+/// byggplatser i en mjuk glöd – inte bara den som pekaren råkar sväva
+/// över – så spelaren ser alla giltiga rutor på en gång.
 class PrincipalityGrid extends StatelessWidget {
   final RealmBoard board;
   final Map<String, int> resourceStorage;
   final double unit;
   final double gap;
+  final bool interactive;
+  final GameCard? draggingCard;
+  final ExpansionDropCallback? onDropExpansion;
 
   const PrincipalityGrid({
     super.key,
@@ -26,6 +42,9 @@ class PrincipalityGrid extends StatelessWidget {
     this.resourceStorage = const {},
     this.unit = 78,
     this.gap = 5,
+    this.interactive = false,
+    this.draggingCard,
+    this.onDropExpansion,
   });
 
   @override
@@ -90,11 +109,11 @@ class PrincipalityGrid extends StatelessWidget {
         width: width,
         child: Column(
           children: [
-            _siteRow(node.aboveSites, width),
+            _siteRow(col, BuildingRow.above, node.aboveSites, width),
             SizedBox(height: gap),
             SizedBox(height: unit, child: SettlementCardView(card: node.center.card)),
             SizedBox(height: gap),
-            _siteRow(node.belowSites, width),
+            _siteRow(col, BuildingRow.below, node.belowSites, width),
           ],
         ),
       );
@@ -120,18 +139,37 @@ class PrincipalityGrid extends StatelessWidget {
     );
   }
 
-  Widget _siteRow(List<PlacedCard?> sites, double width) {
+  Widget _siteRow(int column, BuildingRow row, List<PlacedCard?> sites, double width) {
     return SizedBox(
       height: unit,
       width: width,
       child: Row(
         children: [
           for (var i = 0; i < sites.length; i++) ...[
-            Expanded(child: sites[i] != null ? _expansionCard(sites[i]!) : const BuildingSiteView()),
+            Expanded(child: _buildingSite(column, row, i, sites[i])),
             if (i != sites.length - 1) SizedBox(width: gap),
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildingSite(int column, BuildingRow row, int slotIndex, PlacedCard? placed) {
+    if (placed != null) return _expansionCard(placed);
+
+    if (!interactive) return const BuildingSiteView();
+
+    return DragTarget<GameCard>(
+      onWillAcceptWithDetails: (details) => true,
+      onAcceptWithDetails: (details) => onDropExpansion?.call(column, row, slotIndex, details.data),
+      builder: (context, candidates, rejected) {
+        final isHovering = candidates.isNotEmpty;
+        final isValidTargetWhileDragging = draggingCard != null;
+        return BuildingSiteView(
+          highlighted: isHovering || isValidTargetWhileDragging,
+          hovering: isHovering,
+        );
+      },
     );
   }
 

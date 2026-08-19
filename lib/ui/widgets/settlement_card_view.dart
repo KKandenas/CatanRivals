@@ -79,24 +79,47 @@ class RoadCardView extends StatelessWidget {
 
 /// Tom byggplats – dashad kvadratisk platshållare där ett
 /// bygg-/enhetskort kan placeras.
+///
+/// `highlighted` tänds i en mjuk grön glöd när ett kort dras (så att
+/// spelaren ser alla giltiga rutor samtidigt); `hovering` skiftar till
+/// starkare fyllning när pekaren/fingret faktiskt svävar över just den
+/// här rutan.
 class BuildingSiteView extends StatelessWidget {
-  const BuildingSiteView({super.key});
+  final bool highlighted;
+  final bool hovering;
+
+  const BuildingSiteView({super.key, this.highlighted = false, this.hovering = false});
 
   @override
   Widget build(BuildContext context) {
+    final color = highlighted ? const Color(0xFF7CBF6A) : CatanColors.buildingSiteBorder;
     return AspectRatio(
       aspectRatio: 1,
-      child: CustomPaint(painter: _DashedBorderPainter()),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(6),
+          color: hovering ? color.withValues(alpha: 0.35) : (highlighted ? color.withValues(alpha: 0.12) : null),
+          boxShadow: highlighted
+              ? [BoxShadow(color: color.withValues(alpha: 0.6), blurRadius: 8, spreadRadius: hovering ? 1 : 0)]
+              : null,
+        ),
+        child: CustomPaint(painter: _DashedBorderPainter(color: color)),
+      ),
     );
   }
 }
 
 class _DashedBorderPainter extends CustomPainter {
+  final Color color;
+
+  _DashedBorderPainter({required this.color});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = CatanColors.buildingSiteBorder
-      ..strokeWidth = 1.2
+      ..color = color
+      ..strokeWidth = 1.4
       ..style = PaintingStyle.stroke;
     const dashWidth = 4.0;
     const dashSpace = 3.0;
@@ -114,5 +137,5 @@ class _DashedBorderPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) => oldDelegate.color != color;
 }

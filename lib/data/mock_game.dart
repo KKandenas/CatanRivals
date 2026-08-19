@@ -16,6 +16,8 @@ class MockGame {
         BasicSetCards.merchantCaravan,
         BasicSetCards.scout,
         BasicSetCards.storehouse,
+        BasicSetCards.grainMill,
+        BasicSetCards.austin,
       ],
       resources: {
         ResourceType.lumber: 3,

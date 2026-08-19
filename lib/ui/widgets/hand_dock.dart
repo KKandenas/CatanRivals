@@ -4,12 +4,18 @@ import '../../models/models.dart';
 import '../theme/catan_colors.dart';
 
 /// Bottenfältet (~10%): halvtransparent docka med handkort samt en
-/// sammanfattande resursmätare. Rent visuellt – kort går inte att dra
-/// upp på brädet ännu.
+/// sammanfattande resursmätare.
+///
+/// Bygg-/enhetskort (kategori [CardCategory.expansion]) går att
+/// långtrycka-och-dra upp på det egna riket för att spela dem – se
+/// [PrincipalityGrid]. Handlingskort är inte dragbara än (att spela dem
+/// är en egen, icke-rumslig interaktion som kommer i ett senare steg).
 class HandDock extends StatelessWidget {
   final Player player;
+  final void Function(GameCard card)? onDragStarted;
+  final VoidCallback? onDragEnd;
 
-  const HandDock({super.key, required this.player});
+  const HandDock({super.key, required this.player, this.onDragStarted, this.onDragEnd});
 
   static const double _dockHeight = 92;
 
@@ -31,7 +37,11 @@ class HandDock extends StatelessWidget {
                         scrollDirection: Axis.horizontal,
                         itemCount: player.hand.length,
                         separatorBuilder: (_, __) => const SizedBox(width: 8),
-                        itemBuilder: (context, i) => _HandCard(card: player.hand[i]),
+                        itemBuilder: (context, i) => _HandCard(
+                          card: player.hand[i],
+                          onDragStarted: onDragStarted,
+                          onDragEnd: onDragEnd,
+                        ),
                       ),
               ),
               const SizedBox(width: 12),
@@ -46,8 +56,39 @@ class HandDock extends StatelessWidget {
 
 class _HandCard extends StatelessWidget {
   final GameCard card;
+  final void Function(GameCard card)? onDragStarted;
+  final VoidCallback? onDragEnd;
 
-  const _HandCard({required this.card});
+  const _HandCard({required this.card, this.onDragStarted, this.onDragEnd});
+
+  @override
+  Widget build(BuildContext context) {
+    final playable = card.category == CardCategory.expansion;
+    final face = _CardFace(card: card, playable: playable);
+
+    if (!playable) return face;
+
+    return LongPressDraggable<GameCard>(
+      data: card,
+      delay: const Duration(milliseconds: 180),
+      feedback: Material(
+        color: Colors.transparent,
+        child: Transform.scale(scale: 1.12, child: _CardFace(card: card, playable: true)),
+      ),
+      childWhenDragging: Opacity(opacity: 0.35, child: face),
+      onDragStarted: () => onDragStarted?.call(card),
+      onDragEnd: (_) => onDragEnd?.call(),
+      onDraggableCanceled: (_, __) => onDragEnd?.call(),
+      child: face,
+    );
+  }
+}
+
+class _CardFace extends StatelessWidget {
+  final GameCard card;
+  final bool playable;
+
+  const _CardFace({required this.card, required this.playable});
 
   static const double _size = 72;
 
@@ -59,7 +100,7 @@ class _HandCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: CatanColors.parchment,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: CatanColors.woodFrame, width: 1),
+        border: Border.all(color: playable ? const Color(0xFF7CBF6A) : CatanColors.woodFrame, width: playable ? 1.6 : 1),
         boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 2, offset: Offset(0, 1))],
       ),
       alignment: Alignment.center,
