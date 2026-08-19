@@ -169,6 +169,7 @@ class BasicSetCards {
     expansionKind: ExpansionKind.building,
     isUnique: true,
     buildingCost: {ResourceType.wool: 1, ResourceType.grain: 1},
+    commercePoints: 1,
     effectText:
         "If a production number is rolled that appears more frequently on your opponent's "
         'regions than yours, you receive 1 resource. Choose a resource your opponent can '
@@ -182,7 +183,7 @@ class BasicSetCards {
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.building,
     isUnique: true,
-    buildingCost: {ResourceType.grain: 1, ResourceType.gold: 1},
+    buildingCost: {ResourceType.brick: 1, ResourceType.grain: 1},
     effectText: 'You pay only 1 resource for choosing a card from a draw stack.',
     imageAsset: 'assets/images/cards/building_parish_hall.png',
   );
@@ -204,6 +205,7 @@ class BasicSetCards {
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.building,
     buildingCost: {ResourceType.lumber: 1, ResourceType.brick: 1},
+    commercePoints: 1,
     effectText: 'Even: Plentiful Harvest: You receive 2 gold.',
     imageAsset: 'assets/images/cards/building_toll_bridge.png',
   );
@@ -223,7 +225,7 @@ class BasicSetCards {
     name: 'Kvarn',
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.building,
-    buildingCost: {ResourceType.grain: 1},
+    buildingCost: {ResourceType.grain: 1, ResourceType.lumber: 1},
     effectText: 'Doubles the grain production of the neighboring fields.',
     imageAsset: 'assets/images/cards/building_grain_mill.png',
   );
@@ -268,6 +270,7 @@ class BasicSetCards {
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.tradeShip,
     buildingCost: {ResourceType.lumber: 1, ResourceType.wool: 1},
+    commercePoints: 1,
     effectText:
         'You may trade 2 resources of the left or right neighboring region for any 1 other '
         'resource of your choice.',
@@ -282,6 +285,7 @@ class BasicSetCards {
         expansionKind: ExpansionKind.tradeShip,
         resource: resource,
         buildingCost: {ResourceType.lumber: 1, ResourceType.wool: 1},
+        commercePoints: 1,
         effectText:
             'During your turn, you may trade 2 $resourceName for any 1 other resource as often as you wish.',
         imageAsset: 'assets/images/cards/$imageFile',
@@ -353,7 +357,7 @@ class BasicSetCards {
     name: 'Candamir',
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.hero,
-    buildingCost: {ResourceType.grain: 1, ResourceType.wool: 1, ResourceType.ore: 1},
+    buildingCost: {ResourceType.wool: 2, ResourceType.grain: 1, ResourceType.ore: 1},
     strengthPoints: 4,
     skillPoints: 1,
     effectText: 'A well-sharpened axe is a tried and tested starting position for a successful conversation.',
@@ -365,7 +369,7 @@ class BasicSetCards {
     name: 'Siglind',
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.hero,
-    buildingCost: {ResourceType.wool: 1, ResourceType.grain: 1, ResourceType.ore: 1},
+    buildingCost: {ResourceType.wool: 2, ResourceType.grain: 1, ResourceType.ore: 1},
     strengthPoints: 2,
     skillPoints: 3,
     effectText: 'Turning men into heroes belittles the importance of being a hero.',
