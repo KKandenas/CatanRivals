@@ -203,7 +203,7 @@ class BasicSetCards {
     name: 'Tullbro',
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.building,
-    buildingCost: {ResourceType.brick: 1},
+    buildingCost: {ResourceType.lumber: 1, ResourceType.brick: 1},
     effectText: 'Even: Plentiful Harvest: You receive 2 gold.',
     imageAsset: 'assets/images/cards/building_toll_bridge.png',
   );
@@ -253,7 +253,7 @@ class BasicSetCards {
     name: 'Vävstuga',
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.building,
-    buildingCost: {ResourceType.lumber: 1, ResourceType.ore: 1},
+    buildingCost: {ResourceType.lumber: 1, ResourceType.wool: 1},
     effectText: 'Doubles the wool production of the neighboring pastures.',
     imageAsset: 'assets/images/cards/building_weavers_shop.png',
   );
@@ -305,7 +305,7 @@ class BasicSetCards {
     expansionKind: ExpansionKind.hero,
     buildingCost: {ResourceType.grain: 1, ResourceType.ore: 1},
     strengthPoints: 1,
-    skillPoints: 1,
+    skillPoints: 2,
     effectText: "If you hit my left cheek, don't even think you'll have time to hit the right one too.",
     imageAsset: 'assets/images/cards/hero_austin.png',
   );
@@ -316,7 +316,7 @@ class BasicSetCards {
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.hero,
     buildingCost: {ResourceType.grain: 1, ResourceType.ore: 1},
-    strengthPoints: 1,
+    strengthPoints: 2,
     skillPoints: 1,
     effectText: 'I knock you out faster than you can carve the word "strategy" in this stone.',
     imageAsset: 'assets/images/cards/hero_harald.png',
@@ -329,7 +329,7 @@ class BasicSetCards {
     expansionKind: ExpansionKind.hero,
     buildingCost: {ResourceType.grain: 1, ResourceType.wool: 1, ResourceType.ore: 1},
     strengthPoints: 1,
-    skillPoints: 1,
+    skillPoints: 3,
     effectText: 'The gods are expecting more offerings. And they expect you to hand them over to me!',
     imageAsset: 'assets/images/cards/hero_inga.png',
   );
@@ -340,8 +340,8 @@ class BasicSetCards {
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.hero,
     buildingCost: {ResourceType.grain: 1, ResourceType.wool: 1, ResourceType.ore: 1},
-    strengthPoints: 1,
-    skillPoints: 1,
+    strengthPoints: 2,
+    skillPoints: 2,
     effectText:
         'When it comes to gold and women, friendship stops. And it also stops when it comes to power. '
         'Actually, friendship never lasts very long.',
@@ -354,7 +354,7 @@ class BasicSetCards {
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.hero,
     buildingCost: {ResourceType.grain: 1, ResourceType.wool: 1, ResourceType.ore: 1},
-    strengthPoints: 1,
+    strengthPoints: 4,
     skillPoints: 1,
     effectText: 'A well-sharpened axe is a tried and tested starting position for a successful conversation.',
     imageAsset: 'assets/images/cards/hero_candamir.png',
@@ -367,7 +367,7 @@ class BasicSetCards {
     expansionKind: ExpansionKind.hero,
     buildingCost: {ResourceType.wool: 1, ResourceType.grain: 1, ResourceType.ore: 1},
     strengthPoints: 2,
-    skillPoints: 1,
+    skillPoints: 3,
     effectText: 'Turning men into heroes belittles the importance of being a hero.',
     imageAsset: 'assets/images/cards/hero_siglind.png',
   );
