@@ -1,4 +1,5 @@
 import 'package:catan_rivals/data/basic_set_cards.dart';
+import 'package:catan_rivals/data/era_of_gold_cards.dart';
 import 'package:catan_rivals/data/starter_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,6 +25,31 @@ void main() {
           .where((id) => !BasicSetCards.supplyCounts.containsKey(id));
 
       expect(idsWithoutCount, isEmpty);
+    });
+  });
+
+  group('EraOfGoldCards', () {
+    test('has 15 new card types', () {
+      expect(EraOfGoldCards.all, hasLength(15));
+    });
+
+    test('supply counts add up to the full 27-card set', () {
+      final totalCopies = EraOfGoldCards.supplyCounts.values.fold(0, (a, b) => a + b);
+
+      expect(totalCopies, 27);
+    });
+
+    test('every new card in the catalog has a supply count', () {
+      final idsWithoutCount = EraOfGoldCards.all
+          .map((card) => card.id)
+          .where((id) => !EraOfGoldCards.supplyCounts.containsKey(id));
+
+      expect(idsWithoutCount, isEmpty);
+    });
+
+    test('cards with a requirement expose it', () {
+      expect(EraOfGoldCards.tradeMaster.requirement, 'Merchant Guild');
+      expect(EraOfGoldCards.goldCache.requirement, 'Hero with at least 1 strength point');
     });
   });
 

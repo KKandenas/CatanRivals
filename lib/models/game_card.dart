@@ -13,9 +13,14 @@ enum CardCategory {
 }
 
 /// Underkategori för kort med [CardCategory.expansion] – dessa delas i
-/// byggnader och enheter, där enheter i sin tur är antingen hjältar
-/// eller handelsskepp.
-enum ExpansionKind { building, hero, tradeShip }
+/// byggnader och enheter, där enheter i sin tur är hjältar, handelsskepp
+/// eller övriga enheter (t.ex. Pirate Ship, som varken är hjälte eller
+/// handelsskepp men ändå är en "Unit"-kortkategori).
+enum ExpansionKind { building, hero, tradeShip, otherUnit }
+
+/// Underkategori för [CardCategory.action] – attackkort kan blockeras av
+/// försvarskort (t.ex. Lookout Tower), neutrala kan det inte.
+enum ActionKind { neutral, attack }
 
 /// De resurstyper som finns i spelet.
 enum ResourceType { lumber, brick, ore, grain, wool, gold, none }
@@ -34,6 +39,7 @@ class GameCard {
   final String name;
   final CardCategory category;
   final ExpansionKind? expansionKind;
+  final ActionKind? actionKind;
   final ExpansionSet expansionSet;
 
   /// Resurs kortet producerar. `ResourceType.none` för kort som inte
@@ -62,6 +68,11 @@ class GameCard {
   /// Regeltext/effekt som visas på kortet.
   final String? effectText;
 
+  /// Förutsättning som måste vara uppfylld för att spela/bygga kortet,
+  /// t.ex. "Requires: Merchant Guild" eller "Requires: Strength advantage".
+  /// `null` om kortet saknar krav.
+  final String? requirement;
+
   /// Sökväg till bild/ikon-asset, t.ex. 'assets/images/cards/hills.png'.
   final String imageAsset;
 
@@ -70,6 +81,7 @@ class GameCard {
     required this.name,
     required this.category,
     this.expansionKind,
+    this.actionKind,
     this.expansionSet = ExpansionSet.basic,
     this.resource = ResourceType.none,
     this.productionNumber,
@@ -81,6 +93,7 @@ class GameCard {
     this.skillPoints = 0,
     this.progressPoints = 0,
     this.effectText,
+    this.requirement,
     required this.imageAsset,
   });
 
@@ -89,6 +102,7 @@ class GameCard {
     String? name,
     CardCategory? category,
     ExpansionKind? expansionKind,
+    ActionKind? actionKind,
     ExpansionSet? expansionSet,
     ResourceType? resource,
     int? productionNumber,
@@ -100,6 +114,7 @@ class GameCard {
     int? skillPoints,
     int? progressPoints,
     String? effectText,
+    String? requirement,
     String? imageAsset,
   }) {
     return GameCard(
@@ -107,6 +122,7 @@ class GameCard {
       name: name ?? this.name,
       category: category ?? this.category,
       expansionKind: expansionKind ?? this.expansionKind,
+      actionKind: actionKind ?? this.actionKind,
       expansionSet: expansionSet ?? this.expansionSet,
       resource: resource ?? this.resource,
       productionNumber: productionNumber ?? this.productionNumber,
@@ -118,6 +134,7 @@ class GameCard {
       skillPoints: skillPoints ?? this.skillPoints,
       progressPoints: progressPoints ?? this.progressPoints,
       effectText: effectText ?? this.effectText,
+      requirement: requirement ?? this.requirement,
       imageAsset: imageAsset ?? this.imageAsset,
     );
   }
@@ -127,6 +144,7 @@ class GameCard {
         'name': name,
         'category': category.name,
         'expansionKind': expansionKind?.name,
+        'actionKind': actionKind?.name,
         'expansionSet': expansionSet.name,
         'resource': resource.name,
         'productionNumber': productionNumber,
@@ -139,6 +157,7 @@ class GameCard {
         'skillPoints': skillPoints,
         'progressPoints': progressPoints,
         'effectText': effectText,
+        'requirement': requirement,
         'imageAsset': imageAsset,
       };
 
@@ -149,6 +168,9 @@ class GameCard {
         expansionKind: (json['expansionKind'] as String?) == null
             ? null
             : ExpansionKind.values.byName(json['expansionKind'] as String),
+        actionKind: (json['actionKind'] as String?) == null
+            ? null
+            : ActionKind.values.byName(json['actionKind'] as String),
         expansionSet:
             ExpansionSet.values.byName(json['expansionSet'] as String? ?? 'basic'),
         resource: ResourceType.values.byName(json['resource'] as String),
@@ -164,6 +186,7 @@ class GameCard {
         skillPoints: json['skillPoints'] as int? ?? 0,
         progressPoints: json['progressPoints'] as int? ?? 0,
         effectText: json['effectText'] as String?,
+        requirement: json['requirement'] as String?,
         imageAsset: json['imageAsset'] as String,
       );
 
