@@ -1,5 +1,6 @@
 import 'package:catan_rivals/data/basic_set_cards.dart';
 import 'package:catan_rivals/data/era_of_gold_cards.dart';
+import 'package:catan_rivals/data/era_of_turmoil_cards.dart';
 import 'package:catan_rivals/data/starter_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -50,6 +51,42 @@ void main() {
     test('cards with a requirement expose it', () {
       expect(EraOfGoldCards.tradeMaster.requirement, 'Merchant Guild');
       expect(EraOfGoldCards.goldCache.requirement, 'Hero with at least 1 strength point');
+    });
+  });
+
+  group('EraOfTurmoilCards', () {
+    test('has 18 new card types', () {
+      expect(EraOfTurmoilCards.all, hasLength(18));
+    });
+
+    test('supply counts add up to the full 28-card set', () {
+      final totalCopies = EraOfTurmoilCards.supplyCounts.values.fold(0, (a, b) => a + b);
+
+      expect(totalCopies, 28);
+    });
+
+    test('every new card in the catalog has a supply count', () {
+      final idsWithoutCount = EraOfTurmoilCards.all
+          .map((card) => card.id)
+          .where((id) => !EraOfTurmoilCards.supplyCounts.containsKey(id));
+
+      expect(idsWithoutCount, isEmpty);
+    });
+
+    test('the two Chapels protect against opposite production rolls', () {
+      expect(EraOfTurmoilCards.chapelLowRoll.effectText, contains('1, 2, or 3'));
+      expect(EraOfTurmoilCards.chapelHighRoll.effectText, contains('4, 5, or 6'));
+    });
+
+    test('attack action cards requiring Hedge Tavern are flagged', () {
+      for (final card in [
+        EraOfTurmoilCards.archer,
+        EraOfTurmoilCards.arsonist,
+        EraOfTurmoilCards.traitor,
+      ]) {
+        expect(card.actionKind, ActionKind.attack);
+        expect(card.requirement, 'Hedge Tavern');
+      }
     });
   });
 
