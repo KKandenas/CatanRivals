@@ -49,10 +49,13 @@ class _HandCard extends StatelessWidget {
 
   const _HandCard({required this.card});
 
+  static const double _size = 72;
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 56,
+      width: _size,
+      height: _size,
       decoration: BoxDecoration(
         color: CatanColors.parchment,
         borderRadius: BorderRadius.circular(6),

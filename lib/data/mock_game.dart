@@ -51,4 +51,14 @@ class MockGame {
     }
     return storage;
   }
+
+  /// Mock-antal kvar i center-dragstaplarna: grundspelets totala antal
+  /// minus de kort de två startuppställningarna redan använder.
+  static Map<String, int> centerStackCounts() => {
+        'roads': BasicSetCards.supplyCounts['road']! - 2,
+        'settlements': BasicSetCards.supplyCounts['settlement']! - 4,
+        'cities': BasicSetCards.supplyCounts['city']!,
+        'regions': 24 - 12,
+        'event': 9,
+      };
 }

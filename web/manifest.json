@@ -6,6 +6,6 @@
     "background_color": "#F5E6C8",
     "theme_color": "#8B5E3C",
     "description": "Digital 2D-implementation av Catan Duellen för iPad.",
-    "orientation": "landscape",
+    "orientation": "portrait",
     "icons": []
 }

@@ -29,4 +29,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/images/
+    - assets/images/cards/
+    - assets/images/cards/resources/
+    - assets/images/cards/backs/
+    - assets/images/cards/locations/
