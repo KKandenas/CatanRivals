@@ -119,7 +119,8 @@ class EraOfGoldCards {
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfGold,
     isUnique: true,
-    buildingCost: {ResourceType.brick: 1, ResourceType.wool: 1, ResourceType.grain: 1},
+    buildingCost: {ResourceType.brick: 2, ResourceType.wool: 2, ResourceType.grain: 1},
+    victoryPoints: 1,
     commercePoints: 2,
     effectText:
         "Money can't buy you happiness. But taking it away from others can. Is a prerequisite "
@@ -133,7 +134,8 @@ class EraOfGoldCards {
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfGold,
     isUnique: true,
-    buildingCost: {ResourceType.lumber: 1, ResourceType.ore: 1, ResourceType.brick: 1},
+    buildingCost: {ResourceType.lumber: 2, ResourceType.ore: 2, ResourceType.brick: 1},
+    victoryPoints: 1,
     effectText:
         'If you have the trade advantage and the event Trade is rolled on the event die, you '
         'may take 2 resources of your choice from your opponent.',
@@ -145,7 +147,7 @@ class EraOfGoldCards {
     name: 'Hamn',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfGold,
-    buildingCost: {ResourceType.grain: 1, ResourceType.wool: 1, ResourceType.ore: 1},
+    buildingCost: {ResourceType.brick: 1, ResourceType.wool: 1, ResourceType.ore: 1},
     commercePoints: 1,
     effectText:
         'As long as at least 3 trade ships are placed in your principality, the Harbor is '
@@ -158,7 +160,7 @@ class EraOfGoldCards {
     name: 'Handelsplats',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfGold,
-    buildingCost: {ResourceType.grain: 1},
+    buildingCost: {ResourceType.grain: 2, ResourceType.wool: 2, ResourceType.brick: 1},
     commercePoints: 1,
     victoryPoints: 1,
     effectText: 'The Marketplace and the Harbor receive a second commerce point.',
@@ -180,7 +182,8 @@ class EraOfGoldCards {
     name: 'Stapelhus',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfGold,
-    buildingCost: {ResourceType.lumber: 1, ResourceType.wool: 1, ResourceType.grain: 1},
+    buildingCost: {ResourceType.brick: 2, ResourceType.ore: 2, ResourceType.wool: 1},
+    victoryPoints: 1,
     requirement: 'Merchant Guild',
     effectText: 'If you build the Staple House, you immediately receive 2 resources of your choice.',
     imageAsset: 'assets/images/cards/city_expansion_staple_house.png',
@@ -191,7 +194,8 @@ class EraOfGoldCards {
     name: 'Saltsilo',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfGold,
-    buildingCost: {ResourceType.wool: 1, ResourceType.gold: 1, ResourceType.brick: 1},
+    buildingCost: {ResourceType.wool: 2, ResourceType.gold: 2, ResourceType.brick: 1},
+    victoryPoints: 1,
     effectText: 'Each of your trade ships is worth 1 more commerce point.',
     imageAsset: 'assets/images/cards/city_expansion_salt_silo.png',
   );
