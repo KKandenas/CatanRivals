@@ -120,9 +120,8 @@ class EraOfTurmoilCards {
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.hero,
     expansionSet: ExpansionSet.eraOfTurmoil,
-    buildingCost: {ResourceType.wool: 1, ResourceType.grain: 1, ResourceType.ore: 1},
-    strengthPoints: 3,
-    skillPoints: 1,
+    buildingCost: {ResourceType.wool: 2, ResourceType.grain: 1, ResourceType.ore: 1},
+    strengthPoints: 5,
     effectText: 'What a beautiful island! I take it.',
     imageAsset: 'assets/images/cards/hero_carl_forkbeard.png',
   );
@@ -134,7 +133,7 @@ class EraOfTurmoilCards {
     expansionKind: ExpansionKind.hero,
     expansionSet: ExpansionSet.eraOfTurmoil,
     buildingCost: {ResourceType.grain: 1, ResourceType.wool: 1, ResourceType.ore: 1},
-    strengthPoints: 3,
+    strengthPoints: 2,
     effectText:
         'Heinrich is a hero who, in addition to his strength points, has a special effect. If '
         'you also have a Lookout Tower in your principality, you are protected when a 1, 2, 3, '
@@ -150,8 +149,7 @@ class EraOfTurmoilCards {
     expansionKind: ExpansionKind.hero,
     expansionSet: ExpansionSet.eraOfTurmoil,
     buildingCost: {ResourceType.grain: 1, ResourceType.gold: 1},
-    strengthPoints: 1,
-    skillPoints: 1,
+    skillPoints: 2,
     effectText:
         'If you lose a card of your principality due to an event or an action, you receive '
         'any 1 resource of your choice.',
@@ -167,7 +165,8 @@ class EraOfTurmoilCards {
     name: 'Kapell (1–3)',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfTurmoil,
-    buildingCost: {ResourceType.gold: 1, ResourceType.grain: 1},
+    buildingCost: {ResourceType.ore: 2, ResourceType.brick: 1, ResourceType.grain: 1},
+    victoryPoints: 1,
     effectText: 'If a 1, 2, or 3 is rolled with the production die, the event Riots does not apply to you.',
     imageAsset: 'assets/images/cards/city_expansion_chapel_low.png',
   );
@@ -177,7 +176,8 @@ class EraOfTurmoilCards {
     name: 'Kapell (4–6)',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfTurmoil,
-    buildingCost: {ResourceType.gold: 1, ResourceType.grain: 1},
+    buildingCost: {ResourceType.ore: 2, ResourceType.brick: 1, ResourceType.grain: 1},
+    victoryPoints: 1,
     effectText: 'If a 4, 5, or 6 is rolled with the production die, the event Riots does not apply to you.',
     imageAsset: 'assets/images/cards/city_expansion_chapel_high.png',
   );
@@ -187,7 +187,8 @@ class EraOfTurmoilCards {
     name: 'Marknadsfält',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfTurmoil,
-    buildingCost: {ResourceType.lumber: 1, ResourceType.grain: 1, ResourceType.wool: 1},
+    buildingCost: {ResourceType.lumber: 2, ResourceType.grain: 1, ResourceType.wool: 1},
+    victoryPoints: 1,
     effectText:
         'If you have more skill points than your opponent you immediately receive 2 resources '
         'of your choice after building the Fairground.',
@@ -199,7 +200,8 @@ class EraOfTurmoilCards {
     name: 'Brandkår',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfTurmoil,
-    buildingCost: {ResourceType.wool: 1, ResourceType.brick: 1, ResourceType.ore: 1},
+    buildingCost: {ResourceType.wool: 2, ResourceType.brick: 1, ResourceType.ore: 1},
+    victoryPoints: 1,
     effectText:
         'The Fire Brigade protects all buildings (settlement/city expansions and city '
         'expansions) in the city where the Fire Brigade is placed, including the Fire Brigade '
