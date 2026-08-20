@@ -78,7 +78,7 @@ class ExpansionCardView extends StatelessWidget {
                   child: _UniqueBadge(),
                 ),
               Positioned(
-                bottom: 2,
+                bottom: 24,
                 right: 2,
                 child: _PointsCorner(card: card),
               ),
