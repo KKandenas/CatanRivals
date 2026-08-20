@@ -51,7 +51,18 @@ class GameBoardScreen extends ConsumerWidget {
             ),
       body: Column(
         children: [
-          if (state.mode == SessionMode.host && !state.opponentConnected)
+          if (state.sessionError != null)
+            Container(
+              width: double.infinity,
+              color: Theme.of(context).colorScheme.errorContainer,
+              padding: const EdgeInsets.all(8),
+              child: Text(
+                state.sessionError!,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
+              ),
+            )
+          else if (state.mode == SessionMode.host && !state.opponentConnected)
             Container(
               width: double.infinity,
               color: Theme.of(context).colorScheme.secondaryContainer,

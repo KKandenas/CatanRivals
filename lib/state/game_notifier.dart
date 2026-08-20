@@ -76,7 +76,11 @@ class GameNotifier extends Notifier<GameState> {
     final waitingOpponent = MockGame.buildStartingPlayer('guest', 'Väntar på motståndare …', isRed: false);
     final centerStacks = MockGame.centerStackCounts();
 
-    await _sync.createRoom(roomCode, 'host', hostPlayer, centerStacks);
+    try {
+      await _sync.createRoom(roomCode, 'host', hostPlayer, centerStacks).timeout(const Duration(seconds: 10));
+    } on TimeoutException {
+      throw Exception('Fick ingen kontakt med servern. Kontrollera internetanslutningen och försök igen.');
+    }
 
     state = GameState(
       you: hostPlayer,
@@ -96,7 +100,12 @@ class GameNotifier extends Notifier<GameState> {
   /// gick-med, annars ett felmeddelande att visa i lobbyn.
   Future<String?> joinRoom(String roomCode, String myName) async {
     final guestPlayer = MockGame.buildStartingPlayer('guest', myName, isRed: false);
-    final error = await _sync.joinRoom(roomCode, 'guest', guestPlayer);
+    String? error;
+    try {
+      error = await _sync.joinRoom(roomCode, 'guest', guestPlayer).timeout(const Duration(seconds: 10));
+    } on TimeoutException {
+      return 'Fick ingen kontakt med servern. Kontrollera internetanslutningen och försök igen.';
+    }
     if (error != null) return error;
 
     state = GameState(
@@ -117,16 +126,29 @@ class GameNotifier extends Notifier<GameState> {
     _playersSub?.cancel();
     _centerStacksSub?.cancel();
 
-    _playersSub = _sync.watchPlayers(roomCode).listen((players) {
-      final opponentPlayer = players[state.opponentPlayerId];
-      if (opponentPlayer == null) return;
-      state = state.copyWith(opponent: opponentPlayer, opponentConnected: true);
-    });
+    _playersSub = _sync.watchPlayers(roomCode).listen(
+      (players) {
+        final opponentPlayer = players[state.opponentPlayerId];
+        if (opponentPlayer == null) return;
+        state = state.copyWith(opponent: opponentPlayer, opponentConnected: true, clearSessionError: true);
+      },
+      // Utan den här hanteraren skulle t.ex. ett rättighetsfel i
+      // Firebase-databasreglerna tysta misslyckas – "väntar på
+      // motståndare" skulle stå kvar för evigt utan någon förklaring.
+      onError: (Object e) {
+        state = state.copyWith(sessionError: 'Kunde inte synka med motståndaren: $e');
+      },
+    );
 
-    _centerStacksSub = _sync.watchCenterStacks(roomCode).listen((centerStacks) {
-      if (centerStacks.isEmpty) return;
-      state = state.copyWith(centerStacks: centerStacks);
-    });
+    _centerStacksSub = _sync.watchCenterStacks(roomCode).listen(
+      (centerStacks) {
+        if (centerStacks.isEmpty) return;
+        state = state.copyWith(centerStacks: centerStacks);
+      },
+      onError: (Object e) {
+        state = state.copyWith(sessionError: 'Kunde inte synka dragstaplarna: $e');
+      },
+    );
   }
 
   void _syncMyPlayer() {
