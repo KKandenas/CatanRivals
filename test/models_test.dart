@@ -201,6 +201,23 @@ void main() {
         }
       }
     });
+
+    test('survives Firebase dropping null values from an empty building site', () {
+      // Firebase Realtime Database lagrar aldrig null – ett null i en
+      // array-position gör att den positionen (och därmed hela
+      // array-strukturen) försvinner vid skrivning. Simulerar det här
+      // genom att koda en tom byggplats till JSON och sedan ta bort
+      // den nyckeln helt (som Firebase skulle göra), innan avkodning.
+      final board = StarterCards.buildStartingPrincipality('p1');
+      final json = board.toJson();
+
+      final settlement0 = Map<String, dynamic>.from((json['settlements'] as Map)['c0'] as Map);
+      final aboveSites = Map<String, dynamic>.from(settlement0['aboveSites'] as Map);
+      expect(aboveSites.containsKey('s0'), isFalse); // tom byggplats skrevs aldrig ut
+
+      final restored = RealmBoard.fromJson(json);
+      expect(restored.settlementAt(0)!.aboveSites, [null]);
+    });
   });
 
   group('RealmBoard – resurslagring per region', () {

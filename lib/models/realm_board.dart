@@ -71,21 +71,45 @@ class SettlementNode {
     );
   }
 
+  // Byggplatserna serialiseras som en nyckel-per-index-map (och hoppar
+  // helt över tomma platser) i stället för en JSON-array med null-
+  // luckor. Firebase Realtime Database lagrar aldrig null-värden – ett
+  // null i en array-position gör att arrayen tystnar bort/glesnar när
+  // den skrivs, vilket kraschade när vi sedan försökte läsa tillbaka
+  // den som en fullständig List. En map där tomma platser helt enkelt
+  // saknar sin nyckel har inte det problemet.
+  static Map<String, dynamic> _sitesToJson(List<PlacedCard?> sites) {
+    final json = <String, dynamic>{};
+    for (var i = 0; i < sites.length; i++) {
+      final site = sites[i];
+      if (site != null) json['s$i'] = site.toJson();
+    }
+    return json;
+  }
+
+  static List<PlacedCard?> _sitesFromJson(dynamic raw, int slotCount) {
+    final map = raw as Map? ?? {};
+    return [
+      for (var i = 0; i < slotCount; i++)
+        map['s$i'] == null ? null : PlacedCard.fromJson(Map<String, dynamic>.from(map['s$i'] as Map)),
+    ];
+  }
+
   Map<String, dynamic> toJson() => {
         'center': center.toJson(),
-        'aboveSites': aboveSites.map((c) => c?.toJson()).toList(),
-        'belowSites': belowSites.map((c) => c?.toJson()).toList(),
+        'aboveSites': _sitesToJson(aboveSites),
+        'belowSites': _sitesToJson(belowSites),
       };
 
-  factory SettlementNode.fromJson(Map<String, dynamic> json) => SettlementNode(
-        center: PlacedCard.fromJson(Map<String, dynamic>.from(json['center'] as Map)),
-        aboveSites: (json['aboveSites'] as List)
-            .map((c) => c == null ? null : PlacedCard.fromJson(Map<String, dynamic>.from(c as Map)))
-            .toList(),
-        belowSites: (json['belowSites'] as List)
-            .map((c) => c == null ? null : PlacedCard.fromJson(Map<String, dynamic>.from(c as Map)))
-            .toList(),
-      );
+  factory SettlementNode.fromJson(Map<String, dynamic> json) {
+    final center = PlacedCard.fromJson(Map<String, dynamic>.from(json['center'] as Map));
+    final slotCount = center.card.category == CardCategory.city ? 2 : 1;
+    return SettlementNode(
+      center: center,
+      aboveSites: _sitesFromJson(json['aboveSites'], slotCount),
+      belowSites: _sitesFromJson(json['belowSites'], slotCount),
+    );
+  }
 }
 
 /// En spelares rike (Fyrstendöme).
