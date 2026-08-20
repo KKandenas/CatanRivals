@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/models.dart';
+import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
 import 'expansion_card_view.dart';
 import 'region_card_view.dart';
@@ -59,9 +60,11 @@ class PrincipalityGrid extends StatelessWidget {
   });
 
   bool get _draggingRoad => draggingCard?.category == CardCategory.road;
-  bool get _draggingSettlement => draggingCard?.category == CardCategory.settlement;
+  bool get _draggingSettlement =>
+      draggingCard?.category == CardCategory.settlement;
   bool get _draggingCity => draggingCard?.category == CardCategory.city;
-  bool get _draggingExpansion => draggingCard?.category == CardCategory.expansion;
+  bool get _draggingExpansion =>
+      draggingCard?.category == CardCategory.expansion;
 
   @override
   Widget build(BuildContext context) {
@@ -91,35 +94,43 @@ class PrincipalityGrid extends StatelessWidget {
     final contentHeight = unit * 3 + gap * 2;
     const padding = 20.0;
 
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [CatanColors.parchment, CatanColors.parchmentDark],
-        ),
-      ),
-      child: InteractiveViewer(
-        // Pan/zoom stängs av på det interaktiva (egna) brädet: på
-        // pekskärmar tävlar InteractiveViewers egen pan-gest med
-        // LongPressDraggable om samma pekhändelser, och panorering
-        // vinner ofta innan långtrycket hinner registreras – då går
-        // det inte att dra ut kort alls. Motståndarens skrivskyddade
-        // bräde (interactive: false) har inga dragbara mål, så där är
-        // pan/zoom kvar för att kunna zooma in det.
-        panEnabled: !interactive,
-        scaleEnabled: !interactive,
-        minScale: 0.6,
-        maxScale: 2.5,
-        boundaryMargin: const EdgeInsets.all(200),
-        child: Center(
-          child: SizedBox(
-            width: contentWidth + padding * 2,
-            height: contentHeight + padding * 2,
-            child: Padding(
-              padding: const EdgeInsets.all(padding),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: columns),
-            ),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.asset(CatanAssets.boardBackground, fit: BoxFit.cover),
+        // Pergament-slöja ovanpå träteexturen, så att de tomma
+        // byggplatsernas streckade kanter och korten fortfarande
+        // syns tydligt – samma ljushet som den gamla gradienten hade.
+        Container(color: CatanColors.parchment.withValues(alpha: 0.55)),
+        _buildInteractiveContent(contentWidth, contentHeight, padding, columns),
+      ],
+    );
+  }
+
+  Widget _buildInteractiveContent(double contentWidth, double contentHeight,
+      double padding, List<Widget> columns) {
+    return InteractiveViewer(
+      // Pan/zoom stängs av på det interaktiva (egna) brädet: på
+      // pekskärmar tävlar InteractiveViewers egen pan-gest med
+      // LongPressDraggable om samma pekhändelser, och panorering
+      // vinner ofta innan långtrycket hinner registreras – då går
+      // det inte att dra ut kort alls. Motståndarens skrivskyddade
+      // bräde (interactive: false) har inga dragbara mål, så där är
+      // pan/zoom kvar för att kunna zooma in det.
+      panEnabled: !interactive,
+      scaleEnabled: !interactive,
+      minScale: 0.6,
+      maxScale: 2.5,
+      boundaryMargin: const EdgeInsets.all(200),
+      child: Center(
+        child: SizedBox(
+          width: contentWidth + padding * 2,
+          height: contentHeight + padding * 2,
+          child: Padding(
+            padding: EdgeInsets.all(padding),
+            child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: columns),
           ),
         ),
       ),
@@ -151,8 +162,10 @@ class PrincipalityGrid extends StatelessWidget {
 
     // Ingen by/stad här – kolla om det är en giltig "spökby"-plats
     // bortom en redan utplacerad hängande väg.
-    final isWestPhantom = col == board.leftmostColumn - 2 && board.roads.containsKey(board.leftmostColumn - 1);
-    final isEastPhantom = col == board.rightmostColumn + 2 && board.roads.containsKey(board.rightmostColumn + 1);
+    final isWestPhantom = col == board.leftmostColumn - 2 &&
+        board.roads.containsKey(board.leftmostColumn - 1);
+    final isEastPhantom = col == board.rightmostColumn + 2 &&
+        board.roads.containsKey(board.rightmostColumn + 1);
 
     if (interactive && (isWestPhantom || isEastPhantom)) {
       return SizedBox(
@@ -162,11 +175,15 @@ class PrincipalityGrid extends StatelessWidget {
           child: SizedBox(
             height: unit,
             child: DragTarget<GameCard>(
-              onWillAcceptWithDetails: (details) => details.data.category == CardCategory.settlement,
-              onAcceptWithDetails: (details) => onDropSettlement?.call(col, details.data),
+              onWillAcceptWithDetails: (details) =>
+                  details.data.category == CardCategory.settlement,
+              onAcceptWithDetails: (details) =>
+                  onDropSettlement?.call(col, details.data),
               builder: (context, candidates, rejected) {
                 final isHovering = candidates.isNotEmpty;
-                return BuildingSiteView(highlighted: isHovering || _draggingSettlement, hovering: isHovering);
+                return BuildingSiteView(
+                    highlighted: isHovering || _draggingSettlement,
+                    hovering: isHovering);
               },
             ),
           ),
@@ -182,8 +199,10 @@ class PrincipalityGrid extends StatelessWidget {
     if (!interactive || node.isCity) return view;
 
     return DragTarget<GameCard>(
-      onWillAcceptWithDetails: (details) => details.data.category == CardCategory.city,
-      onAcceptWithDetails: (details) => onDropCityUpgrade?.call(column, details.data),
+      onWillAcceptWithDetails: (details) =>
+          details.data.category == CardCategory.city,
+      onAcceptWithDetails: (details) =>
+          onDropCityUpgrade?.call(column, details.data),
       builder: (context, candidates, rejected) {
         // Byggnadskortets egen bild ska alltid synas; vi lägger bara på
         // en glödande ram ovanpå när ett stadskort dras.
@@ -196,7 +215,9 @@ class PrincipalityGrid extends StatelessWidget {
               DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0xFF7CBF6A), width: isHovering ? 3 : 2),
+                  border: Border.all(
+                      color: const Color(0xFF7CBF6A),
+                      width: isHovering ? 3 : 2),
                 ),
               ),
           ],
@@ -209,17 +230,22 @@ class PrincipalityGrid extends StatelessWidget {
     final road = board.roads[col];
     final above = board.regionAt(col, BuildingRow.above);
     final below = board.regionAt(col, BuildingRow.below);
-    final isFrontier = col == board.leftmostColumn - 1 || col == board.rightmostColumn + 1;
+    final isFrontier =
+        col == board.leftmostColumn - 1 || col == board.rightmostColumn + 1;
 
     return SizedBox(
       width: unit,
       child: Column(
         children: [
-          SizedBox(height: unit, child: above != null ? _region(above) : const SizedBox()),
+          SizedBox(
+              height: unit,
+              child: above != null ? _region(above) : const SizedBox()),
           SizedBox(height: gap),
           SizedBox(height: unit, child: _roadSlot(col, road, isFrontier)),
           SizedBox(height: gap),
-          SizedBox(height: unit, child: below != null ? _region(below) : const SizedBox()),
+          SizedBox(
+              height: unit,
+              child: below != null ? _region(below) : const SizedBox()),
         ],
       ),
     );
@@ -230,16 +256,19 @@ class PrincipalityGrid extends StatelessWidget {
     if (!interactive || !isFrontier) return const SizedBox();
 
     return DragTarget<GameCard>(
-      onWillAcceptWithDetails: (details) => details.data.category == CardCategory.road,
+      onWillAcceptWithDetails: (details) =>
+          details.data.category == CardCategory.road,
       onAcceptWithDetails: (details) => onDropRoad?.call(col, details.data),
       builder: (context, candidates, rejected) {
         final isHovering = candidates.isNotEmpty;
-        return BuildingSiteView(highlighted: isHovering || _draggingRoad, hovering: isHovering);
+        return BuildingSiteView(
+            highlighted: isHovering || _draggingRoad, hovering: isHovering);
       },
     );
   }
 
-  Widget _siteRow(int column, BuildingRow row, List<PlacedCard?> sites, double width) {
+  Widget _siteRow(
+      int column, BuildingRow row, List<PlacedCard?> sites, double width) {
     return SizedBox(
       height: unit,
       width: width,
@@ -254,16 +283,21 @@ class PrincipalityGrid extends StatelessWidget {
     );
   }
 
-  Widget _buildingSite(int column, BuildingRow row, int slotIndex, PlacedCard? placed) {
+  Widget _buildingSite(
+      int column, BuildingRow row, int slotIndex, PlacedCard? placed) {
     if (placed != null) return _expansionCard(placed);
     if (!interactive) return const BuildingSiteView();
 
     return DragTarget<GameCard>(
-      onWillAcceptWithDetails: (details) => details.data.category == CardCategory.expansion,
-      onAcceptWithDetails: (details) => onDropExpansion?.call(column, row, slotIndex, details.data),
+      onWillAcceptWithDetails: (details) =>
+          details.data.category == CardCategory.expansion,
+      onAcceptWithDetails: (details) =>
+          onDropExpansion?.call(column, row, slotIndex, details.data),
       builder: (context, candidates, rejected) {
         final isHovering = candidates.isNotEmpty;
-        return BuildingSiteView(highlighted: isHovering || _draggingExpansion, hovering: isHovering);
+        return BuildingSiteView(
+            highlighted: isHovering || _draggingExpansion,
+            hovering: isHovering);
       },
     );
   }

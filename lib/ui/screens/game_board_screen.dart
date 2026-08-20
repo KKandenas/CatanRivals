@@ -56,7 +56,8 @@ class GameBoardScreen extends ConsumerWidget {
               child: Text(
                 state.sessionError!,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onErrorContainer),
               ),
             )
           else if (state.mode == SessionMode.host && !state.opponentConnected)
@@ -96,7 +97,8 @@ class GameBoardScreen extends ConsumerWidget {
             onDragEnd: notifier.endDrag,
             isChoosingHand: state.isOnline && !state.handsReady,
             isMyTurnToChooseHand: state.isMyTurnToChooseHand,
-            onChooseStack: (index) => _handleResult(context, notifier.chooseStartingStack(index)),
+            onChooseStack: (index) =>
+                _handleResult(context, notifier.chooseStartingStack(index)),
           ),
           Expanded(
             flex: 5,
@@ -104,11 +106,15 @@ class GameBoardScreen extends ConsumerWidget {
               board: state.you.principality,
               interactive: true,
               draggingCard: state.draggingCard,
-              onDropExpansion: (column, row, slotIndex, card) =>
-                  _handleResult(context, notifier.dropExpansion(column, row, slotIndex, card)),
-              onDropRoad: (column, card) => _handleResult(context, notifier.dropRoad(column, card)),
-              onDropSettlement: (column, card) => _handleResult(context, notifier.dropSettlement(column, card)),
-              onDropCityUpgrade: (column, card) => _handleResult(context, notifier.dropCityUpgrade(column, card)),
+              onDropExpansion: (column, row, slotIndex, card) => _handleResult(
+                  context,
+                  notifier.dropExpansion(column, row, slotIndex, card)),
+              onDropRoad: (column, card) =>
+                  _handleResult(context, notifier.dropRoad(column, card)),
+              onDropSettlement: (column, card) =>
+                  _handleResult(context, notifier.dropSettlement(column, card)),
+              onDropCityUpgrade: (column, card) => _handleResult(
+                  context, notifier.dropCityUpgrade(column, card)),
             ),
           ),
           HandDock(
