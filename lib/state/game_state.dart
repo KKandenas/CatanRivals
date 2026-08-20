@@ -30,6 +30,15 @@ class GameState {
   final bool opponentConnected;
   final String? sessionError;
 
+  /// Vems tur det är just nu (regelhäftet s. 7). Röd går alltid först
+  /// – matchar samma förenkling som starthandsvalet ([pendingHandChooserId]).
+  final String activePlayerId;
+
+  /// Om den aktiva spelaren redan slagit produktionstärningen den här
+  /// omgången. Händelsetärningen är inte byggd än.
+  final bool diceRolled;
+  final int? productionRoll;
+
   const GameState({
     required this.you,
     required this.opponent,
@@ -41,9 +50,17 @@ class GameState {
     this.opponentPlayerId = 'opponent',
     this.opponentConnected = false,
     this.sessionError,
+    this.activePlayerId = 'you',
+    this.diceRolled = false,
+    this.productionRoll,
   });
 
   bool get isOnline => mode != SessionMode.local;
+
+  /// I lokalt läge (samma iPad) finns ingen verklig spärr mot vem som
+  /// får slå/avsluta omgången – det är samma enhet. Online gäller den
+  /// riktiga tur-spärren.
+  bool get isMyTurn => !isOnline || activePlayerId == myPlayerId;
 
   /// Röd/blå-tillhörighet härleds från spelar-id:t (satt av
   /// [GameNotifier.hostRoom]/[joinRoom]/mock-datan): host/"you" är
@@ -82,6 +99,10 @@ class GameState {
     bool? opponentConnected,
     String? sessionError,
     bool clearSessionError = false,
+    String? activePlayerId,
+    bool? diceRolled,
+    int? productionRoll,
+    bool clearProductionRoll = false,
   }) {
     return GameState(
       you: you ?? this.you,
@@ -94,6 +115,9 @@ class GameState {
       opponentPlayerId: opponentPlayerId ?? this.opponentPlayerId,
       opponentConnected: opponentConnected ?? this.opponentConnected,
       sessionError: clearSessionError ? null : (sessionError ?? this.sessionError),
+      activePlayerId: activePlayerId ?? this.activePlayerId,
+      diceRolled: diceRolled ?? this.diceRolled,
+      productionRoll: clearProductionRoll ? null : (productionRoll ?? this.productionRoll),
     );
   }
 }

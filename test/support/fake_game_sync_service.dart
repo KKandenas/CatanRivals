@@ -11,8 +11,10 @@ import 'package:catan_rivals/services/game_sync_service.dart';
 class FakeGameSyncService implements GameSyncService {
   final Map<String, Map<String, Player>> _players = {};
   final Map<String, Map<String, int>> _centerStacks = {};
+  final Map<String, TurnState> _turnStates = {};
   final Map<String, StreamController<Map<String, Player>>> _playerControllers = {};
   final Map<String, StreamController<Map<String, int>>> _centerStackControllers = {};
+  final Map<String, StreamController<TurnState>> _turnStateControllers = {};
 
   StreamController<Map<String, Player>> _playersController(String roomCode) =>
       _playerControllers.putIfAbsent(roomCode, () => StreamController.broadcast());
@@ -20,17 +22,23 @@ class FakeGameSyncService implements GameSyncService {
   StreamController<Map<String, int>> _centerStacksController(String roomCode) =>
       _centerStackControllers.putIfAbsent(roomCode, () => StreamController.broadcast());
 
+  StreamController<TurnState> _turnStateController(String roomCode) =>
+      _turnStateControllers.putIfAbsent(roomCode, () => StreamController.broadcast());
+
   @override
   Future<void> createRoom(
     String roomCode,
     String hostId,
     Player hostPlayer,
     Map<String, int> centerStacks,
+    TurnState turnState,
   ) async {
     _players[roomCode] = {hostId: hostPlayer};
     _centerStacks[roomCode] = Map.of(centerStacks);
+    _turnStates[roomCode] = turnState;
     _playersController(roomCode).add(Map.of(_players[roomCode]!));
     _centerStacksController(roomCode).add(Map.of(_centerStacks[roomCode]!));
+    _turnStateController(roomCode).add(turnState);
   }
 
   @override
@@ -79,5 +87,19 @@ class FakeGameSyncService implements GameSyncService {
   Future<void> writeCenterStacks(String roomCode, Map<String, int> centerStacks) async {
     _centerStacks[roomCode] = Map.of(centerStacks);
     _centerStacksController(roomCode).add(Map.of(centerStacks));
+  }
+
+  @override
+  Stream<TurnState> watchTurnState(String roomCode) {
+    final existing = _turnStates[roomCode];
+    final controller = _turnStateController(roomCode);
+    if (existing == null) return controller.stream;
+    return controller.stream.transform(_replayLatest(existing));
+  }
+
+  @override
+  Future<void> writeTurnState(String roomCode, TurnState turnState) async {
+    _turnStates[roomCode] = turnState;
+    _turnStateController(roomCode).add(turnState);
   }
 }

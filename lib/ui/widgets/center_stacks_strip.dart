@@ -20,7 +20,6 @@ import 'card_detail_dialog.dart';
 /// `stackCounts` är mock-data tills en riktig dragstapel-modell finns.
 class CenterStacksStrip extends StatelessWidget {
   final Map<String, int> stackCounts;
-  final int lastProductionRoll;
   final bool isYourTurn;
   final void Function(GameCard card)? onDragStarted;
   final VoidCallback? onDragEnd;
@@ -33,16 +32,29 @@ class CenterStacksStrip extends StatelessWidget {
   final bool isMyTurnToChooseHand;
   final void Function(int stackIndex)? onChooseStack;
 
+  /// Omgången (regelhäftet s. 7): produktionstärningens senaste kast
+  /// (`null` = inte slagen än den här omgången), och om den redan är
+  /// slagen. Tärningen går att trycka på för att slå när det är din
+  /// tur och den inte redan är slagen; "Avsluta omgång" blir aktiv när
+  /// den väl är slagen.
+  final int? productionRoll;
+  final bool diceRolled;
+  final VoidCallback? onRollDice;
+  final VoidCallback? onEndTurn;
+
   const CenterStacksStrip({
     super.key,
     required this.stackCounts,
-    this.lastProductionRoll = 6,
     this.isYourTurn = true,
     this.onDragStarted,
     this.onDragEnd,
     this.isChoosingHand = false,
     this.isMyTurnToChooseHand = false,
     this.onChooseStack,
+    this.productionRoll,
+    this.diceRolled = false,
+    this.onRollDice,
+    this.onEndTurn,
   });
 
   @override
@@ -93,9 +105,17 @@ class CenterStacksStrip extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          _DiceBadge(value: lastProductionRoll),
+          _DiceBadge(
+            value: productionRoll,
+            rollable: isYourTurn && !diceRolled && !isChoosingHand,
+            onTap: onRollDice,
+          ),
           const SizedBox(width: 8),
           _TurnIndicator(isYourTurn: isYourTurn),
+          if (isYourTurn && diceRolled && !isChoosingHand) ...[
+            const SizedBox(width: 8),
+            _EndTurnButton(onTap: onEndTurn),
+          ],
         ],
       ),
     );
@@ -244,27 +264,61 @@ class _CountBadge extends StatelessWidget {
   }
 }
 
+/// Produktionstärningen (regelhäftet s. 7). Visar det senaste kastet,
+/// eller ett "🎲"-ikon att trycka på för att slå när det är din tur och
+/// tärningen inte redan är slagen den här omgången.
 class _DiceBadge extends StatelessWidget {
-  final int value;
+  final int? value;
+  final bool rollable;
+  final VoidCallback? onTap;
 
-  const _DiceBadge({required this.value});
+  const _DiceBadge({required this.value, required this.rollable, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final badge = Container(
       width: 32,
       height: 32,
       decoration: BoxDecoration(
-        color: CatanColors.parchment,
+        color: rollable ? const Color(0xFF7CBF6A) : CatanColors.parchment,
         borderRadius: BorderRadius.circular(6),
         boxShadow: const [
           BoxShadow(color: Colors.black45, blurRadius: 2, offset: Offset(0, 1))
         ],
       ),
       alignment: Alignment.center,
-      child: Text('$value',
-          style: const TextStyle(
-              color: CatanColors.ink, fontWeight: FontWeight.bold)),
+      child: value == null
+          ? Icon(Icons.casino,
+              size: 18, color: rollable ? Colors.white : CatanColors.inkSoft)
+          : Text('$value',
+              style: const TextStyle(
+                  color: CatanColors.ink, fontWeight: FontWeight.bold)),
+    );
+    if (!rollable) return badge;
+    return GestureDetector(onTap: onTap, child: badge);
+  }
+}
+
+class _EndTurnButton extends StatelessWidget {
+  final VoidCallback? onTap;
+
+  const _EndTurnButton({this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: const Color(0xFF7CBF6A),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: const Text(
+          'Avsluta omgång',
+          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+        ),
+      ),
     );
   }
 }

@@ -20,6 +20,10 @@ typedef ExpansionDropCallback = void Function(
 /// kolumnen (by/stads-uppgradering) det gäller.
 typedef ColumnDropCallback = void Function(int column, GameCard card);
 
+/// Anropas när +/- trycks på en region för att manuellt justera dess
+/// lagrade resurser (regelhäftet s. 7: produktionstärningens utdelning).
+typedef RegionAdjustCallback = void Function(int junctionColumn, BuildingRow row, int delta);
+
 /// Ritar ut ett [RealmBoard] enligt kolumnmodellen: byar/städer i en rad,
 /// vägar mellan dem, och regioner delade diagonalt i hörnen ovanför och
 /// nedanför (se "Rikets koordinatsystem"-skissen). Zoombart/panorerbart
@@ -45,6 +49,7 @@ class PrincipalityGrid extends StatelessWidget {
   final ColumnDropCallback? onDropRoad;
   final ColumnDropCallback? onDropSettlement;
   final ColumnDropCallback? onDropCityUpgrade;
+  final RegionAdjustCallback? onAdjustRegion;
 
   const PrincipalityGrid({
     super.key,
@@ -57,6 +62,7 @@ class PrincipalityGrid extends StatelessWidget {
     this.onDropRoad,
     this.onDropSettlement,
     this.onDropCityUpgrade,
+    this.onAdjustRegion,
   });
 
   bool get _draggingRoad => draggingCard?.category == CardCategory.road;
@@ -239,13 +245,17 @@ class PrincipalityGrid extends StatelessWidget {
         children: [
           SizedBox(
               height: unit,
-              child: above != null ? _region(above) : const SizedBox()),
+              child: above != null
+                  ? _region(above, col, BuildingRow.above)
+                  : const SizedBox()),
           SizedBox(height: gap),
           SizedBox(height: unit, child: _roadSlot(col, road, isFrontier)),
           SizedBox(height: gap),
           SizedBox(
               height: unit,
-              child: below != null ? _region(below) : const SizedBox()),
+              child: below != null
+                  ? _region(below, col, BuildingRow.below)
+                  : const SizedBox()),
         ],
       ),
     );
@@ -302,8 +312,14 @@ class PrincipalityGrid extends StatelessWidget {
     );
   }
 
-  Widget _region(PlacedCard placed) {
-    return RegionCardView(card: placed.card, stored: placed.storedResources);
+  Widget _region(PlacedCard placed, int column, BuildingRow row) {
+    return RegionCardView(
+      card: placed.card,
+      stored: placed.storedResources,
+      onAdjust: interactive && onAdjustRegion != null
+          ? (delta) => onAdjustRegion!(column, row, delta)
+          : null,
+    );
   }
 
   Widget _expansionCard(PlacedCard placed) {

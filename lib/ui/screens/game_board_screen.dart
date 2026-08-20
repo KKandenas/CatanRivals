@@ -102,6 +102,11 @@ class GameBoardScreen extends ConsumerWidget {
             isMyTurnToChooseHand: state.isMyTurnToChooseHand,
             onChooseStack: (index) =>
                 _handleResult(context, notifier.chooseStartingStack(index)),
+            isYourTurn: state.isMyTurn,
+            productionRoll: state.productionRoll,
+            diceRolled: state.diceRolled,
+            onRollDice: () => _handleResult(context, notifier.rollProductionDie()),
+            onEndTurn: () => _handleResult(context, notifier.endTurn()),
           ),
           Expanded(
             flex: 5,
@@ -118,6 +123,7 @@ class GameBoardScreen extends ConsumerWidget {
                   _handleResult(context, notifier.dropSettlement(column, card)),
               onDropCityUpgrade: (column, card) => _handleResult(
                   context, notifier.dropCityUpgrade(column, card)),
+              onAdjustRegion: notifier.adjustRegionResource,
             ),
           ),
           HandDock(

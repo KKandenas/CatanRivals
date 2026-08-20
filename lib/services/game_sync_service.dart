@@ -10,6 +10,7 @@ import '../models/models.dart';
 /// /games/{roomCode}/
 ///   players/{playerId} -> Player.toJson()
 ///   centerStacks       -> Map<String, int>
+///   turnState          -> TurnState.toJson()
 /// ```
 abstract class GameSyncService {
   /// Skapar ett nytt rum med given kod och sätter värden-spelaren som
@@ -20,6 +21,7 @@ abstract class GameSyncService {
     String hostId,
     Player hostPlayer,
     Map<String, int> centerStacks,
+    TurnState turnState,
   );
 
   /// Går med i ett befintligt rum. Returnerar `null` vid lyckat
@@ -37,4 +39,9 @@ abstract class GameSyncService {
   Future<void> writePlayer(String roomCode, String playerId, Player player);
 
   Future<void> writeCenterStacks(String roomCode, Map<String, int> centerStacks);
+
+  /// Strömmar vems tur det är och tärningsläget, varje gång det ändras.
+  Stream<TurnState> watchTurnState(String roomCode);
+
+  Future<void> writeTurnState(String roomCode, TurnState turnState);
 }

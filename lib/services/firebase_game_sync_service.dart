@@ -17,11 +17,13 @@ class FirebaseGameSyncService implements GameSyncService {
     String hostId,
     Player hostPlayer,
     Map<String, int> centerStacks,
+    TurnState turnState,
   ) async {
     await _roomRef(roomCode).set({
       'createdAt': ServerValue.timestamp,
       'players': {hostId: hostPlayer.toJson()},
       'centerStacks': centerStacks,
+      'turnState': turnState.toJson(),
     });
   }
 
@@ -70,5 +72,19 @@ class FirebaseGameSyncService implements GameSyncService {
   @override
   Future<void> writeCenterStacks(String roomCode, Map<String, int> centerStacks) {
     return _roomRef(roomCode).child('centerStacks').set(centerStacks);
+  }
+
+  @override
+  Stream<TurnState> watchTurnState(String roomCode) {
+    return _roomRef(roomCode).child('turnState').onValue.map((event) {
+      final raw = event.snapshot.value;
+      if (raw is! Map) return const TurnState(activePlayerId: 'host');
+      return TurnState.fromJson(Map<String, dynamic>.from(raw));
+    });
+  }
+
+  @override
+  Future<void> writeTurnState(String roomCode, TurnState turnState) {
+    return _roomRef(roomCode).child('turnState').set(turnState.toJson());
   }
 }

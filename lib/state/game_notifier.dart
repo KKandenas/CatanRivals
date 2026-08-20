@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -34,6 +35,7 @@ final gameProvider = NotifierProvider<GameNotifier, GameState>(GameNotifier.new)
 class GameNotifier extends Notifier<GameState> {
   StreamSubscription<Map<String, Player>>? _playersSub;
   StreamSubscription<Map<String, int>>? _centerStacksSub;
+  StreamSubscription<TurnState>? _turnStateSub;
 
   /// Regionstapelns kvarvarande, blandade kort (se [RegionDeck]) – dras
   /// från när en ny by byggs. Var spelares klient håller sin egen
@@ -87,6 +89,7 @@ class GameNotifier extends Notifier<GameState> {
     ref.onDispose(() {
       _playersSub?.cancel();
       _centerStacksSub?.cancel();
+      _turnStateSub?.cancel();
     });
     return GameState(
       you: MockGame.buildYou(),
@@ -109,6 +112,7 @@ class GameNotifier extends Notifier<GameState> {
   void playLocally() {
     _playersSub?.cancel();
     _centerStacksSub?.cancel();
+    _turnStateSub?.cancel();
     _resetDecks();
 
     // Lokalt läge har ingen egen vy för en andra spelare att trycka
@@ -126,6 +130,8 @@ class GameNotifier extends Notifier<GameState> {
       centerStacks: Map.of(MockGame.centerStackCounts())
         ..update('draw1', (v) => v - 3)
         ..update('draw2', (v) => v - 3),
+      // Röd ("du") går alltid först – samma förenkling som starthandsvalet.
+      activePlayerId: 'you',
     );
   }
 
@@ -138,8 +144,12 @@ class GameNotifier extends Notifier<GameState> {
     final centerStacks = MockGame.centerStackCounts();
     _resetDecks();
 
+    // Röd (host) går alltid först – samma förenkling som starthandsvalet.
+    const initialTurnState = TurnState(activePlayerId: 'host');
     try {
-      await _sync.createRoom(roomCode, 'host', hostPlayer, centerStacks).timeout(const Duration(seconds: 10));
+      await _sync
+          .createRoom(roomCode, 'host', hostPlayer, centerStacks, initialTurnState)
+          .timeout(const Duration(seconds: 10));
     } on TimeoutException {
       throw Exception('Fick ingen kontakt med servern. Kontrollera internetanslutningen och försök igen.');
     }
@@ -153,6 +163,7 @@ class GameNotifier extends Notifier<GameState> {
       myPlayerId: 'host',
       opponentPlayerId: 'guest',
       opponentConnected: false,
+      activePlayerId: initialTurnState.activePlayerId,
     );
     _subscribeToRoom(roomCode);
     return roomCode;
@@ -180,6 +191,9 @@ class GameNotifier extends Notifier<GameState> {
       myPlayerId: 'guest',
       opponentPlayerId: 'host',
       opponentConnected: true,
+      // Host är alltid röd och går alltid först – överskrivs så fort
+      // [watchTurnState] hinner leverera det riktiga läget.
+      activePlayerId: 'host',
     );
     _subscribeToRoom(roomCode);
     return null;
@@ -188,6 +202,7 @@ class GameNotifier extends Notifier<GameState> {
   void _subscribeToRoom(String roomCode) {
     _playersSub?.cancel();
     _centerStacksSub?.cancel();
+    _turnStateSub?.cancel();
 
     _playersSub = _sync.watchPlayers(roomCode).listen(
       (players) {
@@ -212,6 +227,20 @@ class GameNotifier extends Notifier<GameState> {
         state = state.copyWith(sessionError: 'Kunde inte synka dragstaplarna: $e');
       },
     );
+
+    _turnStateSub = _sync.watchTurnState(roomCode).listen(
+      (turnState) {
+        state = state.copyWith(
+          activePlayerId: turnState.activePlayerId,
+          diceRolled: turnState.diceRolled,
+          productionRoll: turnState.productionRoll,
+          clearProductionRoll: turnState.productionRoll == null,
+        );
+      },
+      onError: (Object e) {
+        state = state.copyWith(sessionError: 'Kunde inte synka omgången: $e');
+      },
+    );
   }
 
   void _syncMyPlayer() {
@@ -224,6 +253,61 @@ class GameNotifier extends Notifier<GameState> {
     final roomCode = state.roomCode;
     if (roomCode == null) return;
     unawaited(_sync.writeCenterStacks(roomCode, state.centerStacks));
+  }
+
+  void _syncTurnState() {
+    final roomCode = state.roomCode;
+    if (roomCode == null) return;
+    unawaited(_sync.writeTurnState(
+      roomCode,
+      TurnState(
+        activePlayerId: state.activePlayerId,
+        diceRolled: state.diceRolled,
+        productionRoll: state.productionRoll,
+      ),
+    ));
+  }
+
+  // ---------------------------------------------------------------------
+  // Omgången: slå produktionstärningen, justera resurser, avsluta
+  // ---------------------------------------------------------------------
+
+  /// Slår produktionstärningen (1–6, regelhäftet s. 7). Båda spelarna
+  /// får utdelning på sina regioner med det talet – i det här steget
+  /// justerar man själv resurserna manuellt med +/- på varje region
+  /// (se [adjustRegionResource]) i stället för att det sker automatiskt.
+  /// Händelsetärningen och stegen efter tärningsslaget (åtgärder,
+  /// handkortskontroll, byte) är inte byggda än.
+  String? rollProductionDie() {
+    if (!state.handsReady) return null;
+    if (!state.isMyTurn) return 'Inte din tur.';
+    if (state.diceRolled) return null;
+
+    final roll = Random().nextInt(6) + 1;
+    state = state.copyWith(productionRoll: roll, diceRolled: true);
+    _syncTurnState();
+    return null;
+  }
+
+  /// Justerar lagrade resurser på en av dina egna regioner – den
+  /// manuella motsvarigheten till att en region ger/förlorar en resurs.
+  /// Klämmer till 0–3 (regelhäftet s. 3), se [RealmBoard.addResourceToRegion].
+  void adjustRegionResource(int junctionColumn, BuildingRow row, int delta) {
+    state.you.principality.addResourceToRegion(junctionColumn, row, delta);
+    state = state.copyWith(you: state.you);
+    _syncMyPlayer();
+  }
+
+  /// Lämnar över turen till motståndaren och återställer tärningsläget.
+  /// Kräver att produktionstärningen redan är slagen den här omgången.
+  String? endTurn() {
+    if (!state.isMyTurn) return 'Inte din tur.';
+    if (!state.diceRolled) return 'Slå tärningen innan du avslutar omgången.';
+
+    final next = state.activePlayerId == state.myPlayerId ? state.opponentPlayerId : state.myPlayerId;
+    state = state.copyWith(activePlayerId: next, diceRolled: false, clearProductionRoll: true);
+    _syncTurnState();
+    return null;
   }
 
   // ---------------------------------------------------------------------
