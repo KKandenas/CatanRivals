@@ -31,7 +31,10 @@ class GameBoardScreen extends ConsumerWidget {
     final notifier = ref.read(gameProvider.notifier);
 
     return Scaffold(
-      appBar: state.roomCode == null
+      // Rumskoden behövs bara medan den andra spelaren ännu inte gått
+      // med – när båda är inne försvinner remsan automatiskt för att
+      // ge mer plats åt själva brädet.
+      appBar: (state.roomCode == null || state.opponentConnected)
           ? null
           : AppBar(
               title: Text('Rum: ${state.roomCode}'),

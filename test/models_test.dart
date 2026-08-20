@@ -257,4 +257,41 @@ void main() {
       expect(board.regionAt(-1, BuildingRow.above)!.storedResources, 3);
     });
   });
+
+  group('RealmBoard – poängsummor per typ', () {
+    test('sums victory, strength, commerce, skill and progress points across placed cards', () {
+      final board = StarterCards.buildStartingPrincipality('p1');
+      // Startuppställningens 2 byar ger 2 VP och inga andra poäng.
+      expect(board.totalVictoryPoints, 2);
+      expect(board.totalStrengthPoints, 0);
+      expect(board.totalCommercePoints, 0);
+      expect(board.totalSkillPoints, 0);
+      expect(board.totalProgressPoints, 0);
+
+      board.placeExpansion(
+        0,
+        BuildingRow.above,
+        0,
+        const PlacedCard(
+          card: GameCard(
+            id: 'test-unit',
+            name: 'Testenhet',
+            category: CardCategory.expansion,
+            strengthPoints: 2,
+            commercePoints: 1,
+            skillPoints: 3,
+            progressPoints: 1,
+            victoryPoints: 1,
+            imageAsset: 'assets/images/cards/heroes/test.png',
+          ),
+        ),
+      );
+
+      expect(board.totalVictoryPoints, 3);
+      expect(board.totalStrengthPoints, 2);
+      expect(board.totalCommercePoints, 1);
+      expect(board.totalSkillPoints, 3);
+      expect(board.totalProgressPoints, 1);
+    });
+  });
 }

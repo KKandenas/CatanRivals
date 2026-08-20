@@ -17,10 +17,11 @@ class PlacedCard {
 
   const PlacedCard({required this.card, this.storedResources = 0});
 
-  PlacedCard copyWith({int? storedResources}) =>
-      PlacedCard(card: card, storedResources: storedResources ?? this.storedResources);
+  PlacedCard copyWith({int? storedResources}) => PlacedCard(
+      card: card, storedResources: storedResources ?? this.storedResources);
 
-  Map<String, dynamic> toJson() => {'card': card.toJson(), 'storedResources': storedResources};
+  Map<String, dynamic> toJson() =>
+      {'card': card.toJson(), 'storedResources': storedResources};
 
   factory PlacedCard.fromJson(Map<String, dynamic> json) => PlacedCard(
         card: GameCard.fromJson(Map<String, dynamic>.from(json['card'] as Map)),
@@ -91,7 +92,9 @@ class SettlementNode {
     final map = raw as Map? ?? {};
     return [
       for (var i = 0; i < slotCount; i++)
-        map['s$i'] == null ? null : PlacedCard.fromJson(Map<String, dynamic>.from(map['s$i'] as Map)),
+        map['s$i'] == null
+            ? null
+            : PlacedCard.fromJson(Map<String, dynamic>.from(map['s$i'] as Map)),
     ];
   }
 
@@ -102,7 +105,8 @@ class SettlementNode {
       };
 
   factory SettlementNode.fromJson(Map<String, dynamic> json) {
-    final center = PlacedCard.fromJson(Map<String, dynamic>.from(json['center'] as Map));
+    final center =
+        PlacedCard.fromJson(Map<String, dynamic>.from(json['center'] as Map));
     final slotCount = center.card.category == CardCategory.city ? 2 : 1;
     return SettlementNode(
       center: center,
@@ -156,7 +160,9 @@ class RealmBoard {
   SettlementNode? settlementAt(int column) => _settlements[column];
 
   PlacedCard? regionAt(int junctionColumn, BuildingRow row) =>
-      row == BuildingRow.above ? _regionsAbove[junctionColumn] : _regionsBelow[junctionColumn];
+      row == BuildingRow.above
+          ? _regionsAbove[junctionColumn]
+          : _regionsBelow[junctionColumn];
 
   /// De två hörnregioner (vänster/höger knutpunkt) som ligger ovanför
   /// respektive nedanför byn/staden i given kolumn.
@@ -190,7 +196,8 @@ class RealmBoard {
   void placeRegion(int junctionColumn, BuildingRow row, PlacedCard regionCard) {
     final target = row == BuildingRow.above ? _regionsAbove : _regionsBelow;
     if (target.containsKey(junctionColumn)) {
-      throw StateError('Det ligger redan en region i kolumn $junctionColumn ($row).');
+      throw StateError(
+          'Det ligger redan en region i kolumn $junctionColumn ($row).');
     }
     target[junctionColumn] = regionCard;
   }
@@ -198,7 +205,8 @@ class RealmBoard {
   /// Placerar ett bygg-/enhetskort på en av byggplatserna för byn/staden
   /// i given kolumn. `slotIndex` är 0 för den ursprungliga byggplatsen
   /// och 1 för stadens andra (tillkommande) byggplats.
-  void placeExpansion(int column, BuildingRow row, int slotIndex, PlacedCard expansionCard) {
+  void placeExpansion(
+      int column, BuildingRow row, int slotIndex, PlacedCard expansionCard) {
     final node = _settlements[column];
     if (node == null) {
       throw StateError('Ingen by/stad i kolumn $column.');
@@ -236,7 +244,8 @@ class RealmBoard {
   /// [canAfford] först).
   void spend(Map<ResourceType, int> cost) {
     if (!canAfford(cost)) {
-      throw StateError('Inte tillräckligt med resurser för att betala kostnaden.');
+      throw StateError(
+          'Inte tillräckligt med resurser för att betala kostnaden.');
     }
     for (final entry in cost.entries) {
       var remaining = entry.value;
@@ -251,9 +260,14 @@ class RealmBoard {
       for (final location in candidates) {
         if (remaining <= 0) break;
         final region = regionAt(location.key, location.value)!;
-        if (region.card.resource != entry.key || region.storedResources <= 0) continue;
-        final taken = remaining < region.storedResources ? remaining : region.storedResources;
-        _setRegionStorage(location.key, location.value, region.storedResources - taken);
+        if (region.card.resource != entry.key || region.storedResources <= 0) {
+          continue;
+        }
+        final taken = remaining < region.storedResources
+            ? remaining
+            : region.storedResources;
+        _setRegionStorage(
+            location.key, location.value, region.storedResources - taken);
         remaining -= taken;
       }
     }
@@ -268,32 +282,44 @@ class RealmBoard {
     _setRegionStorage(junctionColumn, row, clamped);
   }
 
-  void _setRegionStorage(int junctionColumn, BuildingRow row, int storedResources) {
+  void _setRegionStorage(
+      int junctionColumn, BuildingRow row, int storedResources) {
     final target = row == BuildingRow.above ? _regionsAbove : _regionsBelow;
     final region = target[junctionColumn];
     if (region == null) return;
     target[junctionColumn] = region.copyWith(storedResources: storedResources);
   }
 
-  int get leftmostColumn =>
-      _settlements.keys.isEmpty ? 0 : _settlements.keys.reduce((a, b) => a < b ? a : b);
+  int get leftmostColumn => _settlements.keys.isEmpty
+      ? 0
+      : _settlements.keys.reduce((a, b) => a < b ? a : b);
 
-  int get rightmostColumn =>
-      _settlements.keys.isEmpty ? 0 : _settlements.keys.reduce((a, b) => a > b ? a : b);
+  int get rightmostColumn => _settlements.keys.isEmpty
+      ? 0
+      : _settlements.keys.reduce((a, b) => a > b ? a : b);
 
-  int get totalVictoryPoints {
+  int get totalVictoryPoints => _sumPoints((card) => card.victoryPoints);
+  int get totalStrengthPoints => _sumPoints((card) => card.strengthPoints);
+  int get totalCommercePoints => _sumPoints((card) => card.commercePoints);
+  int get totalSkillPoints => _sumPoints((card) => card.skillPoints);
+  int get totalProgressPoints => _sumPoints((card) => card.progressPoints);
+
+  /// Summerar en poängtyp (VP, styrka, handel, färdighet eller
+  /// framsteg) över alla utplacerade kort: byar/städer, bygg-/
+  /// enhetskort på deras byggplatser, vägar och regioner.
+  int _sumPoints(int Function(GameCard card) points) {
     var total = 0;
     for (final node in _settlements.values) {
-      total += node.center.card.victoryPoints;
+      total += points(node.center.card);
       for (final site in [...node.aboveSites, ...node.belowSites]) {
-        total += site?.card.victoryPoints ?? 0;
+        if (site != null) total += points(site.card);
       }
     }
     for (final road in _roads.values) {
-      total += road.card.victoryPoints;
+      total += points(road.card);
     }
     for (final region in [..._regionsAbove.values, ..._regionsBelow.values]) {
-      total += region.card.victoryPoints;
+      total += points(region.card);
     }
     return total;
   }
@@ -308,19 +334,22 @@ class RealmBoard {
 
   Map<String, dynamic> toJson() => {
         'ownerId': ownerId,
-        'settlements': _settlements.map((col, node) => MapEntry(_columnKey(col), node.toJson())),
-        'roads': _roads.map((col, card) => MapEntry(_columnKey(col), card.toJson())),
-        'regionsAbove':
-            _regionsAbove.map((col, card) => MapEntry(_columnKey(col), card.toJson())),
-        'regionsBelow':
-            _regionsBelow.map((col, card) => MapEntry(_columnKey(col), card.toJson())),
+        'settlements': _settlements
+            .map((col, node) => MapEntry(_columnKey(col), node.toJson())),
+        'roads':
+            _roads.map((col, card) => MapEntry(_columnKey(col), card.toJson())),
+        'regionsAbove': _regionsAbove
+            .map((col, card) => MapEntry(_columnKey(col), card.toJson())),
+        'regionsBelow': _regionsBelow
+            .map((col, card) => MapEntry(_columnKey(col), card.toJson())),
       };
 
   factory RealmBoard.fromJson(Map<String, dynamic> json) {
-    Map<int, T> parseColumnMap<T>(dynamic raw, T Function(Map<String, dynamic>) fromJson) {
+    Map<int, T> parseColumnMap<T>(
+        dynamic raw, T Function(Map<String, dynamic>) fromJson) {
       return (raw as Map? ?? {}).map(
-        (col, value) =>
-            MapEntry(_parseColumnKey(col as String), fromJson(Map<String, dynamic>.from(value as Map))),
+        (col, value) => MapEntry(_parseColumnKey(col as String),
+            fromJson(Map<String, dynamic>.from(value as Map))),
       );
     }
 

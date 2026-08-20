@@ -4,9 +4,10 @@ import '../../models/models.dart';
 import '../theme/catan_colors.dart';
 import 'card_detail_dialog.dart';
 import 'expansion_card_view.dart';
+import 'score_summary.dart';
 
-/// Bottenfältet (~10%): halvtransparent docka med handkort samt en
-/// sammanfattande resursmätare.
+/// Bottenfältet (~10%): halvtransparent docka med handkort samt
+/// spelarens aktuella ställning (VP och poäng).
 ///
 /// Bygg-/enhetskort (kategori [CardCategory.expansion]) går att
 /// långtrycka-och-dra upp på det egna riket för att spela dem – se
@@ -51,7 +52,7 @@ class HandDock extends StatelessWidget {
                       ),
               ),
               const SizedBox(width: 12),
-              _ResourceMeter(player: player),
+              ScoreSummary(player: player),
             ],
           ),
         ),
@@ -125,47 +126,6 @@ class _CardFace extends StatelessWidget {
                 border: Border.all(color: const Color(0xFF7CBF6A), width: 1.6),
               ),
             ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ResourceMeter extends StatelessWidget {
-  final Player player;
-
-  const _ResourceMeter({required this.player});
-
-  @override
-  Widget build(BuildContext context) {
-    final types = [
-      ResourceType.lumber,
-      ResourceType.brick,
-      ResourceType.ore,
-      ResourceType.grain,
-      ResourceType.wool,
-      ResourceType.gold,
-    ];
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-          color: Colors.black26, borderRadius: BorderRadius.circular(8)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final type in types) ...[
-            Icon(CatanColors.iconFor(type),
-                size: 15, color: CatanColors.resourceColor(type)),
-            const SizedBox(width: 3),
-            Text(
-              '${player.resourceCount(type)}',
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(width: 10),
-          ],
         ],
       ),
     );
