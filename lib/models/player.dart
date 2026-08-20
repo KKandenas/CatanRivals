@@ -14,12 +14,20 @@ class Player {
   final int victoryPoints;
   final RealmBoard principality;
 
+  /// Om spelaren redan tagit sina 3 starthandkort från en draghög
+  /// (regelhäftet s. 6). Ett eget flagg-fält i stället för att kolla
+  /// `hand.isEmpty`, eftersom handen kan bli tom även under vanligt
+  /// spel (spelar man alla kort) utan att starthands-fasen ska räknas
+  /// om.
+  final bool hasDrawnStartingHand;
+
   Player({
     required this.id,
     required this.name,
     List<GameCard>? hand,
     this.victoryPoints = 0,
     RealmBoard? principality,
+    this.hasDrawnStartingHand = false,
   })  : hand = hand ?? [],
         principality = principality ?? RealmBoard(ownerId: id);
 
@@ -31,6 +39,7 @@ class Player {
     List<GameCard>? hand,
     int? victoryPoints,
     RealmBoard? principality,
+    bool? hasDrawnStartingHand,
   }) {
     return Player(
       id: id ?? this.id,
@@ -38,6 +47,7 @@ class Player {
       hand: hand ?? this.hand,
       victoryPoints: victoryPoints ?? this.victoryPoints,
       principality: principality ?? this.principality,
+      hasDrawnStartingHand: hasDrawnStartingHand ?? this.hasDrawnStartingHand,
     );
   }
 
@@ -47,6 +57,7 @@ class Player {
         'hand': hand.map((c) => c.toJson()).toList(),
         'victoryPoints': victoryPoints,
         'principality': principality.toJson(),
+        'hasDrawnStartingHand': hasDrawnStartingHand,
       };
 
   factory Player.fromJson(Map<String, dynamic> json) => Player(
@@ -58,5 +69,6 @@ class Player {
         victoryPoints: json['victoryPoints'] as int? ?? 0,
         principality: RealmBoard.fromJson(
             Map<String, dynamic>.from(json['principality'] as Map)),
+        hasDrawnStartingHand: json['hasDrawnStartingHand'] as bool? ?? false,
       );
 }

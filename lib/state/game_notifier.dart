@@ -71,6 +71,17 @@ class GameNotifier extends Notifier<GameState> {
     return _regionDeck.removeLast();
   }
 
+  /// Tar de 3 översta korten från draghög [stackIndex] och lägger dem i
+  /// spelarens hand (regelhäftet s. 6). Muterar den lokala kopian av
+  /// högen – de återstående 6 korten blir kvar där för framtida
+  /// handpåfyllning.
+  Player _dealStartingHand(Player player, int stackIndex) {
+    final stack = _drawStacks[stackIndex];
+    final drawn = stack.sublist(0, 3);
+    _drawStacks[stackIndex] = stack.sublist(3);
+    return player.copyWith(hand: [...player.hand, ...drawn], hasDrawnStartingHand: true);
+  }
+
   @override
   GameState build() {
     ref.onDispose(() {
@@ -99,10 +110,22 @@ class GameNotifier extends Notifier<GameState> {
     _playersSub?.cancel();
     _centerStacksSub?.cancel();
     _resetDecks();
+
+    // Lokalt läge har ingen egen vy för en andra spelare att trycka
+    // sig igenom "välj en draghög"-steget interaktivt, så här delas
+    // starthänderna ut direkt (röd från hög 1, blå från hög 2) i
+    // stället för att vänta på [chooseStartingStack]. I ett riktigt
+    // rum (host/guest) väljer varje spelare interaktivt på sin egen
+    // enhet – se [hostRoom]/[joinRoom].
+    final you = _dealStartingHand(MockGame.buildStartingPlayer('you', 'Du', isRed: true), 0);
+    final opponent = _dealStartingHand(MockGame.buildStartingPlayer('opponent', 'Motståndare', isRed: false), 1);
+
     state = GameState(
-      you: MockGame.buildYou(),
-      opponent: MockGame.buildOpponent(),
-      centerStacks: MockGame.centerStackCounts(),
+      you: you,
+      opponent: opponent,
+      centerStacks: Map.of(MockGame.centerStackCounts())
+        ..update('draw1', (v) => v - 3)
+        ..update('draw2', (v) => v - 3),
     );
   }
 
@@ -201,6 +224,31 @@ class GameNotifier extends Notifier<GameState> {
     final roomCode = state.roomCode;
     if (roomCode == null) return;
     unawaited(_sync.writeCenterStacks(roomCode, state.centerStacks));
+  }
+
+  // ---------------------------------------------------------------------
+  // Starthand: välj en draghög och ta dess 3 översta kort
+  // ---------------------------------------------------------------------
+
+  /// Väljer draghög [index] (0–3) och tar dess 3 översta kort som
+  /// starthand (regelhäftet s. 6). Bara giltigt om det är den här
+  /// spelarens tur att välja (se [GameState.isMyTurnToChooseHand]) och
+  /// högen inte redan är vald. Returnerar `null` vid lyckat val, annars
+  /// ett felmeddelande.
+  String? chooseStartingStack(int index) {
+    if (state.handsReady) return null;
+    if (!state.isMyTurnToChooseHand) return 'Inte din tur att välja en draghög.';
+    final key = 'draw${index + 1}';
+    if ((state.centerStacks[key] ?? 0) < 9) return 'Den högen är redan vald.';
+
+    final updated = _dealStartingHand(state.you, index);
+    state = state.copyWith(
+      you: updated,
+      centerStacks: Map.of(state.centerStacks)..update(key, (v) => v - 3),
+    );
+    _syncMyPlayer();
+    _syncCenterStacks();
+    return null;
   }
 
   // ---------------------------------------------------------------------

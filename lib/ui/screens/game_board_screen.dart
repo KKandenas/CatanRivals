@@ -68,6 +68,18 @@ class GameBoardScreen extends ConsumerWidget {
                 'Väntar på att motståndaren ska gå med rummet ${state.roomCode} …',
                 textAlign: TextAlign.center,
               ),
+            )
+          else if (state.isOnline && !state.handsReady)
+            Container(
+              width: double.infinity,
+              color: Theme.of(context).colorScheme.secondaryContainer,
+              padding: const EdgeInsets.all(8),
+              child: Text(
+                state.isMyTurnToChooseHand
+                    ? 'Din tur: tryck på en draghög för att ta dina 3 starthandkort'
+                    : 'Väntar på att ${state.opponent.name} väljer en draghög …',
+                textAlign: TextAlign.center,
+              ),
             ),
           TopStatusBar(opponent: state.opponent, opponentIsRed: !state.amIRed),
           Expanded(
@@ -82,6 +94,9 @@ class GameBoardScreen extends ConsumerWidget {
             stackCounts: state.centerStacks,
             onDragStarted: notifier.startDrag,
             onDragEnd: notifier.endDrag,
+            isChoosingHand: state.isOnline && !state.handsReady,
+            isMyTurnToChooseHand: state.isMyTurnToChooseHand,
+            onChooseStack: (index) => _handleResult(context, notifier.chooseStartingStack(index)),
           ),
           Expanded(
             flex: 5,

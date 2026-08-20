@@ -24,6 +24,14 @@ class CenterStacksStrip extends StatelessWidget {
   final void Function(GameCard card)? onDragStarted;
   final VoidCallback? onDragEnd;
 
+  /// Starthandsvalet (regelhäftet s. 6): om `true` går draghögarna att
+  /// trycka på (i stället för att dra korten) för att välja hög och ta
+  /// dess 3 översta kort som starthand – bara när det är ens egen tur
+  /// ([isMyTurnToChooseHand]) och högen inte redan är vald.
+  final bool isChoosingHand;
+  final bool isMyTurnToChooseHand;
+  final void Function(int stackIndex)? onChooseStack;
+
   const CenterStacksStrip({
     super.key,
     required this.stackCounts,
@@ -31,6 +39,9 @@ class CenterStacksStrip extends StatelessWidget {
     this.isYourTurn = true,
     this.onDragStarted,
     this.onDragEnd,
+    this.isChoosingHand = false,
+    this.isMyTurnToChooseHand = false,
+    this.onChooseStack,
   });
 
   @override
@@ -69,10 +80,7 @@ class CenterStacksStrip extends StatelessWidget {
                   width: 34,
                 ),
                 _StackPile(asset: CatanAssets.backRegions, count: stackCounts['regions'] ?? 0, width: 34),
-                _StackPile(asset: CatanAssets.backBasicSet, count: stackCounts['draw1'] ?? 0, width: 34),
-                _StackPile(asset: CatanAssets.backBasicSet, count: stackCounts['draw2'] ?? 0, width: 34),
-                _StackPile(asset: CatanAssets.backBasicSet, count: stackCounts['draw3'] ?? 0, width: 34),
-                _StackPile(asset: CatanAssets.backBasicSet, count: stackCounts['draw4'] ?? 0, width: 34),
+                for (var i = 0; i < 4; i++) _drawStackPile(i),
                 _StackPile(asset: CatanAssets.backEvent, count: stackCounts['event'] ?? 0, width: 34),
               ],
             ),
@@ -83,6 +91,20 @@ class CenterStacksStrip extends StatelessWidget {
           _TurnIndicator(isYourTurn: isYourTurn),
         ],
       ),
+    );
+  }
+
+  Widget _drawStackPile(int index) {
+    final count = stackCounts['draw${index + 1}'] ?? 0;
+    final claimed = count < 9;
+    final tappable = isChoosingHand && isMyTurnToChooseHand && !claimed;
+    return _StackPile(
+      asset: CatanAssets.backBasicSet,
+      count: count,
+      width: 34,
+      dimmed: isChoosingHand && claimed,
+      highlighted: tappable,
+      onTap: tappable ? () => onChooseStack?.call(index) : null,
     );
   }
 }
@@ -98,6 +120,17 @@ class _StackPile extends StatelessWidget {
   final void Function(GameCard card)? onDragStarted;
   final VoidCallback? onDragEnd;
 
+  /// Tryckbar (i stället för dragbar) – används av draghögarna under
+  /// starthandsvalet.
+  final VoidCallback? onTap;
+
+  /// Grön glöd, samma stil som de dragbara högarna – visar att den här
+  /// högen går att trycka på just nu.
+  final bool highlighted;
+
+  /// Nedtonad – en redan vald draghög under starthandsvalet.
+  final bool dimmed;
+
   const _StackPile({
     required this.asset,
     required this.count,
@@ -105,29 +138,36 @@ class _StackPile extends StatelessWidget {
     this.card,
     this.onDragStarted,
     this.onDragEnd,
+    this.onTap,
+    this.highlighted = false,
+    this.dimmed = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final glowing = card != null || highlighted;
     final pile = AspectRatio(
       aspectRatio: 1,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(4),
         child: Container(
           decoration: BoxDecoration(
-            border: Border.all(color: card != null ? const Color(0xFF7CBF6A) : CatanColors.woodFrame, width: card != null ? 1.6 : 1),
+            border: Border.all(color: glowing ? const Color(0xFF7CBF6A) : CatanColors.woodFrame, width: glowing ? 1.6 : 1),
           ),
           child: Image.asset(asset, fit: BoxFit.cover),
         ),
       ),
     );
+    final dimmedPile = dimmed ? Opacity(opacity: 0.4, child: pile) : pile;
 
     return SizedBox(
       width: width,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (card != null && count > 0)
+          if (onTap != null)
+            GestureDetector(onTap: onTap, child: dimmedPile)
+          else if (card != null && count > 0)
             LongPressDraggable<GameCard>(
               data: card,
               delay: const Duration(milliseconds: 180),
@@ -142,7 +182,7 @@ class _StackPile extends StatelessWidget {
               child: pile,
             )
           else
-            pile,
+            dimmedPile,
           const SizedBox(height: 2),
           Text('$count', style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w600)),
         ],

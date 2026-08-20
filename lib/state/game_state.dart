@@ -51,6 +51,24 @@ class GameState {
   /// startuppställning ([StarterCards]) spelaren fick.
   bool get amIRed => myPlayerId == 'host' || myPlayerId == 'you';
 
+  Player get _redPlayer => amIRed ? you : opponent;
+  Player get _bluePlayer => amIRed ? opponent : you;
+
+  /// Vem som ska ta sina 3 starthandkort härnäst (regelhäftet s. 6: den
+  /// röda/startande spelaren väljer en draghög och tar de tre översta
+  /// korten, sedan väljer den andra spelaren en annan hög). `null` när
+  /// båda redan har dragit. Röd går alltid först – riktig tärningsslag
+  /// för att avgöra startspelare är inte byggt än.
+  String? get pendingHandChooserId {
+    if (!_redPlayer.hasDrawnStartingHand) return _redPlayer.id;
+    if (!_bluePlayer.hasDrawnStartingHand) return _bluePlayer.id;
+    return null;
+  }
+
+  bool get isMyTurnToChooseHand => pendingHandChooserId == myPlayerId;
+
+  bool get handsReady => pendingHandChooserId == null;
+
   GameState copyWith({
     Player? you,
     Player? opponent,
