@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/game_notifier.dart';
+import '../theme/catan_assets.dart';
+import '../theme/catan_colors.dart';
 import 'game_board_screen.dart';
 
 /// Startskärmen: skapa ett rum, gå med i ett rum via kod, eller spela
@@ -79,62 +81,82 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text('Catan Duellen', style: Theme.of(context).textTheme.headlineMedium, textAlign: TextAlign.center),
-                  const SizedBox(height: 24),
-                  TextField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(labelText: 'Ditt namn', border: OutlineInputBorder()),
-                  ),
-                  const SizedBox(height: 24),
-                  FilledButton(
-                    onPressed: _busy ? null : _hostRoom,
-                    child: const Text('Skapa nytt rum'),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _codeController,
-                          textCapitalization: TextCapitalization.characters,
-                          decoration: const InputDecoration(labelText: 'Rumskod', border: OutlineInputBorder()),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(CatanAssets.lobbyBackground, fit: BoxFit.cover),
+          // Mörk slöja över bakgrunden så vit text/knappar syns tydligt
+          // ovanpå bilden, oavsett hur ljus den är där de hamnar.
+          Container(color: Colors.black.withValues(alpha: 0.35)),
+          SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: CatanColors.parchment.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: CatanColors.woodFrame, width: 2),
+                      boxShadow: const [
+                        BoxShadow(color: Colors.black45, blurRadius: 12, offset: Offset(0, 4)),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text('Catan Duellen', style: Theme.of(context).textTheme.headlineMedium, textAlign: TextAlign.center),
+                        const SizedBox(height: 24),
+                        TextField(
+                          controller: _nameController,
+                          decoration: const InputDecoration(labelText: 'Ditt namn', border: OutlineInputBorder()),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton.tonal(
-                        onPressed: _busy ? null : _joinRoom,
-                        child: const Text('Gå med'),
-                      ),
-                    ],
+                        const SizedBox(height: 24),
+                        FilledButton(
+                          onPressed: _busy ? null : _hostRoom,
+                          child: const Text('Skapa nytt rum'),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _codeController,
+                                textCapitalization: TextCapitalization.characters,
+                                decoration: const InputDecoration(labelText: 'Rumskod', border: OutlineInputBorder()),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            FilledButton.tonal(
+                              onPressed: _busy ? null : _joinRoom,
+                              child: const Text('Gå med'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        OutlinedButton(
+                          onPressed: _busy ? null : _playLocally,
+                          child: const Text('Spela lokalt (utan synk)'),
+                        ),
+                        if (_busy) const Padding(
+                          padding: EdgeInsets.only(top: 24),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                        if (_error != null) Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error), textAlign: TextAlign.center),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 24),
-                  OutlinedButton(
-                    onPressed: _busy ? null : _playLocally,
-                    child: const Text('Spela lokalt (utan synk)'),
-                  ),
-                  if (_busy) const Padding(
-                    padding: EdgeInsets.only(top: 24),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                  if (_error != null) Padding(
-                    padding: const EdgeInsets.only(top: 16),
-                    child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error), textAlign: TextAlign.center),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

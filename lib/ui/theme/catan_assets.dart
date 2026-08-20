@@ -11,6 +11,9 @@ class CatanAssets {
   static const String _backs = 'assets/images/cards/backs';
   static const String _locations = 'assets/images/cards/locations';
   static const String _icons = 'assets/images/cards/icons';
+  static const String _ui = 'assets/images/ui';
+
+  static const String lobbyBackground = '$_ui/lobby_background.png';
 
   /// Landskapsfoto för en resurstyp, t.ex. ResourceType.wool -> wool.png.
   static String resourcePhoto(ResourceType type) => '$_resources/${type.name}.png';
