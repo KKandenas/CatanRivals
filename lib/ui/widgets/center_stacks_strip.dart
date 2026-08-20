@@ -4,6 +4,7 @@ import '../../data/basic_set_cards.dart';
 import '../../models/models.dart';
 import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
+import 'card_detail_dialog.dart';
 
 /// Mittremsan mellan de två rikena: dragstaplarna (vägar/byar/städer/
 /// regioner), händelsekortsstapeln, tärningsslaget och turindikatorn –
@@ -79,9 +80,15 @@ class CenterStacksStrip extends StatelessWidget {
                   onDragEnd: onDragEnd,
                   width: 48,
                 ),
-                _StackPile(asset: CatanAssets.backRegions, count: stackCounts['regions'] ?? 0, width: 48),
+                _StackPile(
+                    asset: CatanAssets.backRegions,
+                    count: stackCounts['regions'] ?? 0,
+                    width: 48),
                 for (var i = 0; i < 4; i++) _drawStackPile(i),
-                _StackPile(asset: CatanAssets.backEvent, count: stackCounts['event'] ?? 0, width: 48),
+                _StackPile(
+                    asset: CatanAssets.backEvent,
+                    count: stackCounts['event'] ?? 0,
+                    width: 48),
               ],
             ),
           ),
@@ -152,7 +159,10 @@ class _StackPile extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
         child: Container(
           decoration: BoxDecoration(
-            border: Border.all(color: glowing ? const Color(0xFF7CBF6A) : CatanColors.woodFrame, width: glowing ? 1.6 : 1),
+            border: Border.all(
+                color:
+                    glowing ? const Color(0xFF7CBF6A) : CatanColors.woodFrame,
+                width: glowing ? 1.6 : 1),
           ),
           child: Stack(
             fit: StackFit.expand,
@@ -178,15 +188,32 @@ class _StackPile extends StatelessWidget {
                 delay: const Duration(milliseconds: 180),
                 feedback: Material(
                   color: Colors.transparent,
-                  child: SizedBox(width: width, child: Transform.scale(scale: 1.3, child: pile)),
+                  child: SizedBox(
+                      width: width,
+                      child: Transform.scale(scale: 1.3, child: pile)),
                 ),
                 childWhenDragging: Opacity(opacity: 0.35, child: pile),
                 onDragStarted: () => onDragStarted?.call(card!),
                 onDragEnd: (_) => onDragEnd?.call(),
-                onDraggableCanceled: (_, __) => onDragEnd?.call(),
+                // Ett riktigt fingertryck varar ofta längre än 180ms,
+                // så LongPressDraggable hinner vinna gest-arenan innan
+                // ett vanligt tryck hade fått chansen – utan det här
+                // skulle den här högen inte gå att trycka på alls.
+                // Släpps kortet utan att träffa ett giltigt mål tolkar
+                // vi det som ett tryck och visar kortet förstorat.
+                onDraggableCanceled: (_, __) {
+                  onDragEnd?.call();
+                  showCardDetail(context, card!);
+                },
                 child: pile,
               )
-            : dimmedPile;
+            // Tom hög (t.ex. slut på städer) – fortfarande tryckbar
+            // för att kunna se kostnaden, bara inte dragbar.
+            : card != null
+                ? GestureDetector(
+                    onTap: () => showCardDetail(context, card!),
+                    child: dimmedPile)
+                : dimmedPile;
 
     return SizedBox(width: width, child: content);
   }
@@ -210,7 +237,8 @@ class _CountBadge extends StatelessWidget {
       ),
       child: Text(
         '$count',
-        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+        style: const TextStyle(
+            color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -229,10 +257,14 @@ class _DiceBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: CatanColors.parchment,
         borderRadius: BorderRadius.circular(6),
-        boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 2, offset: Offset(0, 1))],
+        boxShadow: const [
+          BoxShadow(color: Colors.black45, blurRadius: 2, offset: Offset(0, 1))
+        ],
       ),
       alignment: Alignment.center,
-      child: Text('$value', style: const TextStyle(color: CatanColors.ink, fontWeight: FontWeight.bold)),
+      child: Text('$value',
+          style: const TextStyle(
+              color: CatanColors.ink, fontWeight: FontWeight.bold)),
     );
   }
 }
@@ -252,7 +284,8 @@ class _TurnIndicator extends StatelessWidget {
       ),
       child: Text(
         isYourTurn ? 'Din tur' : 'Motst.',
-        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+        style: const TextStyle(
+            color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }
