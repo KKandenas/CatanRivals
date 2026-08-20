@@ -50,6 +50,7 @@ class CenterStacksStrip extends StatelessWidget {
                   card: BasicSetCards.road,
                   onDragStarted: onDragStarted,
                   onDragEnd: onDragEnd,
+                  width: 34,
                 ),
                 _StackPile(
                   asset: CatanAssets.backSettlements,
@@ -57,6 +58,7 @@ class CenterStacksStrip extends StatelessWidget {
                   card: BasicSetCards.settlement,
                   onDragStarted: onDragStarted,
                   onDragEnd: onDragEnd,
+                  width: 34,
                 ),
                 _StackPile(
                   asset: CatanAssets.backCities,
@@ -64,9 +66,14 @@ class CenterStacksStrip extends StatelessWidget {
                   card: BasicSetCards.city,
                   onDragStarted: onDragStarted,
                   onDragEnd: onDragEnd,
+                  width: 34,
                 ),
-                _StackPile(asset: CatanAssets.backRegions, count: stackCounts['regions'] ?? 0),
-                _StackPile(asset: CatanAssets.backEvent, count: stackCounts['event'] ?? 0),
+                _StackPile(asset: CatanAssets.backRegions, count: stackCounts['regions'] ?? 0, width: 34),
+                _StackPile(asset: CatanAssets.backBasicSet, count: stackCounts['draw1'] ?? 0, width: 34),
+                _StackPile(asset: CatanAssets.backBasicSet, count: stackCounts['draw2'] ?? 0, width: 34),
+                _StackPile(asset: CatanAssets.backBasicSet, count: stackCounts['draw3'] ?? 0, width: 34),
+                _StackPile(asset: CatanAssets.backBasicSet, count: stackCounts['draw4'] ?? 0, width: 34),
+                _StackPile(asset: CatanAssets.backEvent, count: stackCounts['event'] ?? 0, width: 34),
               ],
             ),
           ),
@@ -83,9 +90,10 @@ class CenterStacksStrip extends StatelessWidget {
 class _StackPile extends StatelessWidget {
   final String asset;
   final int count;
+  final double width;
 
   /// Kortmall att dra (t.ex. [BasicSetCards.road]). `null` = ej dragbar
-  /// stapel (regioner, händelse).
+  /// stapel (regioner, draghögar, händelse).
   final GameCard? card;
   final void Function(GameCard card)? onDragStarted;
   final VoidCallback? onDragEnd;
@@ -93,6 +101,7 @@ class _StackPile extends StatelessWidget {
   const _StackPile({
     required this.asset,
     required this.count,
+    this.width = 40,
     this.card,
     this.onDragStarted,
     this.onDragEnd,
@@ -114,7 +123,7 @@ class _StackPile extends StatelessWidget {
     );
 
     return SizedBox(
-      width: 40,
+      width: width,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -124,7 +133,7 @@ class _StackPile extends StatelessWidget {
               delay: const Duration(milliseconds: 180),
               feedback: Material(
                 color: Colors.transparent,
-                child: SizedBox(width: 40, child: Transform.scale(scale: 1.3, child: pile)),
+                child: SizedBox(width: width, child: Transform.scale(scale: 1.3, child: pile)),
               ),
               childWhenDragging: Opacity(opacity: 0.35, child: pile),
               onDragStarted: () => onDragStarted?.call(card!),

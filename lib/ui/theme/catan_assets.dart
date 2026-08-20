@@ -24,6 +24,7 @@ class CatanAssets {
   static const String backCities = '$_backs/cities.png';
   static const String backRegions = '$_backs/regions.png';
   static const String backEvent = '$_backs/event.png';
+  static const String backBasicSet = '$_backs/basic_set.png';
   static const String backEraGold = '$_backs/era_gold.png';
   static const String backEraTurmoil = '$_backs/era_turmoil.png';
   static const String backEraProgress = '$_backs/era_progress.png';

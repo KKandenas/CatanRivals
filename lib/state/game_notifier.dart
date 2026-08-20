@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/basic_set_draw_deck.dart';
+import '../data/event_deck.dart';
 import '../data/mock_game.dart';
 import '../data/region_deck.dart';
 import '../models/models.dart';
@@ -41,6 +43,27 @@ class GameNotifier extends Notifier<GameState> {
   /// delad, synkad dragstapel är ett större steg för sig.
   List<GameCard> _regionDeck = RegionDeck.shuffledRemainingDeck();
 
+  /// De 4 grundspels-draghögarna (36 kort, se [BasicSetDrawDeck]) och
+  /// händelsekortsstapeln (9 kort, Yule 4:e från botten, se
+  /// [EventDeck]). Precis som regionstapeln hålls de lokalt per klient
+  /// tills vidare – bara antalet (alltid 9 vardera) syns i
+  /// centerStacks, inte de exakta korten.
+  List<List<GameCard>> _drawStacks = BasicSetDrawDeck.shuffledFourStacks();
+  List<GameCard> _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom();
+
+  void _resetDecks() {
+    _regionDeck = RegionDeck.shuffledRemainingDeck();
+    _drawStacks = BasicSetDrawDeck.shuffledFourStacks();
+    _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom();
+  }
+
+  /// Exponerat för UI/tester – de fyra draghögarna finns, är riktigt
+  /// blandade, men går inte att dra kort ifrån än (handkorts-utdelning
+  /// och påfyllning är ett senare steg).
+  List<GameCard> drawStack(int index) => List.unmodifiable(_drawStacks[index]);
+
+  List<GameCard> get eventDeck => List.unmodifiable(_eventDeck);
+
   GameSyncService get _sync => ref.read(gameSyncServiceProvider);
 
   GameCard _drawRegion() {
@@ -75,7 +98,7 @@ class GameNotifier extends Notifier<GameState> {
   void playLocally() {
     _playersSub?.cancel();
     _centerStacksSub?.cancel();
-    _regionDeck = RegionDeck.shuffledRemainingDeck();
+    _resetDecks();
     state = GameState(
       you: MockGame.buildYou(),
       opponent: MockGame.buildOpponent(),
@@ -90,7 +113,7 @@ class GameNotifier extends Notifier<GameState> {
     final hostPlayer = MockGame.buildStartingPlayer('host', myName, isRed: true);
     final waitingOpponent = MockGame.buildStartingPlayer('guest', 'Väntar på motståndare …', isRed: false);
     final centerStacks = MockGame.centerStackCounts();
-    _regionDeck = RegionDeck.shuffledRemainingDeck();
+    _resetDecks();
 
     try {
       await _sync.createRoom(roomCode, 'host', hostPlayer, centerStacks).timeout(const Duration(seconds: 10));
@@ -123,7 +146,7 @@ class GameNotifier extends Notifier<GameState> {
       return 'Fick ingen kontakt med servern. Kontrollera internetanslutningen och försök igen.';
     }
     if (error != null) return error;
-    _regionDeck = RegionDeck.shuffledRemainingDeck();
+    _resetDecks();
 
     state = GameState(
       you: guestPlayer,

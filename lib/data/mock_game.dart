@@ -67,6 +67,10 @@ class MockGame {
         'settlements': BasicSetCards.supplyCounts['settlement']! - 4,
         'cities': BasicSetCards.supplyCounts['city']!,
         'regions': 24 - 12,
+        'draw1': 9,
+        'draw2': 9,
+        'draw3': 9,
+        'draw4': 9,
         'event': 9,
       };
 
