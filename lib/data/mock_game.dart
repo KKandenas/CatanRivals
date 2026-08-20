@@ -45,6 +45,25 @@ class MockGame {
     );
   }
 
+  /// Bygger en riktig startspelare (samma startuppställning som
+  /// [buildYou]/[buildOpponent], men med angivet id/namn) – används när
+  /// två spelare möts via Firebase-synk i stället för mock-datan ovan.
+  static Player buildStartingPlayer(String id, String name) {
+    return Player(
+      id: id,
+      name: name,
+      principality: StarterCards.buildStartingPrincipality(id),
+    );
+  }
+
+  static final _roomCodeChars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'.split('');
+
+  /// Genererar en slumpad, lättstavad 4-teckens rumskod (utan tvetydiga
+  /// tecken som 0/O/1/I) för att dela mellan de två iPads.
+  static String generateRoomCode() {
+    return List.generate(4, (_) => _roomCodeChars[_rng.nextInt(_roomCodeChars.length)]).join();
+  }
+
   /// Mock-lager för pip-visning: kortid -> antal resurser (0–3).
   static Map<String, int> resourceStorageFor(RealmBoard board) {
     final storage = <String, int>{};

@@ -15,6 +15,3 @@ pubspec.lock
 
 # macOS
 .DS_Store
-
-# Firebase (fylls i senare steg – innehåller projektnycklar)
-lib/firebase_options.dart

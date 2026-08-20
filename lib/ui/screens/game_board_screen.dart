@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/mock_game.dart';
 import '../../state/game_notifier.dart';
+import '../../state/game_state.dart';
 import '../widgets/center_stacks_strip.dart';
 import '../widgets/hand_dock.dart';
 import '../widgets/principality_grid.dart';
@@ -33,8 +34,33 @@ class GameBoardScreen extends ConsumerWidget {
     final opponentStorage = MockGame.resourceStorageFor(state.opponent.principality);
 
     return Scaffold(
+      appBar: state.roomCode == null
+          ? null
+          : AppBar(
+              title: Text('Rum: ${state.roomCode}'),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.logout),
+                  tooltip: 'Lämna rummet',
+                  onPressed: () {
+                    notifier.playLocally();
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  },
+                ),
+              ],
+            ),
       body: Column(
         children: [
+          if (state.mode == SessionMode.host && !state.opponentConnected)
+            Container(
+              width: double.infinity,
+              color: Theme.of(context).colorScheme.secondaryContainer,
+              padding: const EdgeInsets.all(8),
+              child: Text(
+                'Väntar på att motståndaren ska gå med rummet ${state.roomCode} …',
+                textAlign: TextAlign.center,
+              ),
+            ),
           TopStatusBar(opponent: state.opponent),
           Expanded(
             flex: 4,

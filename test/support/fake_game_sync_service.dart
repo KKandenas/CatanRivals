@@ -1,0 +1,83 @@
+import 'dart:async';
+
+import 'package:catan_rivals/models/models.dart';
+import 'package:catan_rivals/services/game_sync_service.dart';
+
+/// In-memory-fejk av [GameSyncService] för tester, eftersom riktig
+/// Firebase-anslutning inte går att testa i CI/sandboxmiljö. Delar en
+/// enda "databas" (statiska maps) så att två [GameNotifier]-instanser
+/// (host + guest) kan synka mot varandra i samma test, precis som två
+/// riktiga klienter skulle göra via Firebase.
+class FakeGameSyncService implements GameSyncService {
+  final Map<String, Map<String, Player>> _players = {};
+  final Map<String, Map<String, int>> _centerStacks = {};
+  final Map<String, StreamController<Map<String, Player>>> _playerControllers = {};
+  final Map<String, StreamController<Map<String, int>>> _centerStackControllers = {};
+
+  StreamController<Map<String, Player>> _playersController(String roomCode) =>
+      _playerControllers.putIfAbsent(roomCode, () => StreamController.broadcast());
+
+  StreamController<Map<String, int>> _centerStacksController(String roomCode) =>
+      _centerStackControllers.putIfAbsent(roomCode, () => StreamController.broadcast());
+
+  @override
+  Future<void> createRoom(
+    String roomCode,
+    String hostId,
+    Player hostPlayer,
+    Map<String, int> centerStacks,
+  ) async {
+    _players[roomCode] = {hostId: hostPlayer};
+    _centerStacks[roomCode] = Map.of(centerStacks);
+    _playersController(roomCode).add(Map.of(_players[roomCode]!));
+    _centerStacksController(roomCode).add(Map.of(_centerStacks[roomCode]!));
+  }
+
+  @override
+  Future<String?> joinRoom(String roomCode, String guestId, Player guestPlayer) async {
+    final players = _players[roomCode];
+    if (players == null) return 'Rummet finns inte. Kontrollera koden.';
+    if (players.length >= 2) return 'Rummet är redan fullt.';
+    players[guestId] = guestPlayer;
+    _playersController(roomCode).add(Map.of(players));
+    return null;
+  }
+
+  @override
+  Stream<Map<String, Player>> watchPlayers(String roomCode) {
+    final existing = _players[roomCode];
+    final controller = _playersController(roomCode);
+    if (existing == null) return controller.stream;
+    return controller.stream.transform(_replayLatest(Map.of(existing)));
+  }
+
+  @override
+  Stream<Map<String, int>> watchCenterStacks(String roomCode) {
+    final existing = _centerStacks[roomCode];
+    final controller = _centerStacksController(roomCode);
+    if (existing != null) {
+      return controller.stream.transform(_replayLatest(Map.of(existing)));
+    }
+    return controller.stream;
+  }
+
+  StreamTransformer<T, T> _replayLatest<T>(T initial) {
+    return StreamTransformer.fromBind((stream) async* {
+      yield initial;
+      yield* stream;
+    });
+  }
+
+  @override
+  Future<void> writePlayer(String roomCode, String playerId, Player player) async {
+    final players = _players.putIfAbsent(roomCode, () => {});
+    players[playerId] = player;
+    _playersController(roomCode).add(Map.of(players));
+  }
+
+  @override
+  Future<void> writeCenterStacks(String roomCode, Map<String, int> centerStacks) async {
+    _centerStacks[roomCode] = Map.of(centerStacks);
+    _centerStacksController(roomCode).add(Map.of(centerStacks));
+  }
+}

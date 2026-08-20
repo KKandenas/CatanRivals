@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/mock_game.dart';
 import '../models/models.dart';
+import '../services/game_sync_providers.dart';
+import '../services/game_sync_service.dart';
 import 'game_state.dart';
 
 /// Spelets state-provider. Läs med `ref.watch(gameProvider)` och mutera
@@ -9,8 +13,10 @@ import 'game_state.dart';
 final gameProvider = NotifierProvider<GameNotifier, GameState>(GameNotifier.new);
 
 /// Håller och muterar [GameState]: bygga vägar/byar/städer från
-/// center-dragstaplarna, spela bygg-/enhetskort från handen, och
-/// drag-state (vilket kort som just nu dras).
+/// center-dragstaplarna, spela bygg-/enhetskort från handen, drag-state
+/// (vilket kort som just nu dras), och – när ett rum är anslutet –
+/// synka drag mot [GameSyncService] så att motståndarens iPad ser samma
+/// bräde.
 ///
 /// Metoderna som bygger något returnerar `null` vid lyckad byggnation
 /// eller ett felmeddelande (t.ex. "Inte råd med X") som UI-lagret kan
@@ -23,8 +29,17 @@ final gameProvider = NotifierProvider<GameNotifier, GameState>(GameNotifier.new)
 /// brädet immutabelt. En fullt immutabel spelbräde-modell är en större
 /// omskrivning som får vänta till den behövs (t.ex. för ångra/logg).
 class GameNotifier extends Notifier<GameState> {
+  StreamSubscription<Map<String, Player>>? _playersSub;
+  StreamSubscription<Map<String, int>>? _centerStacksSub;
+
+  GameSyncService get _sync => ref.read(gameSyncServiceProvider);
+
   @override
   GameState build() {
+    ref.onDispose(() {
+      _playersSub?.cancel();
+      _centerStacksSub?.cancel();
+    });
     return GameState(
       you: MockGame.buildYou(),
       opponent: MockGame.buildOpponent(),
@@ -35,6 +50,100 @@ class GameNotifier extends Notifier<GameState> {
   void startDrag(GameCard card) => state = state.copyWith(draggingCard: card);
 
   void endDrag() => state = state.copyWith(clearDraggingCard: true);
+
+  // ---------------------------------------------------------------------
+  // Rum: skapa/gå med/lämna
+  // ---------------------------------------------------------------------
+
+  /// Startar om till lokalt läge (mock-data, ingen synk) – "spela
+  /// lokalt"-genvägen i lobbyn, och det man hamnar i om man lämnar ett
+  /// rum.
+  void playLocally() {
+    _playersSub?.cancel();
+    _centerStacksSub?.cancel();
+    state = GameState(
+      you: MockGame.buildYou(),
+      opponent: MockGame.buildOpponent(),
+      centerStacks: MockGame.centerStackCounts(),
+    );
+  }
+
+  /// Skapar ett nytt rum, blir "host" och väntar på att en motståndare
+  /// ska gå med. Returnerar den genererade rumskoden.
+  Future<String> hostRoom(String myName) async {
+    final roomCode = MockGame.generateRoomCode();
+    final hostPlayer = MockGame.buildStartingPlayer('host', myName);
+    final waitingOpponent = MockGame.buildStartingPlayer('guest', 'Väntar på motståndare …');
+    final centerStacks = MockGame.centerStackCounts();
+
+    await _sync.createRoom(roomCode, 'host', hostPlayer, centerStacks);
+
+    state = GameState(
+      you: hostPlayer,
+      opponent: waitingOpponent,
+      centerStacks: centerStacks,
+      mode: SessionMode.host,
+      roomCode: roomCode,
+      myPlayerId: 'host',
+      opponentPlayerId: 'guest',
+      opponentConnected: false,
+    );
+    _subscribeToRoom(roomCode);
+    return roomCode;
+  }
+
+  /// Går med i ett befintligt rum. Returnerar `null` vid lyckat
+  /// gick-med, annars ett felmeddelande att visa i lobbyn.
+  Future<String?> joinRoom(String roomCode, String myName) async {
+    final guestPlayer = MockGame.buildStartingPlayer('guest', myName);
+    final error = await _sync.joinRoom(roomCode, 'guest', guestPlayer);
+    if (error != null) return error;
+
+    state = GameState(
+      you: guestPlayer,
+      opponent: MockGame.buildStartingPlayer('host', '…'),
+      centerStacks: MockGame.centerStackCounts(),
+      mode: SessionMode.guest,
+      roomCode: roomCode,
+      myPlayerId: 'guest',
+      opponentPlayerId: 'host',
+      opponentConnected: true,
+    );
+    _subscribeToRoom(roomCode);
+    return null;
+  }
+
+  void _subscribeToRoom(String roomCode) {
+    _playersSub?.cancel();
+    _centerStacksSub?.cancel();
+
+    _playersSub = _sync.watchPlayers(roomCode).listen((players) {
+      final opponentPlayer = players[state.opponentPlayerId];
+      if (opponentPlayer == null) return;
+      state = state.copyWith(opponent: opponentPlayer, opponentConnected: true);
+    });
+
+    _centerStacksSub = _sync.watchCenterStacks(roomCode).listen((centerStacks) {
+      if (centerStacks.isEmpty) return;
+      state = state.copyWith(centerStacks: centerStacks);
+    });
+  }
+
+  void _syncMyPlayer() {
+    final roomCode = state.roomCode;
+    if (roomCode == null) return;
+    unawaited(_sync.writePlayer(roomCode, state.myPlayerId, state.you));
+  }
+
+  void _syncCenterStacks() {
+    final roomCode = state.roomCode;
+    if (roomCode == null) return;
+    unawaited(_sync.writeCenterStacks(roomCode, state.centerStacks));
+  }
+
+  // ---------------------------------------------------------------------
+  // Bygga: spela kort från handen / center-dragstaplarna
+  // ---------------------------------------------------------------------
 
   bool _canAfford(GameCard card) {
     return card.buildingCost.entries.every((entry) => state.you.resourceCount(entry.key) >= entry.value);
@@ -68,6 +177,7 @@ class GameNotifier extends Notifier<GameState> {
     final updated = _spend(state.you.copyWith(hand: List.of(state.you.hand)..remove(card)), card);
 
     state = state.copyWith(you: updated, clearDraggingCard: true);
+    _syncMyPlayer();
     return null;
   }
 
@@ -83,6 +193,8 @@ class GameNotifier extends Notifier<GameState> {
       centerStacks: Map.of(state.centerStacks)..update('roads', (v) => v - 1),
       clearDraggingCard: true,
     );
+    _syncMyPlayer();
+    _syncCenterStacks();
     return null;
   }
 
@@ -115,6 +227,8 @@ class GameNotifier extends Notifier<GameState> {
         ..update('regions', (v) => wasNewSettlementFurtherOut ? v - 2 : v),
       clearDraggingCard: true,
     );
+    _syncMyPlayer();
+    _syncCenterStacks();
     return null;
   }
 
@@ -130,6 +244,8 @@ class GameNotifier extends Notifier<GameState> {
       centerStacks: Map.of(state.centerStacks)..update('cities', (v) => v - 1),
       clearDraggingCard: true,
     );
+    _syncMyPlayer();
+    _syncCenterStacks();
     return null;
   }
 }
