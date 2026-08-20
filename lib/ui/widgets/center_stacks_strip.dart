@@ -45,7 +45,7 @@ class CenterStacksStrip extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 _StackPile(
-                  asset: CatanAssets.backRoads,
+                  asset: CatanAssets.road,
                   count: stackCounts['roads'] ?? 0,
                   card: BasicSetCards.road,
                   onDragStarted: onDragStarted,

@@ -19,7 +19,6 @@ class CatanAssets {
   static const String settlement = '$_locations/settlement_village.png';
   static const String city = '$_locations/city_walled_river.png';
 
-  static const String backRoads = '$_backs/roads.png';
   static const String backSettlements = '$_backs/settlements.png';
   static const String backCities = '$_backs/cities.png';
   static const String backRegions = '$_backs/regions.png';
