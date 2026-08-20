@@ -64,7 +64,8 @@ class ExpansionCardView extends StatelessWidget {
                 Positioned(
                   top: 2,
                   left: 2,
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       for (final entry in card.buildingCost.entries) _CostPip(type: entry.key, amount: entry.value),
                     ],
@@ -76,6 +77,11 @@ class ExpansionCardView extends StatelessWidget {
                   right: 2,
                   child: _UniqueBadge(),
                 ),
+              Positioned(
+                bottom: 2,
+                right: 2,
+                child: _PointsCorner(card: card),
+              ),
             ],
           ),
         ),
@@ -93,7 +99,7 @@ class _CostPip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(right: 1),
+      padding: const EdgeInsets.only(bottom: 1),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -120,6 +126,74 @@ class _CostPip extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Kortets värde: segerpoäng (VP) och ev. styrka/handel/färdighet/
+/// framstegspoäng, staplade nere till höger. VP saknar än så länge en
+/// egen symbol (kommer senare) och visas därför bara som en siffra i
+/// en liten badge; de andra poängtyperna har redan ikoner.
+class _PointsCorner extends StatelessWidget {
+  final GameCard card;
+
+  const _PointsCorner({required this.card});
+
+  @override
+  Widget build(BuildContext context) {
+    final pips = <Widget>[
+      if (card.strengthPoints > 0) _PointPip(asset: CatanAssets.pointStrength, amount: card.strengthPoints),
+      if (card.commercePoints > 0) _PointPip(asset: CatanAssets.pointCommerce, amount: card.commercePoints),
+      if (card.skillPoints > 0) _PointPip(asset: CatanAssets.pointSkill, amount: card.skillPoints),
+      if (card.progressPoints > 0) _PointPip(asset: CatanAssets.pointProgress, amount: card.progressPoints),
+      if (card.victoryPoints > 0) _VictoryPointPip(amount: card.victoryPoints),
+    ];
+    if (pips.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [for (final pip in pips) Padding(padding: const EdgeInsets.only(top: 1), child: pip)],
+    );
+  }
+}
+
+class _PointPip extends StatelessWidget {
+  final String asset;
+  final int amount;
+
+  const _PointPip({required this.asset, required this.amount});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('$amount', style: const TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.w700)),
+        const SizedBox(width: 2),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(2),
+          child: Image.asset(asset, width: 12, height: 12, fit: BoxFit.cover),
+        ),
+      ],
+    );
+  }
+}
+
+/// Platshållare för segerpoäng tills det finns en egen VP-symbol.
+class _VictoryPointPip extends StatelessWidget {
+  final int amount;
+
+  const _VictoryPointPip({required this.amount});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 12,
+      height: 12,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(color: Colors.black87, shape: BoxShape.circle),
+      child: Text('$amount', style: const TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.w700)),
     );
   }
 }
