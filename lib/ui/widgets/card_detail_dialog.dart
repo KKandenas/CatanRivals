@@ -135,12 +135,31 @@ class _CardDetailContent extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      card.name,
-                      style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: CatanColors.ink),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (card.affectsBothNeighboringRegions)
+                          const Padding(
+                            padding: EdgeInsets.only(right: 6),
+                            child: Icon(Icons.arrow_back,
+                                size: 16, color: CatanColors.ink),
+                          ),
+                        Flexible(
+                          child: Text(
+                            card.name,
+                            style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: CatanColors.ink),
+                          ),
+                        ),
+                        if (card.affectsBothNeighboringRegions)
+                          const Padding(
+                            padding: EdgeInsets.only(left: 6),
+                            child: Icon(Icons.arrow_forward,
+                                size: 16, color: CatanColors.ink),
+                          ),
+                      ],
                     ),
                     if (card.requirement != null) ...[
                       const SizedBox(height: 6),

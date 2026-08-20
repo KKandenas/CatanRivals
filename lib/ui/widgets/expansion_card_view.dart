@@ -55,17 +55,37 @@ class ExpansionCardView extends StatelessWidget {
                   left: 3,
                   right: 3,
                   bottom: 2,
-                  child: Text(
-                    card.name,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 9,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      height: 1.05,
-                    ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      if (card.affectsBothNeighboringRegions)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 2),
+                          child: Icon(Icons.arrow_back,
+                              size: 9, color: Colors.white),
+                        ),
+                      Flexible(
+                        child: Text(
+                          card.name,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 9,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            height: 1.05,
+                          ),
+                        ),
+                      ),
+                      if (card.affectsBothNeighboringRegions)
+                        const Padding(
+                          padding: EdgeInsets.only(left: 2),
+                          child: Icon(Icons.arrow_forward,
+                              size: 9, color: Colors.white),
+                        ),
+                    ],
                   ),
                 ),
                 if (showCost && card.buildingCost.isNotEmpty)

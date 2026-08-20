@@ -75,7 +75,12 @@ class BasicSetCards {
     name: 'By',
     category: CardCategory.settlement,
     victoryPoints: 1,
-    buildingCost: {ResourceType.brick: 1, ResourceType.grain: 1, ResourceType.wool: 1, ResourceType.lumber: 1},
+    buildingCost: {
+      ResourceType.brick: 1,
+      ResourceType.grain: 1,
+      ResourceType.wool: 1,
+      ResourceType.lumber: 1
+    },
     imageAsset: 'assets/images/cards/settlement.png',
   );
 
@@ -143,7 +148,8 @@ class BasicSetCards {
     id: 'action-goldsmith',
     name: 'Guldsmed',
     category: CardCategory.action,
-    effectText: 'Discard 3 gold and take any 2 resources of your choice in return.',
+    effectText:
+        'Discard 3 gold and take any 2 resources of your choice in return.',
     imageAsset: 'assets/images/cards/actions/action_blacksmith_forge.png',
   );
 
@@ -157,9 +163,14 @@ class BasicSetCards {
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.building,
     isUnique: true,
-    buildingCost: {ResourceType.brick: 1, ResourceType.grain: 1, ResourceType.ore: 1},
+    buildingCost: {
+      ResourceType.brick: 1,
+      ResourceType.grain: 1,
+      ResourceType.ore: 1
+    },
     progressPoints: 1,
-    effectText: 'Progress is not the only thing here; you also get red wine and lots of dark beer.',
+    effectText:
+        'Progress is not the only thing here; you also get red wine and lots of dark beer.',
     imageAsset: 'assets/images/cards/dioramas/diorama_church_building.png',
   );
 
@@ -185,7 +196,8 @@ class BasicSetCards {
     expansionKind: ExpansionKind.building,
     isUnique: true,
     buildingCost: {ResourceType.brick: 1, ResourceType.grain: 1},
-    effectText: 'You pay only 1 resource for choosing a card from a draw stack.',
+    effectText:
+        'You pay only 1 resource for choosing a card from a draw stack.',
     imageAsset: 'assets/images/cards/dioramas/diorama_village_market_2.png',
   );
 
@@ -195,6 +207,7 @@ class BasicSetCards {
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.building,
     buildingCost: {ResourceType.lumber: 1, ResourceType.wool: 1},
+    affectsBothNeighboringRegions: true,
     effectText:
         'Do not count the resources on the 2 neighboring regions when the event Brigand Attack is rolled.',
     imageAsset: 'assets/images/cards/buildings/storehouse.png',
@@ -217,6 +230,7 @@ class BasicSetCards {
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.building,
     buildingCost: {ResourceType.brick: 1, ResourceType.ore: 1},
+    affectsBothNeighboringRegions: true,
     effectText: 'Doubles the brick production of the neighboring hills.',
     imageAsset: 'assets/images/cards/buildings/forge_1.png',
   );
@@ -227,6 +241,7 @@ class BasicSetCards {
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.building,
     buildingCost: {ResourceType.grain: 1, ResourceType.lumber: 1},
+    affectsBothNeighboringRegions: true,
     effectText: 'Doubles the grain production of the neighboring fields.',
     imageAsset: 'assets/images/cards/buildings/water_mill_1.png',
   );
@@ -237,6 +252,7 @@ class BasicSetCards {
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.building,
     buildingCost: {ResourceType.brick: 1, ResourceType.ore: 1},
+    affectsBothNeighboringRegions: true,
     effectText: 'Doubles the ore production of the neighboring mountains.',
     imageAsset: 'assets/images/cards/buildings/forge_2_active.png',
   );
@@ -247,6 +263,7 @@ class BasicSetCards {
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.building,
     buildingCost: {ResourceType.lumber: 1, ResourceType.ore: 1},
+    affectsBothNeighboringRegions: true,
     effectText: 'Doubles the lumber production of the neighboring forests.',
     imageAsset: 'assets/images/cards/buildings/lumber_camp.png',
   );
@@ -257,6 +274,7 @@ class BasicSetCards {
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.building,
     buildingCost: {ResourceType.lumber: 1, ResourceType.wool: 1},
+    affectsBothNeighboringRegions: true,
     effectText: 'Doubles the wool production of the neighboring pastures.',
     imageAsset: 'assets/images/cards/buildings/storage_shed_2.png',
   );
@@ -278,7 +296,8 @@ class BasicSetCards {
     imageAsset: 'assets/images/cards/heroes/trade_ship_dock_1.png',
   );
 
-  static GameCard _tradeShip(String resourceName, ResourceType resource) => GameCard(
+  static GameCard _tradeShip(String resourceName, ResourceType resource) =>
+      GameCard(
         id: 'unit-trade-ship-$resourceName',
         name: '${_swedishResourceName(resource)}skepp',
         category: CardCategory.expansion,
@@ -310,7 +329,8 @@ class BasicSetCards {
     buildingCost: {ResourceType.grain: 1, ResourceType.ore: 1},
     strengthPoints: 1,
     skillPoints: 2,
-    effectText: "If you hit my left cheek, don't even think you'll have time to hit the right one too.",
+    effectText:
+        "If you hit my left cheek, don't even think you'll have time to hit the right one too.",
     imageAsset: 'assets/images/cards/heroes/hero_plain_man_1.png',
   );
 
@@ -322,7 +342,8 @@ class BasicSetCards {
     buildingCost: {ResourceType.grain: 1, ResourceType.ore: 1},
     strengthPoints: 2,
     skillPoints: 1,
-    effectText: 'I knock you out faster than you can carve the word "strategy" in this stone.',
+    effectText:
+        'I knock you out faster than you can carve the word "strategy" in this stone.',
     imageAsset: 'assets/images/cards/heroes/hero_plain_man_2.png',
   );
 
@@ -331,10 +352,15 @@ class BasicSetCards {
     name: 'Inga',
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.hero,
-    buildingCost: {ResourceType.grain: 1, ResourceType.wool: 1, ResourceType.ore: 1},
+    buildingCost: {
+      ResourceType.grain: 1,
+      ResourceType.wool: 1,
+      ResourceType.ore: 1
+    },
     strengthPoints: 1,
     skillPoints: 3,
-    effectText: 'The gods are expecting more offerings. And they expect you to hand them over to me!',
+    effectText:
+        'The gods are expecting more offerings. And they expect you to hand them over to me!',
     imageAsset: 'assets/images/cards/hero_inga.png',
   );
 
@@ -343,7 +369,11 @@ class BasicSetCards {
     name: 'Osmund',
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.hero,
-    buildingCost: {ResourceType.grain: 1, ResourceType.wool: 1, ResourceType.ore: 1},
+    buildingCost: {
+      ResourceType.grain: 1,
+      ResourceType.wool: 1,
+      ResourceType.ore: 1
+    },
     strengthPoints: 2,
     skillPoints: 2,
     effectText:
@@ -357,10 +387,15 @@ class BasicSetCards {
     name: 'Candamir',
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.hero,
-    buildingCost: {ResourceType.wool: 2, ResourceType.grain: 1, ResourceType.ore: 1},
+    buildingCost: {
+      ResourceType.wool: 2,
+      ResourceType.grain: 1,
+      ResourceType.ore: 1
+    },
     strengthPoints: 4,
     skillPoints: 1,
-    effectText: 'A well-sharpened axe is a tried and tested starting position for a successful conversation.',
+    effectText:
+        'A well-sharpened axe is a tried and tested starting position for a successful conversation.',
     imageAsset: 'assets/images/cards/hero_candamir.png',
   );
 
@@ -369,10 +404,15 @@ class BasicSetCards {
     name: 'Siglind',
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.hero,
-    buildingCost: {ResourceType.wool: 2, ResourceType.grain: 1, ResourceType.ore: 1},
+    buildingCost: {
+      ResourceType.wool: 2,
+      ResourceType.grain: 1,
+      ResourceType.ore: 1
+    },
     strengthPoints: 2,
     skillPoints: 3,
-    effectText: 'Turning men into heroes belittles the importance of being a hero.',
+    effectText:
+        'Turning men into heroes belittles the importance of being a hero.',
     imageAsset: 'assets/images/cards/heroes/hero_pair_woman_man.png',
   );
 
@@ -425,7 +465,8 @@ class BasicSetCards {
     id: 'event-traveling-merchant',
     name: 'Resande köpman',
     category: CardCategory.event,
-    effectText: 'Each player may take up to 2 resources of his choice, paying 1 gold per resource.',
+    effectText:
+        'Each player may take up to 2 resources of his choice, paying 1 gold per resource.',
     imageAsset: 'assets/images/cards/event_traveling_merchant.png',
   );
 
@@ -451,14 +492,50 @@ class BasicSetCards {
 
   /// Samtliga korttyper i grundspelet, för iteration/uppslag.
   static List<GameCard> get all => [
-        forest, pasture, fields, hills, mountains, goldField,
-        settlement, city, road,
-        brigittaTheWiseWoman, relocation, scout, merchantCaravan, goldsmith,
-        abbey, marketplace, parishHall, storehouse, tollBridge,
-        brickFactory, grainMill, ironFoundry, lumberCamp, weaversShop,
-        largeTradeShip, grainShip, lumberShip, brickShip, woolShip, goldShip, oreShip,
-        austin, harald, inga, osmund, candamir, siglind,
-        feud, fraternalFeuds, invention, tradeShipsRace, travelingMerchant, yule, yearOfPlenty,
+        forest,
+        pasture,
+        fields,
+        hills,
+        mountains,
+        goldField,
+        settlement,
+        city,
+        road,
+        brigittaTheWiseWoman,
+        relocation,
+        scout,
+        merchantCaravan,
+        goldsmith,
+        abbey,
+        marketplace,
+        parishHall,
+        storehouse,
+        tollBridge,
+        brickFactory,
+        grainMill,
+        ironFoundry,
+        lumberCamp,
+        weaversShop,
+        largeTradeShip,
+        grainShip,
+        lumberShip,
+        brickShip,
+        woolShip,
+        goldShip,
+        oreShip,
+        austin,
+        harald,
+        inga,
+        osmund,
+        candamir,
+        siglind,
+        feud,
+        fraternalFeuds,
+        invention,
+        tradeShipsRace,
+        travelingMerchant,
+        yule,
+        yearOfPlenty,
       ];
 
   /// Antal fysiska kopior av varje korttyp i grundspelets 94-korsslek.

@@ -12,21 +12,43 @@ void main() {
       expect(BasicSetCards.all, hasLength(44));
     });
 
-    test('supply counts plus the 24 region cards add up to the full 94-card set', () {
-      final nonRegionCopies = BasicSetCards.supplyCounts.values.fold(0, (a, b) => a + b);
+    test(
+        'supply counts plus the 24 region cards add up to the full 94-card set',
+        () {
+      final nonRegionCopies =
+          BasicSetCards.supplyCounts.values.fold(0, (a, b) => a + b);
       const regionTypeCount = 6;
       const copiesPerRegionType = 4;
 
       expect(nonRegionCopies + regionTypeCount * copiesPerRegionType, 94);
     });
 
-    test('every catalog id has a supply count, except the 6 region templates', () {
+    test('every catalog id has a supply count, except the 6 region templates',
+        () {
       final idsWithoutCount = BasicSetCards.all
           .where((card) => card.category != CardCategory.region)
           .map((card) => card.id)
           .where((id) => !BasicSetCards.supplyCounts.containsKey(id));
 
       expect(idsWithoutCount, isEmpty);
+    });
+
+    test(
+        'exactly the 6 buildings that affect both neighboring regions are flagged',
+        () {
+      final flaggedNames = BasicSetCards.all
+          .where((c) => c.affectsBothNeighboringRegions)
+          .map((c) => c.name)
+          .toSet();
+
+      expect(flaggedNames, {
+        'Lagerhus',
+        'Tegelbruk',
+        'Kvarn',
+        'Järngjuteri',
+        'Timmerläger',
+        'Vävstuga',
+      });
     });
   });
 
@@ -36,7 +58,8 @@ void main() {
     });
 
     test('supply counts add up to the full 27-card set', () {
-      final totalCopies = EraOfGoldCards.supplyCounts.values.fold(0, (a, b) => a + b);
+      final totalCopies =
+          EraOfGoldCards.supplyCounts.values.fold(0, (a, b) => a + b);
 
       expect(totalCopies, 27);
     });
@@ -51,7 +74,8 @@ void main() {
 
     test('cards with a requirement expose it', () {
       expect(EraOfGoldCards.tradeMaster.requirement, 'Merchant Guild');
-      expect(EraOfGoldCards.goldCache.requirement, 'Hero with at least 1 strength point');
+      expect(EraOfGoldCards.goldCache.requirement,
+          'Hero with at least 1 strength point');
     });
   });
 
@@ -61,7 +85,8 @@ void main() {
     });
 
     test('supply counts add up to the full 28-card set', () {
-      final totalCopies = EraOfTurmoilCards.supplyCounts.values.fold(0, (a, b) => a + b);
+      final totalCopies =
+          EraOfTurmoilCards.supplyCounts.values.fold(0, (a, b) => a + b);
 
       expect(totalCopies, 28);
     });
@@ -75,8 +100,10 @@ void main() {
     });
 
     test('the two Chapels protect against opposite production rolls', () {
-      expect(EraOfTurmoilCards.chapelLowRoll.effectText, contains('1, 2, or 3'));
-      expect(EraOfTurmoilCards.chapelHighRoll.effectText, contains('4, 5, or 6'));
+      expect(
+          EraOfTurmoilCards.chapelLowRoll.effectText, contains('1, 2, or 3'));
+      expect(
+          EraOfTurmoilCards.chapelHighRoll.effectText, contains('4, 5, or 6'));
     });
 
     test('attack action cards requiring Hedge Tavern are flagged', () {
@@ -97,7 +124,8 @@ void main() {
     });
 
     test('supply counts add up to the full 31-card set', () {
-      final totalCopies = EraOfProgressCards.supplyCounts.values.fold(0, (a, b) => a + b);
+      final totalCopies =
+          EraOfProgressCards.supplyCounts.values.fold(0, (a, b) => a + b);
 
       expect(totalCopies, 31);
     });
@@ -116,7 +144,8 @@ void main() {
     });
 
     test('Chief Cannoneer is a unit, not a hero, and has no skill points', () {
-      expect(EraOfProgressCards.chiefCannoneer.expansionKind, ExpansionKind.otherUnit);
+      expect(EraOfProgressCards.chiefCannoneer.expansionKind,
+          ExpansionKind.otherUnit);
       expect(EraOfProgressCards.chiefCannoneer.skillPoints, 0);
     });
   });
@@ -124,10 +153,13 @@ void main() {
   group('All four card sets combined', () {
     test('the full catalog totals 180 cards, matching the rulebook', () {
       const basicRegions = 24;
-      final basicNonRegions = BasicSetCards.supplyCounts.values.fold(0, (a, b) => a + b);
+      final basicNonRegions =
+          BasicSetCards.supplyCounts.values.fold(0, (a, b) => a + b);
       final gold = EraOfGoldCards.supplyCounts.values.fold(0, (a, b) => a + b);
-      final turmoil = EraOfTurmoilCards.supplyCounts.values.fold(0, (a, b) => a + b);
-      final progress = EraOfProgressCards.supplyCounts.values.fold(0, (a, b) => a + b);
+      final turmoil =
+          EraOfTurmoilCards.supplyCounts.values.fold(0, (a, b) => a + b);
+      final progress =
+          EraOfProgressCards.supplyCounts.values.fold(0, (a, b) => a + b);
 
       expect(basicRegions + basicNonRegions + gold + turmoil + progress, 180);
     });
@@ -144,11 +176,14 @@ void main() {
       expect(board.totalVictoryPoints, 2); // 2 byar à 1 poäng
     });
 
-    test('the two settlements share their corner regions via the road junction', () {
+    test('the two settlements share their corner regions via the road junction',
+        () {
       final board = StarterCards.buildStartingPrincipality('p1');
 
-      final rightCornersOfLeftSettlement = board.cornerRegions(0, BuildingRow.above)[1];
-      final leftCornersOfRightSettlement = board.cornerRegions(2, BuildingRow.above)[0];
+      final rightCornersOfLeftSettlement =
+          board.cornerRegions(0, BuildingRow.above)[1];
+      final leftCornersOfRightSettlement =
+          board.cornerRegions(2, BuildingRow.above)[0];
 
       expect(rightCornersOfLeftSettlement, isNotNull);
       expect(rightCornersOfLeftSettlement, same(leftCornersOfRightSettlement));
@@ -158,7 +193,8 @@ void main() {
       final board = StarterCards.buildStartingPrincipality('p1');
 
       expect(
-        () => board.placeSettlement(0, const PlacedCard(card: BasicSetCards.settlement)),
+        () => board.placeSettlement(
+            0, const PlacedCard(card: BasicSetCards.settlement)),
         throwsStateError,
       );
     });
@@ -194,15 +230,22 @@ void main() {
       final json = board.toJson();
 
       final numeric = RegExp(r'^-?\d+$');
-      for (final section in ['settlements', 'roads', 'regionsAbove', 'regionsBelow']) {
+      for (final section in [
+        'settlements',
+        'roads',
+        'regionsAbove',
+        'regionsBelow'
+      ]) {
         final keys = (json[section] as Map).keys.cast<String>();
         for (final key in keys) {
-          expect(numeric.hasMatch(key), isFalse, reason: '$section-nyckeln "$key" ser numerisk ut');
+          expect(numeric.hasMatch(key), isFalse,
+              reason: '$section-nyckeln "$key" ser numerisk ut');
         }
       }
     });
 
-    test('survives Firebase dropping null values from an empty building site', () {
+    test('survives Firebase dropping null values from an empty building site',
+        () {
       // Firebase Realtime Database lagrar aldrig null – ett null i en
       // array-position gör att den positionen (och därmed hela
       // array-strukturen) försvinner vid skrivning. Simulerar det här
@@ -211,9 +254,12 @@ void main() {
       final board = StarterCards.buildStartingPrincipality('p1');
       final json = board.toJson();
 
-      final settlement0 = Map<String, dynamic>.from((json['settlements'] as Map)['c0'] as Map);
-      final aboveSites = Map<String, dynamic>.from(settlement0['aboveSites'] as Map);
-      expect(aboveSites.containsKey('s0'), isFalse); // tom byggplats skrevs aldrig ut
+      final settlement0 =
+          Map<String, dynamic>.from((json['settlements'] as Map)['c0'] as Map);
+      final aboveSites =
+          Map<String, dynamic>.from(settlement0['aboveSites'] as Map);
+      expect(aboveSites.containsKey('s0'),
+          isFalse); // tom byggplats skrevs aldrig ut
 
       final restored = RealmBoard.fromJson(json);
       expect(restored.settlementAt(0)!.aboveSites, [null]);
@@ -221,7 +267,9 @@ void main() {
   });
 
   group('RealmBoard – resurslagring per region', () {
-    test('starting principality has exactly 1 of each non-gold resource and 0 gold', () {
+    test(
+        'starting principality has exactly 1 of each non-gold resource and 0 gold',
+        () {
       final board = StarterCards.buildStartingPrincipality('p1', isRed: true);
 
       expect(board.resourceTotal(ResourceType.lumber), 1);
@@ -232,7 +280,8 @@ void main() {
       expect(board.resourceTotal(ResourceType.gold), 0);
     });
 
-    test('spend takes resources from a region with that type, clamped at 0', () {
+    test('spend takes resources from a region with that type, clamped at 0',
+        () {
       final board = StarterCards.buildStartingPrincipality('p1', isRed: true);
 
       board.spend({ResourceType.lumber: 1});
@@ -259,7 +308,9 @@ void main() {
   });
 
   group('RealmBoard – poängsummor per typ', () {
-    test('sums victory, strength, commerce, skill and progress points across placed cards', () {
+    test(
+        'sums victory, strength, commerce, skill and progress points across placed cards',
+        () {
       final board = StarterCards.buildStartingPrincipality('p1');
       // Startuppställningens 2 byar ger 2 VP och inga andra poäng.
       expect(board.totalVictoryPoints, 2);

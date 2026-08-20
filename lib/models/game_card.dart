@@ -59,6 +59,12 @@ class GameCard {
   /// kortet i ditt rike samtidigt.
   final bool isUnique;
 
+  /// Kortets effekt gäller båda knutpunktsregionerna (vänster och
+  /// höger) intill den byggplats där kortet ligger, t.ex. Kvarn som
+  /// dubblar spannmålsproduktionen i båda grannliggande fältregioner.
+  /// Visas som "⬅ Namn ➡" runt kortnamnet.
+  final bool affectsBothNeighboringRegions;
+
   final int victoryPoints;
   final int strengthPoints; // yxsymbol
   final int commercePoints; // vågsymbol
@@ -87,6 +93,7 @@ class GameCard {
     this.productionNumber,
     this.buildingCost = const {},
     this.isUnique = false,
+    this.affectsBothNeighboringRegions = false,
     this.victoryPoints = 0,
     this.strengthPoints = 0,
     this.commercePoints = 0,
@@ -108,6 +115,7 @@ class GameCard {
     int? productionNumber,
     Map<ResourceType, int>? buildingCost,
     bool? isUnique,
+    bool? affectsBothNeighboringRegions,
     int? victoryPoints,
     int? strengthPoints,
     int? commercePoints,
@@ -128,6 +136,8 @@ class GameCard {
       productionNumber: productionNumber ?? this.productionNumber,
       buildingCost: buildingCost ?? this.buildingCost,
       isUnique: isUnique ?? this.isUnique,
+      affectsBothNeighboringRegions:
+          affectsBothNeighboringRegions ?? this.affectsBothNeighboringRegions,
       victoryPoints: victoryPoints ?? this.victoryPoints,
       strengthPoints: strengthPoints ?? this.strengthPoints,
       commercePoints: commercePoints ?? this.commercePoints,
@@ -151,6 +161,7 @@ class GameCard {
         'buildingCost':
             buildingCost.map((type, amount) => MapEntry(type.name, amount)),
         'isUnique': isUnique,
+        'affectsBothNeighboringRegions': affectsBothNeighboringRegions,
         'victoryPoints': victoryPoints,
         'strengthPoints': strengthPoints,
         'commercePoints': commercePoints,
@@ -171,15 +182,17 @@ class GameCard {
         actionKind: (json['actionKind'] as String?) == null
             ? null
             : ActionKind.values.byName(json['actionKind'] as String),
-        expansionSet:
-            ExpansionSet.values.byName(json['expansionSet'] as String? ?? 'basic'),
+        expansionSet: ExpansionSet.values
+            .byName(json['expansionSet'] as String? ?? 'basic'),
         resource: ResourceType.values.byName(json['resource'] as String),
         productionNumber: json['productionNumber'] as int?,
         buildingCost: (json['buildingCost'] as Map? ?? {}).map(
-          (type, amount) =>
-              MapEntry(ResourceType.values.byName(type as String), amount as int),
+          (type, amount) => MapEntry(
+              ResourceType.values.byName(type as String), amount as int),
         ),
         isUnique: json['isUnique'] as bool? ?? false,
+        affectsBothNeighboringRegions:
+            json['affectsBothNeighboringRegions'] as bool? ?? false,
         victoryPoints: json['victoryPoints'] as int? ?? 0,
         strengthPoints: json['strengthPoints'] as int? ?? 0,
         commercePoints: json['commercePoints'] as int? ?? 0,
