@@ -40,19 +40,24 @@ void main() {
     test('dropExpansion rejects a card the player cannot afford, leaving hand and board untouched', () {
       final notifier = container.read(gameProvider.notifier);
       final before = container.read(gameProvider);
-      final austin = before.you.hand.firstWhere((c) => c.id == 'hero-austin');
+      final siglind = before.you.hand.firstWhere((c) => c.id == 'hero-siglind');
 
-      final error = notifier.dropExpansion(0, BuildingRow.above, 0, austin);
+      final error = notifier.dropExpansion(0, BuildingRow.above, 0, siglind);
 
       expect(error, isNotNull);
       final after = container.read(gameProvider);
-      expect(after.you.hand.contains(austin), isTrue);
+      expect(after.you.hand.contains(siglind), isTrue);
       expect(after.you.principality.settlementAt(0)!.aboveSites[0], isNull);
     });
 
     test('dropRoad builds a road at the frontier and decrements the stack', () {
       final notifier = container.read(gameProvider.notifier);
-      final roadsBefore = container.read(gameProvider).centerStacks['roads']!;
+      final before = container.read(gameProvider);
+      final roadsBefore = before.centerStacks['roads']!;
+      // Vägen kostar 2 lera, men startuppställningen har bara 1 lagrad
+      // (regelhäftet s. 3) – toppa upp Hills-regionen så draget går att
+      // betala, precis som en spelare skulle göra efter några tärningsslag.
+      before.you.principality.addResourceToRegion(-1, BuildingRow.below, 1);
 
       final error = notifier.dropRoad(-1, BasicSetCards.road);
 
@@ -64,6 +69,11 @@ void main() {
 
     test('dropSettlement builds beyond a dangling road and grants 2 new regions', () {
       final notifier = container.read(gameProvider.notifier);
+      final before = container.read(gameProvider);
+      // Väg (2 lera, 1 trä) + by (1 lera, 1 säd, 1 får, 1 trä) kostar mer
+      // än startuppställningens 1-av-varje – toppa upp lera och trä.
+      before.you.principality.addResourceToRegion(-1, BuildingRow.below, 2);
+      before.you.principality.addResourceToRegion(-1, BuildingRow.above, 1);
       notifier.dropRoad(-1, BasicSetCards.road);
       final regionsBefore = container.read(gameProvider).centerStacks['regions']!;
 

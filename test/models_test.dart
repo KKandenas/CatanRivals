@@ -185,15 +185,41 @@ void main() {
     });
   });
 
-  group('Player', () {
-    test('addResource accumulates counts', () {
-      final player = Player(id: 'p1', name: 'Alice');
-      final updated = player
-          .addResource(ResourceType.wool, 2)
-          .addResource(ResourceType.wool, 1);
+  group('RealmBoard – resurslagring per region', () {
+    test('starting principality has exactly 1 of each non-gold resource and 0 gold', () {
+      final board = StarterCards.buildStartingPrincipality('p1', isRed: true);
 
-      expect(updated.resourceCount(ResourceType.wool), 3);
-      expect(player.resourceCount(ResourceType.wool), 0); // originalet är oförändrat
+      expect(board.resourceTotal(ResourceType.lumber), 1);
+      expect(board.resourceTotal(ResourceType.brick), 1);
+      expect(board.resourceTotal(ResourceType.ore), 1);
+      expect(board.resourceTotal(ResourceType.grain), 1);
+      expect(board.resourceTotal(ResourceType.wool), 1);
+      expect(board.resourceTotal(ResourceType.gold), 0);
+    });
+
+    test('spend takes resources from a region with that type, clamped at 0', () {
+      final board = StarterCards.buildStartingPrincipality('p1', isRed: true);
+
+      board.spend({ResourceType.lumber: 1});
+
+      expect(board.resourceTotal(ResourceType.lumber), 0);
+      expect(board.canAfford({ResourceType.lumber: 1}), isFalse);
+    });
+
+    test('spend throws when the player cannot afford the cost', () {
+      final board = StarterCards.buildStartingPrincipality('p1', isRed: true);
+
+      expect(() => board.spend({ResourceType.lumber: 2}), throwsStateError);
+      // Oförändrat efter det misslyckade försöket.
+      expect(board.resourceTotal(ResourceType.lumber), 1);
+    });
+
+    test('addResourceToRegion clamps stored resources to 0-3', () {
+      final board = StarterCards.buildStartingPrincipality('p1', isRed: true);
+
+      board.addResourceToRegion(-1, BuildingRow.above, 10);
+
+      expect(board.regionAt(-1, BuildingRow.above)!.storedResources, 3);
     });
   });
 }

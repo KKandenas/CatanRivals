@@ -4,15 +4,28 @@ import 'game_card.dart';
 enum BuildingRow { above, below }
 
 /// Ett kortexemplar som är utplacerat på ett rike.
+///
+/// `storedResources` är bara meningsfullt för regionkort (0–3 resurser
+/// lagrade, se regelhäftet s. 3: "you can thus store between 0 and 3
+/// resources in a region") – för alla andra kategorier är det alltid 0.
+/// Vi visar det som upplysta ringar (se [ResourcePipRow]) i stället för
+/// att rotera kortet grafiskt, men datat är annars likvärdigt med det
+/// fysiska spelets regel.
 class PlacedCard {
   final GameCard card;
+  final int storedResources;
 
-  const PlacedCard({required this.card});
+  const PlacedCard({required this.card, this.storedResources = 0});
 
-  Map<String, dynamic> toJson() => {'card': card.toJson()};
+  PlacedCard copyWith({int? storedResources}) =>
+      PlacedCard(card: card, storedResources: storedResources ?? this.storedResources);
 
-  factory PlacedCard.fromJson(Map<String, dynamic> json) =>
-      PlacedCard(card: GameCard.fromJson(Map<String, dynamic>.from(json['card'] as Map)));
+  Map<String, dynamic> toJson() => {'card': card.toJson(), 'storedResources': storedResources};
+
+  factory PlacedCard.fromJson(Map<String, dynamic> json) => PlacedCard(
+        card: GameCard.fromJson(Map<String, dynamic>.from(json['card'] as Map)),
+        storedResources: json['storedResources'] as int? ?? 0,
+      );
 }
 
 /// En by eller stad i riket, tillsammans med dess byggplatser för
@@ -174,6 +187,68 @@ class RealmBoard {
       throw StateError('Byggplatsen är redan upptagen.');
     }
     sites[slotIndex] = expansionCard;
+  }
+
+  /// Summan av lagrade resurser av given typ över alla regioner i riket
+  /// (regelhäftet s. 3: varje region lagrar 0–3 av sin egen resurstyp).
+  int resourceTotal(ResourceType type) {
+    var total = 0;
+    for (final region in [..._regionsAbove.values, ..._regionsBelow.values]) {
+      if (region.card.resource == type) total += region.storedResources;
+    }
+    return total;
+  }
+
+  bool canAfford(Map<ResourceType, int> cost) =>
+      cost.entries.every((entry) => resourceTotal(entry.key) >= entry.value);
+
+  /// Förbrukar `cost` genom att plocka från de regioner som har den
+  /// aktuella resurstypen lagrad, tills kostnaden är täckt. Vilken
+  /// specifik region man "roterar ner" är upp till spelaren enligt
+  /// reglerna (s. 9: "The resources paid can be taken from various
+  /// regions of the same type") – vi väljer automatiskt bland de
+  /// regioner som har mest lagrat, i väntan på en manuell väljare.
+  /// Kastar [StateError] om det inte finns tillräckligt (anropa
+  /// [canAfford] först).
+  void spend(Map<ResourceType, int> cost) {
+    if (!canAfford(cost)) {
+      throw StateError('Inte tillräckligt med resurser för att betala kostnaden.');
+    }
+    for (final entry in cost.entries) {
+      var remaining = entry.value;
+      final candidates = [
+        for (final col in _regionsAbove.keys) MapEntry(col, BuildingRow.above),
+        for (final col in _regionsBelow.keys) MapEntry(col, BuildingRow.below),
+      ]..sort((a, b) {
+          final regionA = regionAt(a.key, a.value)!;
+          final regionB = regionAt(b.key, b.value)!;
+          return regionB.storedResources.compareTo(regionA.storedResources);
+        });
+      for (final location in candidates) {
+        if (remaining <= 0) break;
+        final region = regionAt(location.key, location.value)!;
+        if (region.card.resource != entry.key || region.storedResources <= 0) continue;
+        final taken = remaining < region.storedResources ? remaining : region.storedResources;
+        _setRegionStorage(location.key, location.value, region.storedResources - taken);
+        remaining -= taken;
+      }
+    }
+  }
+
+  /// Lägger till (eller drar ifrån) lagrade resurser på en specifik
+  /// region, t.ex. vid tärningsproduktion. Klämmer till 0–3.
+  void addResourceToRegion(int junctionColumn, BuildingRow row, int delta) {
+    final region = regionAt(junctionColumn, row);
+    if (region == null) return;
+    final clamped = (region.storedResources + delta).clamp(0, 3);
+    _setRegionStorage(junctionColumn, row, clamped);
+  }
+
+  void _setRegionStorage(int junctionColumn, BuildingRow row, int storedResources) {
+    final target = row == BuildingRow.above ? _regionsAbove : _regionsBelow;
+    final region = target[junctionColumn];
+    if (region == null) return;
+    target[junctionColumn] = region.copyWith(storedResources: storedResources);
   }
 
   int get leftmostColumn =>

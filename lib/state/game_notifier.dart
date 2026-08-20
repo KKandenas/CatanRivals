@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/mock_game.dart';
+import '../data/region_deck.dart';
 import '../models/models.dart';
 import '../services/game_sync_providers.dart';
 import '../services/game_sync_service.dart';
@@ -32,7 +33,20 @@ class GameNotifier extends Notifier<GameState> {
   StreamSubscription<Map<String, Player>>? _playersSub;
   StreamSubscription<Map<String, int>>? _centerStacksSub;
 
+  /// Regionstapelns kvarvarande, blandade kort (se [RegionDeck]) – dras
+  /// från när en ny by byggs. Var spelares klient håller sin egen
+  /// blandning; det synkas inte kort-för-kort mellan host/guest än (bara
+  /// det synliga antalet i centerStacks['regions'] synkas), så exakt
+  /// vilka regioner som dras kan skilja mellan de två klienterna. Fullt
+  /// delad, synkad dragstapel är ett större steg för sig.
+  List<GameCard> _regionDeck = RegionDeck.shuffledRemainingDeck();
+
   GameSyncService get _sync => ref.read(gameSyncServiceProvider);
+
+  GameCard _drawRegion() {
+    if (_regionDeck.isEmpty) _regionDeck = RegionDeck.shuffledRemainingDeck();
+    return _regionDeck.removeLast();
+  }
 
   @override
   GameState build() {
@@ -61,6 +75,7 @@ class GameNotifier extends Notifier<GameState> {
   void playLocally() {
     _playersSub?.cancel();
     _centerStacksSub?.cancel();
+    _regionDeck = RegionDeck.shuffledRemainingDeck();
     state = GameState(
       you: MockGame.buildYou(),
       opponent: MockGame.buildOpponent(),
@@ -75,6 +90,7 @@ class GameNotifier extends Notifier<GameState> {
     final hostPlayer = MockGame.buildStartingPlayer('host', myName, isRed: true);
     final waitingOpponent = MockGame.buildStartingPlayer('guest', 'Väntar på motståndare …', isRed: false);
     final centerStacks = MockGame.centerStackCounts();
+    _regionDeck = RegionDeck.shuffledRemainingDeck();
 
     try {
       await _sync.createRoom(roomCode, 'host', hostPlayer, centerStacks).timeout(const Duration(seconds: 10));
@@ -107,6 +123,7 @@ class GameNotifier extends Notifier<GameState> {
       return 'Fick ingen kontakt med servern. Kontrollera internetanslutningen och försök igen.';
     }
     if (error != null) return error;
+    _regionDeck = RegionDeck.shuffledRemainingDeck();
 
     state = GameState(
       you: guestPlayer,
@@ -167,17 +184,7 @@ class GameNotifier extends Notifier<GameState> {
   // Bygga: spela kort från handen / center-dragstaplarna
   // ---------------------------------------------------------------------
 
-  bool _canAfford(GameCard card) {
-    return card.buildingCost.entries.every((entry) => state.you.resourceCount(entry.key) >= entry.value);
-  }
-
-  Player _spend(Player player, GameCard card) {
-    var updated = player;
-    for (final entry in card.buildingCost.entries) {
-      updated = updated.addResource(entry.key, -entry.value);
-    }
-    return updated;
-  }
+  bool _canAfford(GameCard card) => state.you.principality.canAfford(card.buildingCost);
 
   /// Kollar att stapeln inte är slut och att spelaren har råd. Null om
   /// allt stämmer, annars ett felmeddelande.
@@ -196,7 +203,8 @@ class GameNotifier extends Notifier<GameState> {
     if (!_canAfford(card)) return 'Inte råd med ${card.name}';
 
     state.you.principality.placeExpansion(column, row, slotIndex, PlacedCard(card: card));
-    final updated = _spend(state.you.copyWith(hand: List.of(state.you.hand)..remove(card)), card);
+    state.you.principality.spend(card.buildingCost);
+    final updated = state.you.copyWith(hand: List.of(state.you.hand)..remove(card));
 
     state = state.copyWith(you: updated, clearDraggingCard: true);
     _syncMyPlayer();
@@ -208,10 +216,9 @@ class GameNotifier extends Notifier<GameState> {
     if (error != null) return error;
 
     state.you.principality.placeRoad(column, PlacedCard(card: card));
-    final updated = _spend(state.you, card);
+    state.you.principality.spend(card.buildingCost);
 
     state = state.copyWith(
-      you: updated,
       centerStacks: Map.of(state.centerStacks)..update('roads', (v) => v - 1),
       clearDraggingCard: true,
     );
@@ -234,16 +241,15 @@ class GameNotifier extends Notifier<GameState> {
     final newJunction = column < oldLeft ? column - 1 : column + 1;
     final wasNewSettlementFurtherOut = column < oldLeft || column > oldRight;
     if (wasNewSettlementFurtherOut) {
-      state.you.principality
-          .placeRegion(newJunction, BuildingRow.above, PlacedCard(card: MockGame.drawRandomRegion()));
-      state.you.principality
-          .placeRegion(newJunction, BuildingRow.below, PlacedCard(card: MockGame.drawRandomRegion()));
+      // Regelhäftet s. 8: nydragna regioner börjar tomma (sidan med 0
+      // resurssymboler vänd mot dig).
+      state.you.principality.placeRegion(newJunction, BuildingRow.above, PlacedCard(card: _drawRegion()));
+      state.you.principality.placeRegion(newJunction, BuildingRow.below, PlacedCard(card: _drawRegion()));
     }
 
-    final updated = _spend(state.you, card);
+    state.you.principality.spend(card.buildingCost);
 
     state = state.copyWith(
-      you: updated,
       centerStacks: Map.of(state.centerStacks)
         ..update('settlements', (v) => v - 1)
         ..update('regions', (v) => wasNewSettlementFurtherOut ? v - 2 : v),
@@ -259,10 +265,9 @@ class GameNotifier extends Notifier<GameState> {
     if (error != null) return error;
 
     state.you.principality.upgradeToCity(column, PlacedCard(card: card));
-    final updated = _spend(state.you, card);
+    state.you.principality.spend(card.buildingCost);
 
     state = state.copyWith(
-      you: updated,
       centerStacks: Map.of(state.centerStacks)..update('cities', (v) => v - 1),
       clearDraggingCard: true,
     );

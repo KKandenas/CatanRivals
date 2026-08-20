@@ -49,37 +49,55 @@ class StarterCards {
     board.placeSettlement(2, const PlacedCard(card: BasicSetCards.settlement));
     board.placeRoad(1, const PlacedCard(card: BasicSetCards.road));
 
+    // Regelhäftet s. 3: vid start har varje region – utom guldfältet –
+    // exakt 1 resurs lagrad (guldfältet börjar tomt, du börjar aldrig
+    // med guld).
     board.placeRegion(
       -1,
       BuildingRow.above,
-      PlacedCard(card: BasicSetCards.forest.copyWith(id: 'region-forest-start', productionNumber: numbers['forest'])),
+      PlacedCard(
+        card: BasicSetCards.forest.copyWith(id: 'region-forest-start', productionNumber: numbers['forest']),
+        storedResources: 1,
+      ),
     );
     board.placeRegion(
       -1,
       BuildingRow.below,
-      PlacedCard(card: BasicSetCards.hills.copyWith(id: 'region-hills-start', productionNumber: numbers['hills'])),
+      PlacedCard(
+        card: BasicSetCards.hills.copyWith(id: 'region-hills-start', productionNumber: numbers['hills']),
+        storedResources: 1,
+      ),
     );
     board.placeRegion(
       1,
       BuildingRow.above,
       PlacedCard(
-          card: BasicSetCards.goldField.copyWith(id: 'region-gold-field-start', productionNumber: numbers['goldField'])),
+        card: BasicSetCards.goldField.copyWith(id: 'region-gold-field-start', productionNumber: numbers['goldField']),
+      ),
     );
     board.placeRegion(
       1,
       BuildingRow.below,
-      PlacedCard(card: BasicSetCards.pasture.copyWith(id: 'region-pasture-start', productionNumber: numbers['pasture'])),
+      PlacedCard(
+        card: BasicSetCards.pasture.copyWith(id: 'region-pasture-start', productionNumber: numbers['pasture']),
+        storedResources: 1,
+      ),
     );
     board.placeRegion(
       3,
       BuildingRow.above,
-      PlacedCard(card: BasicSetCards.fields.copyWith(id: 'region-fields-start', productionNumber: numbers['fields'])),
+      PlacedCard(
+        card: BasicSetCards.fields.copyWith(id: 'region-fields-start', productionNumber: numbers['fields']),
+        storedResources: 1,
+      ),
     );
     board.placeRegion(
       3,
       BuildingRow.below,
       PlacedCard(
-          card: BasicSetCards.mountains.copyWith(id: 'region-mountains-start', productionNumber: numbers['mountains'])),
+        card: BasicSetCards.mountains.copyWith(id: 'region-mountains-start', productionNumber: numbers['mountains']),
+        storedResources: 1,
+      ),
     );
 
     return board;

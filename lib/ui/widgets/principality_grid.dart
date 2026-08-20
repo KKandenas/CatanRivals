@@ -24,8 +24,7 @@ typedef ColumnDropCallback = void Function(int column, GameCard card);
 /// nedanför (se "Rikets koordinatsystem"-skissen). Zoombart/panorerbart
 /// via [InteractiveViewer]. Alla kort är kvadratiska.
 ///
-/// `resourceStorage` är mock-data för pip-visningen tills spelstate
-/// finns. `unit` styr kortstorleken – ett mindre värde används för
+/// `unit` styr kortstorleken – ett mindre värde används för
 /// motståndarens kompakta rike.
 ///
 /// Sätt `interactive: true` (bara för ditt eget rike) för att aktivera
@@ -37,7 +36,6 @@ typedef ColumnDropCallback = void Function(int column, GameCard card);
 /// kategori.
 class PrincipalityGrid extends StatelessWidget {
   final RealmBoard board;
-  final Map<String, int> resourceStorage;
   final double unit;
   final double gap;
   final bool interactive;
@@ -50,7 +48,6 @@ class PrincipalityGrid extends StatelessWidget {
   const PrincipalityGrid({
     super.key,
     required this.board,
-    this.resourceStorage = const {},
     this.unit = 78,
     this.gap = 5,
     this.interactive = false,
@@ -272,8 +269,7 @@ class PrincipalityGrid extends StatelessWidget {
   }
 
   Widget _region(PlacedCard placed) {
-    final stored = resourceStorage[placed.card.id] ?? 0;
-    return RegionCardView(card: placed.card, stored: stored);
+    return RegionCardView(card: placed.card, stored: placed.storedResources);
   }
 
   Widget _expansionCard(PlacedCard placed) {

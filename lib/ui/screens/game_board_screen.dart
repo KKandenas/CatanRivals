@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/mock_game.dart';
 import '../../state/game_notifier.dart';
 import '../../state/game_state.dart';
 import '../widgets/center_stacks_strip.dart';
@@ -30,8 +29,6 @@ class GameBoardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(gameProvider);
     final notifier = ref.read(gameProvider.notifier);
-    final yourStorage = MockGame.resourceStorageFor(state.you.principality);
-    final opponentStorage = MockGame.resourceStorageFor(state.opponent.principality);
 
     return Scaffold(
       appBar: state.roomCode == null
@@ -77,7 +74,6 @@ class GameBoardScreen extends ConsumerWidget {
             flex: 4,
             child: PrincipalityGrid(
               board: state.opponent.principality,
-              resourceStorage: opponentStorage,
               unit: 58,
               gap: 4,
             ),
@@ -91,7 +87,6 @@ class GameBoardScreen extends ConsumerWidget {
             flex: 5,
             child: PrincipalityGrid(
               board: state.you.principality,
-              resourceStorage: yourStorage,
               interactive: true,
               draggingCard: state.draggingCard,
               onDropExpansion: (column, row, slotIndex, card) =>

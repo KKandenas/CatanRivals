@@ -46,7 +46,7 @@ class HandDock extends StatelessWidget {
                       ),
               ),
               const SizedBox(width: 12),
-              _ResourceMeter(resources: player.resources),
+              _ResourceMeter(player: player),
             ],
           ),
         ),
@@ -116,9 +116,9 @@ class _CardFace extends StatelessWidget {
 }
 
 class _ResourceMeter extends StatelessWidget {
-  final Map<ResourceType, int> resources;
+  final Player player;
 
-  const _ResourceMeter({required this.resources});
+  const _ResourceMeter({required this.player});
 
   @override
   Widget build(BuildContext context) {
@@ -140,7 +140,7 @@ class _ResourceMeter extends StatelessWidget {
             Icon(CatanColors.iconFor(type), size: 15, color: CatanColors.resourceColor(type)),
             const SizedBox(width: 3),
             Text(
-              '${resources[type] ?? 0}',
+              '${player.resourceCount(type)}',
               style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600),
             ),
             const SizedBox(width: 10),
