@@ -274,21 +274,29 @@ class RealmBoard {
     return total;
   }
 
+  // Kolumnnycklarna är heltal (även negativa), t.ex. "0", "-1", "2".
+  // Firebase Realtime Database gör om ett JSON-objekt till en array om
+  // alla nycklar ser ut som array-index – vilket krossar allt så fort
+  // en spelare har en by i kolumn 0 eller 2. Prefixet "c" garanterar
+  // att nycklarna aldrig ser numeriska ut för Firebase.
+  static String _columnKey(int col) => 'c$col';
+  static int _parseColumnKey(String key) => int.parse(key.substring(1));
+
   Map<String, dynamic> toJson() => {
         'ownerId': ownerId,
-        'settlements': _settlements.map((col, node) => MapEntry(col.toString(), node.toJson())),
-        'roads': _roads.map((col, card) => MapEntry(col.toString(), card.toJson())),
+        'settlements': _settlements.map((col, node) => MapEntry(_columnKey(col), node.toJson())),
+        'roads': _roads.map((col, card) => MapEntry(_columnKey(col), card.toJson())),
         'regionsAbove':
-            _regionsAbove.map((col, card) => MapEntry(col.toString(), card.toJson())),
+            _regionsAbove.map((col, card) => MapEntry(_columnKey(col), card.toJson())),
         'regionsBelow':
-            _regionsBelow.map((col, card) => MapEntry(col.toString(), card.toJson())),
+            _regionsBelow.map((col, card) => MapEntry(_columnKey(col), card.toJson())),
       };
 
   factory RealmBoard.fromJson(Map<String, dynamic> json) {
     Map<int, T> parseColumnMap<T>(dynamic raw, T Function(Map<String, dynamic>) fromJson) {
       return (raw as Map? ?? {}).map(
         (col, value) =>
-            MapEntry(int.parse(col as String), fromJson(Map<String, dynamic>.from(value as Map))),
+            MapEntry(_parseColumnKey(col as String), fromJson(Map<String, dynamic>.from(value as Map))),
       );
     }
 

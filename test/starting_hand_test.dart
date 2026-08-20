@@ -1,6 +1,5 @@
 import 'package:catan_rivals/services/game_sync_providers.dart';
 import 'package:catan_rivals/state/game_notifier.dart';
-import 'package:catan_rivals/state/game_state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 

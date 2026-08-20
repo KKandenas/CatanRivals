@@ -183,6 +183,24 @@ void main() {
       expect(restored.settlements.keys.toSet(), board.settlements.keys.toSet());
       expect(restored.totalVictoryPoints, board.totalVictoryPoints);
     });
+
+    test('serialized column keys are never purely numeric strings', () {
+      // Firebase Realtime Database gör tyst om ett JSON-objekt till en
+      // array om ALLA nycklar ser ut som icke-negativa heltal (t.ex.
+      // "0", "2") – vilket kraschar allt när det läses tillbaka som
+      // Map. Kolumnnycklarna ("0", "-1", "2" ...) måste därför alltid
+      // ha ett prefix i den serialiserade formen.
+      final board = StarterCards.buildStartingPrincipality('p1');
+      final json = board.toJson();
+
+      final numeric = RegExp(r'^-?\d+$');
+      for (final section in ['settlements', 'roads', 'regionsAbove', 'regionsBelow']) {
+        final keys = (json[section] as Map).keys.cast<String>();
+        for (final key in keys) {
+          expect(numeric.hasMatch(key), isFalse, reason: '$section-nyckeln "$key" ser numerisk ut');
+        }
+      }
+    });
   });
 
   group('RealmBoard – resurslagring per region', () {
