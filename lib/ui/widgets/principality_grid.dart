@@ -103,6 +103,15 @@ class PrincipalityGrid extends StatelessWidget {
         ),
       ),
       child: InteractiveViewer(
+        // Pan/zoom stängs av på det interaktiva (egna) brädet: på
+        // pekskärmar tävlar InteractiveViewers egen pan-gest med
+        // LongPressDraggable om samma pekhändelser, och panorering
+        // vinner ofta innan långtrycket hinner registreras – då går
+        // det inte att dra ut kort alls. Motståndarens skrivskyddade
+        // bräde (interactive: false) har inga dragbara mål, så där är
+        // pan/zoom kvar för att kunna zooma in det.
+        panEnabled: !interactive,
+        scaleEnabled: !interactive,
         minScale: 0.6,
         maxScale: 2.5,
         boundaryMargin: const EdgeInsets.all(200),
