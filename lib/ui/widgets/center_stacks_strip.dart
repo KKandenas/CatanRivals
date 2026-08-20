@@ -61,7 +61,7 @@ class CenterStacksStrip extends StatelessWidget {
                   card: BasicSetCards.road,
                   onDragStarted: onDragStarted,
                   onDragEnd: onDragEnd,
-                  width: 34,
+                  width: 48,
                 ),
                 _StackPile(
                   asset: CatanAssets.backSettlements,
@@ -69,7 +69,7 @@ class CenterStacksStrip extends StatelessWidget {
                   card: BasicSetCards.settlement,
                   onDragStarted: onDragStarted,
                   onDragEnd: onDragEnd,
-                  width: 34,
+                  width: 48,
                 ),
                 _StackPile(
                   asset: CatanAssets.backCities,
@@ -77,11 +77,11 @@ class CenterStacksStrip extends StatelessWidget {
                   card: BasicSetCards.city,
                   onDragStarted: onDragStarted,
                   onDragEnd: onDragEnd,
-                  width: 34,
+                  width: 48,
                 ),
-                _StackPile(asset: CatanAssets.backRegions, count: stackCounts['regions'] ?? 0, width: 34),
+                _StackPile(asset: CatanAssets.backRegions, count: stackCounts['regions'] ?? 0, width: 48),
                 for (var i = 0; i < 4; i++) _drawStackPile(i),
-                _StackPile(asset: CatanAssets.backEvent, count: stackCounts['event'] ?? 0, width: 34),
+                _StackPile(asset: CatanAssets.backEvent, count: stackCounts['event'] ?? 0, width: 48),
               ],
             ),
           ),
@@ -101,7 +101,7 @@ class CenterStacksStrip extends StatelessWidget {
     return _StackPile(
       asset: CatanAssets.backBasicSet,
       count: count,
-      width: 34,
+      width: 48,
       dimmed: isChoosingHand && claimed,
       highlighted: tappable,
       onTap: tappable ? () => onChooseStack?.call(index) : null,
@@ -154,38 +154,63 @@ class _StackPile extends StatelessWidget {
           decoration: BoxDecoration(
             border: Border.all(color: glowing ? const Color(0xFF7CBF6A) : CatanColors.woodFrame, width: glowing ? 1.6 : 1),
           ),
-          child: Image.asset(asset, fit: BoxFit.cover),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(asset, fit: BoxFit.cover),
+              Positioned(
+                right: 2,
+                bottom: 2,
+                child: _CountBadge(count: count),
+              ),
+            ],
+          ),
         ),
       ),
     );
     final dimmedPile = dimmed ? Opacity(opacity: 0.4, child: pile) : pile;
 
-    return SizedBox(
-      width: width,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (onTap != null)
-            GestureDetector(onTap: onTap, child: dimmedPile)
-          else if (card != null && count > 0)
-            LongPressDraggable<GameCard>(
-              data: card,
-              delay: const Duration(milliseconds: 180),
-              feedback: Material(
-                color: Colors.transparent,
-                child: SizedBox(width: width, child: Transform.scale(scale: 1.3, child: pile)),
-              ),
-              childWhenDragging: Opacity(opacity: 0.35, child: pile),
-              onDragStarted: () => onDragStarted?.call(card!),
-              onDragEnd: (_) => onDragEnd?.call(),
-              onDraggableCanceled: (_, __) => onDragEnd?.call(),
-              child: pile,
-            )
-          else
-            dimmedPile,
-          const SizedBox(height: 2),
-          Text('$count', style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w600)),
-        ],
+    final content = onTap != null
+        ? GestureDetector(onTap: onTap, child: dimmedPile)
+        : card != null && count > 0
+            ? LongPressDraggable<GameCard>(
+                data: card,
+                delay: const Duration(milliseconds: 180),
+                feedback: Material(
+                  color: Colors.transparent,
+                  child: SizedBox(width: width, child: Transform.scale(scale: 1.3, child: pile)),
+                ),
+                childWhenDragging: Opacity(opacity: 0.35, child: pile),
+                onDragStarted: () => onDragStarted?.call(card!),
+                onDragEnd: (_) => onDragEnd?.call(),
+                onDraggableCanceled: (_, __) => onDragEnd?.call(),
+                child: pile,
+              )
+            : dimmedPile;
+
+    return SizedBox(width: width, child: content);
+  }
+}
+
+/// Antalet kort kvar i högen – en liten badge ovanpå kortbilden i
+/// stället för en textrad under, så att själva högarna kan göras
+/// större utan att remsan växer i höjd.
+class _CountBadge extends StatelessWidget {
+  final int count;
+
+  const _CountBadge({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        '$count',
+        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
       ),
     );
   }
