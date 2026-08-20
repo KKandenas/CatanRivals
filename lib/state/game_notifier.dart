@@ -72,8 +72,8 @@ class GameNotifier extends Notifier<GameState> {
   /// ska gå med. Returnerar den genererade rumskoden.
   Future<String> hostRoom(String myName) async {
     final roomCode = MockGame.generateRoomCode();
-    final hostPlayer = MockGame.buildStartingPlayer('host', myName);
-    final waitingOpponent = MockGame.buildStartingPlayer('guest', 'Väntar på motståndare …');
+    final hostPlayer = MockGame.buildStartingPlayer('host', myName, isRed: true);
+    final waitingOpponent = MockGame.buildStartingPlayer('guest', 'Väntar på motståndare …', isRed: false);
     final centerStacks = MockGame.centerStackCounts();
 
     await _sync.createRoom(roomCode, 'host', hostPlayer, centerStacks);
@@ -95,13 +95,13 @@ class GameNotifier extends Notifier<GameState> {
   /// Går med i ett befintligt rum. Returnerar `null` vid lyckat
   /// gick-med, annars ett felmeddelande att visa i lobbyn.
   Future<String?> joinRoom(String roomCode, String myName) async {
-    final guestPlayer = MockGame.buildStartingPlayer('guest', myName);
+    final guestPlayer = MockGame.buildStartingPlayer('guest', myName, isRed: false);
     final error = await _sync.joinRoom(roomCode, 'guest', guestPlayer);
     if (error != null) return error;
 
     state = GameState(
       you: guestPlayer,
-      opponent: MockGame.buildStartingPlayer('host', '…'),
+      opponent: MockGame.buildStartingPlayer('host', '…', isRed: true),
       centerStacks: MockGame.centerStackCounts(),
       mode: SessionMode.guest,
       roomCode: roomCode,

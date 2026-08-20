@@ -61,7 +61,7 @@ class GameBoardScreen extends ConsumerWidget {
                 textAlign: TextAlign.center,
               ),
             ),
-          TopStatusBar(opponent: state.opponent),
+          TopStatusBar(opponent: state.opponent, opponentIsRed: !state.amIRed),
           Expanded(
             flex: 4,
             child: PrincipalityGrid(

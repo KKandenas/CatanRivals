@@ -29,7 +29,7 @@ class MockGame {
         ResourceType.wool: 1,
         ResourceType.gold: 0,
       },
-      principality: StarterCards.buildStartingPrincipality('you'),
+      principality: StarterCards.buildStartingPrincipality('you', isRed: true),
     );
   }
 
@@ -41,18 +41,21 @@ class MockGame {
         BasicSetCards.goldsmith,
         BasicSetCards.brigittaTheWiseWoman,
       ],
-      principality: StarterCards.buildStartingPrincipality('opponent'),
+      principality: StarterCards.buildStartingPrincipality('opponent', isRed: false),
     );
   }
 
   /// Bygger en riktig startspelare (samma startuppställning som
   /// [buildYou]/[buildOpponent], men med angivet id/namn) – används när
   /// två spelare möts via Firebase-synk i stället för mock-datan ovan.
-  static Player buildStartingPlayer(String id, String name) {
+  /// Regelhäftet ger den röda och den blå spelaren olika tärningstal på
+  /// samma sex regioner (s. 2 och 4), så [isRed] avgör vilken
+  /// uppsättning tal som används.
+  static Player buildStartingPlayer(String id, String name, {required bool isRed}) {
     return Player(
       id: id,
       name: name,
-      principality: StarterCards.buildStartingPrincipality(id),
+      principality: StarterCards.buildStartingPrincipality(id, isRed: isRed),
     );
   }
 

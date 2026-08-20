@@ -45,6 +45,12 @@ class GameState {
 
   bool get isOnline => mode != SessionMode.local;
 
+  /// Röd/blå-tillhörighet härleds från spelar-id:t (satt av
+  /// [GameNotifier.hostRoom]/[joinRoom]/mock-datan): host/"you" är
+  /// alltid röd, guest/"opponent" är alltid blå – matchar vilken
+  /// startuppställning ([StarterCards]) spelaren fick.
+  bool get amIRed => myPlayerId == 'host' || myPlayerId == 'you';
+
   GameState copyWith({
     Player? you,
     Player? opponent,

@@ -9,11 +9,13 @@ import '../theme/catan_colors.dart';
 /// riken, precis som i det fysiska spelets uppställning.
 class TopStatusBar extends StatelessWidget {
   final Player opponent;
+  final bool opponentIsRed;
 
-  const TopStatusBar({super.key, required this.opponent});
+  const TopStatusBar({super.key, required this.opponent, this.opponentIsRed = false});
 
   @override
   Widget build(BuildContext context) {
+    final color = opponentIsRed ? const Color(0xFFB33A3A) : const Color(0xFF3A6FB3);
     return DecoratedBox(
       decoration: const BoxDecoration(
         color: CatanColors.woodFrameDark,
@@ -25,9 +27,11 @@ class TopStatusBar extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           child: Row(
             children: [
-              const CircleAvatar(radius: 14, backgroundColor: CatanColors.woodFrame, child: Icon(Icons.person, size: 16, color: Colors.white70)),
+              CircleAvatar(radius: 14, backgroundColor: color, child: const Icon(Icons.person, size: 16, color: Colors.white70)),
               const SizedBox(width: 8),
               Text(opponent.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+              const SizedBox(width: 6),
+              Text(opponentIsRed ? '(röd)' : '(blå)', style: const TextStyle(color: Colors.white54, fontSize: 11)),
               const Spacer(),
               _StatChip(icon: Icons.emoji_events, label: '${opponent.principality.totalVictoryPoints} VP'),
               const SizedBox(width: 6),
