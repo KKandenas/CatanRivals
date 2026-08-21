@@ -52,7 +52,7 @@ void main() {
       WidgetTester tester, Finder source, Offset target) async {
     final start = tester.getCenter(source);
     final gesture = await tester.startGesture(start);
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 600));
     await gesture.moveTo(target);
     await tester.pump();
     await gesture.up();
