@@ -458,7 +458,7 @@ class BasicSetCards {
     effectText:
         'Each player gets 1 resource of his choice for each building with a progress point – up '
         'to a maximum of 2 resources.',
-    imageAsset: 'assets/images/cards/events/invention.png',
+    imageAsset: 'assets/images/cards/events/invention.jpg',
   );
 
   static const tradeShipsRace = GameCard(
@@ -488,7 +488,7 @@ class BasicSetCards {
     effectText:
         'Shuffle the event card stack as performed at the beginning of the game. Afterwards, '
         'draw an event card again.',
-    imageAsset: 'assets/images/cards/events/yule.png',
+    imageAsset: 'assets/images/cards/events/yule.jpg',
   );
 
   static const yearOfPlenty = GameCard(
