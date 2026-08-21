@@ -36,11 +36,19 @@ typedef BuildConfirmRequest = void Function(GameCard card, VoidCallback onConfir
 
 /// Ritar ut ett [RealmBoard] enligt kolumnmodellen: byar/städer i en rad,
 /// vägar mellan dem, och regioner delade diagonalt i hörnen ovanför och
-/// nedanför (se "Rikets koordinatsystem"-skissen). Zoombart/panorerbart
-/// via [InteractiveViewer]. Alla kort är kvadratiska.
+/// nedanför (se "Rikets koordinatsystem"-skissen). Alla kort är
+/// kvadratiska.
 ///
-/// `unit` styr kortstorleken – ett mindre värde används för
-/// motståndarens kompakta rike.
+/// Hela riket byggs vid en fast basstorlek (`unit`) och skalas sedan
+/// proportionerligt med en enda [FittedBox] för att alltid fylla så
+/// mycket av det tillgängliga utrymmet som möjligt utan att hamna
+/// utanför – ju fler vägar/byar/städer som byggs, desto mindre blir
+/// den slutgiltiga skalan. Eftersom kostnad, poäng, tärningsprickar och
+/// +/- knappar bara är en del av samma innehållsträd skalas de
+/// automatiskt med, utan någon egen skalningslogik.
+///
+/// `unit` styr kortens *inbördes* storlek (text-/ikonstorlek relativt
+/// kortet) – ett mindre värde används för motståndarens kompakta rike.
 ///
 /// Sätt `interactive: true` (bara för ditt eget rike) för att aktivera
 /// drop-mål: tomma byggplatser (bygg-/enhetskort), den öppna vägplatsen
@@ -153,32 +161,33 @@ class PrincipalityGrid extends StatelessWidget {
         // byggplatsernas streckade kanter och korten fortfarande
         // syns tydligt – samma ljushet som den gamla gradienten hade.
         Container(color: CatanColors.parchment.withValues(alpha: 0.55)),
-        _buildInteractiveContent(contentWidth, contentHeight, padding, content),
+        _buildFittedContent(contentWidth, contentHeight, padding, content),
       ],
     );
   }
 
-  Widget _buildInteractiveContent(double contentWidth, double contentHeight,
+  /// Skalar hela riket proportionerligt så att det alltid fyller så
+  /// mycket av tillgängligt utrymme som möjligt utan att hamna utanför
+  /// – i stället för en fast kortstorlek som skulle kräva manuell
+  /// pan/zoom när riket växer sig större än vad som får plats. En enda
+  /// [FittedBox] runt hela innehållet räcker: eftersom kostnads-
+  /// ikonerna, poängen, tärningsprickarna och +/- knapparna bara är
+  /// widgetar längre ner i samma träd skalas de automatiskt med.
+  ///
+  /// OBS: inget `Center` runt [FittedBox] här – `Center` gör om de
+  /// åtstramade begränsningarna som [Stack] (`StackFit.expand`) ger
+  /// till lösa, och då vet `FittedBox` inte hur stort utrymme den
+  /// faktiskt har att fylla (den skalar då varken upp eller ner).
+  /// `FittedBox` centrerar sitt innehåll själv (`alignment.center` är
+  /// standard), så resultatet blir detsamma utan `Center`.
+  Widget _buildFittedContent(double contentWidth, double contentHeight,
       double padding, Widget content) {
-    return InteractiveViewer(
-      // Pan/zoom stängs av på det interaktiva (egna) brädet: på
-      // pekskärmar tävlar InteractiveViewers egen pan-gest med
-      // LongPressDraggable om samma pekhändelser, och panorering
-      // vinner ofta innan långtrycket hinner registreras – då går
-      // det inte att dra ut kort alls. Motståndarens skrivskyddade
-      // bräde (interactive: false) har inga dragbara mål, så där är
-      // pan/zoom kvar för att kunna zooma in det.
-      panEnabled: !interactive,
-      scaleEnabled: !interactive,
-      minScale: 0.6,
-      maxScale: 2.5,
-      boundaryMargin: const EdgeInsets.all(200),
-      child: Center(
-        child: SizedBox(
-          width: contentWidth + padding * 2,
-          height: contentHeight + padding * 2,
-          child: Padding(padding: EdgeInsets.all(padding), child: content),
-        ),
+    return FittedBox(
+      fit: BoxFit.contain,
+      child: SizedBox(
+        width: contentWidth + padding * 2,
+        height: contentHeight + padding * 2,
+        child: Padding(padding: EdgeInsets.all(padding), child: content),
       ),
     );
   }
