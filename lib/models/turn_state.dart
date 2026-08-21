@@ -1,4 +1,5 @@
 import 'event_die_face.dart';
+import 'game_card.dart';
 
 /// Vems tur det är och hur långt omgången kommit (regelhäftet s. 7:
 /// 1) slå tärningarna, 2) utför åtgärder, 3) kontrollera handkort,
@@ -10,11 +11,17 @@ class TurnState {
   final int? productionRoll;
   final EventDieFace? eventDieFace;
 
+  /// Händelsekortet draget när [eventDieFace] visade "?" (regelhäftet:
+  /// "reads the event aloud"), synkat så båda spelarna ser samma kort –
+  /// se [GameNotifier.drawEventCard].
+  final GameCard? drawnEventCard;
+
   const TurnState({
     required this.activePlayerId,
     this.diceRolled = false,
     this.productionRoll,
     this.eventDieFace,
+    this.drawnEventCard,
   });
 
   Map<String, dynamic> toJson() => {
@@ -22,6 +29,7 @@ class TurnState {
         'diceRolled': diceRolled,
         if (productionRoll != null) 'productionRoll': productionRoll,
         if (eventDieFace != null) 'eventDieFace': eventDieFace!.name,
+        if (drawnEventCard != null) 'drawnEventCard': drawnEventCard!.toJson(),
       };
 
   factory TurnState.fromJson(Map<String, dynamic> json) => TurnState(
@@ -31,5 +39,9 @@ class TurnState {
         eventDieFace: (json['eventDieFace'] as String?) == null
             ? null
             : EventDieFace.values.byName(json['eventDieFace'] as String),
+        drawnEventCard: json['drawnEventCard'] == null
+            ? null
+            : GameCard.fromJson(
+                Map<String, dynamic>.from(json['drawnEventCard'] as Map)),
       );
 }

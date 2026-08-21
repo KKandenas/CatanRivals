@@ -75,6 +75,13 @@ class CenterStacksStrip extends StatelessWidget {
   final void Function(int stackIndex)? onPeekStack;
   final bool hasSelectedExchangeCard;
 
+  /// Händelsekortsstapeln (se [EventDieFace.eventCard]) går att trycka
+  /// på för att dra det översta kortet ([onDrawEventCard]) bara när
+  /// tärningen just visade "?" och inget redan är draget den här
+  /// omgången.
+  final bool canDrawEventCard;
+  final VoidCallback? onDrawEventCard;
+
   const CenterStacksStrip({
     super.key,
     required this.stackCounts,
@@ -97,6 +104,8 @@ class CenterStacksStrip extends StatelessWidget {
     this.onExchangeDrawStack,
     this.onPeekStack,
     this.hasSelectedExchangeCard = false,
+    this.canDrawEventCard = false,
+    this.onDrawEventCard,
   });
 
   @override
@@ -140,9 +149,12 @@ class CenterStacksStrip extends StatelessWidget {
                     width: 48),
                 for (var i = 0; i < 4; i++) _drawStackPile(i),
                 _StackPile(
-                    asset: CatanAssets.backEvent,
-                    count: stackCounts['event'] ?? 0,
-                    width: 48),
+                  asset: CatanAssets.backEvent,
+                  count: stackCounts['event'] ?? 0,
+                  width: 48,
+                  highlighted: canDrawEventCard,
+                  onTap: canDrawEventCard ? onDrawEventCard : null,
+                ),
               ],
             ),
           ),

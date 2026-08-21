@@ -105,6 +105,12 @@ class GameState {
   final int? peekStackIndex;
   final List<GameCard>? peekedCards;
 
+  /// Händelsekortet som just nu ligger uppslaget för alla att läsa,
+  /// draget när händelsetärningen visade "?" (se [EventDieFace.eventCard]
+  /// och [GameNotifier.drawEventCard]) – synkas till båda spelarna,
+  /// `null` när inget är uppslaget.
+  final GameCard? drawnEventCard;
+
   const GameState({
     required this.you,
     required this.opponent,
@@ -128,6 +134,7 @@ class GameState {
     this.tradePhase = TradePhase.none,
     this.peekStackIndex,
     this.peekedCards,
+    this.drawnEventCard,
   });
 
   bool get isOnline => mode != SessionMode.local;
@@ -218,6 +225,8 @@ class GameState {
     bool clearPeekStackIndex = false,
     List<GameCard>? peekedCards,
     bool clearPeekedCards = false,
+    GameCard? drawnEventCard,
+    bool clearDrawnEventCard = false,
   }) {
     return GameState(
       you: you ?? this.you,
@@ -253,6 +262,9 @@ class GameState {
       peekStackIndex:
           clearPeekStackIndex ? null : (peekStackIndex ?? this.peekStackIndex),
       peekedCards: clearPeekedCards ? null : (peekedCards ?? this.peekedCards),
+      drawnEventCard: clearDrawnEventCard
+          ? null
+          : (drawnEventCard ?? this.drawnEventCard),
     );
   }
 }

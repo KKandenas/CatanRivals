@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/basic_set_cards.dart';
 import '../data/basic_set_draw_deck.dart';
 import '../data/event_deck.dart';
 import '../data/mock_game.dart';
@@ -256,6 +257,8 @@ class GameNotifier extends Notifier<GameState> {
           clearProductionRoll: turnState.productionRoll == null,
           eventDieFace: turnState.eventDieFace,
           clearEventDieFace: turnState.eventDieFace == null,
+          drawnEventCard: turnState.drawnEventCard,
+          clearDrawnEventCard: turnState.drawnEventCard == null,
         );
       },
       onError: (Object e) {
@@ -286,6 +289,7 @@ class GameNotifier extends Notifier<GameState> {
         diceRolled: state.diceRolled,
         productionRoll: state.productionRoll,
         eventDieFace: state.eventDieFace,
+        drawnEventCard: state.drawnEventCard,
       ),
     ));
   }
@@ -312,6 +316,59 @@ class GameNotifier extends Notifier<GameState> {
     final eventFace = EventDieFace.fromRoll(Random().nextInt(6));
     state = state.copyWith(
         productionRoll: roll, eventDieFace: eventFace, diceRolled: true);
+    _syncTurnState();
+    return null;
+  }
+
+  /// Drar det översta händelsekortet när händelsetärningen visade "?"
+  /// (regelhäftets referenskort: "The player who rolled the dice draws
+  /// the topmost event card and reads the event aloud") – bara den som
+  /// slog tärningen får dra, och bara en gång per omgång. Kortet synkas
+  /// till motståndaren (se [TurnState.drawnEventCard]) så båda ser
+  /// samma kort, och stängs igen med [dismissEventCard]. Vad kortets
+  /// effekt faktiskt innebär sköter spelarna själva utifrån dess
+  /// `effectText`, precis som byggkostnader.
+  String? drawEventCard() {
+    if (state.eventDieFace != EventDieFace.eventCard) return null;
+    if (!state.isMyTurn) return 'Inte din tur.';
+    if (!state.diceRolled) return null;
+    if (state.drawnEventCard != null) return null;
+
+    final card = _drawEventCardResolvingYule();
+    if (card == null) return 'Inga fler händelsekort kvar.';
+
+    state = state.copyWith(
+      drawnEventCard: card,
+      centerStacks: Map.of(state.centerStacks)..['event'] = _eventDeck.length,
+    );
+    _syncCenterStacks();
+    _syncTurnState();
+    return null;
+  }
+
+  /// Drar översta kortet från händelsekortsstapeln. Är det Jul
+  /// (regelhäftet: "Shuffle the event card stack as performed at the
+  /// beginning of the game. Afterwards, draw an event card again.")
+  /// byggs stapeln om automatiskt och nästa kort dras direkt i
+  /// stället – Jul visas alltså aldrig för spelarna, bara kortet som
+  /// kommer efter.
+  GameCard? _drawEventCardResolvingYule() {
+    if (_eventDeck.isEmpty) return null;
+    var card = _eventDeck.removeAt(0);
+    while (card.id == BasicSetCards.yule.id) {
+      _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom();
+      if (_eventDeck.isEmpty) return null;
+      card = _eventDeck.removeAt(0);
+    }
+    return card;
+  }
+
+  /// Stänger det uppslagna händelsekortet (se [drawEventCard]) – vem
+  /// som helst av spelarna kan stänga det när det är läst och (om det
+  /// påverkar någon) genomfört, det är bara en informationsruta.
+  String? dismissEventCard() {
+    if (state.drawnEventCard == null) return null;
+    state = state.copyWith(clearDrawnEventCard: true);
     _syncTurnState();
     return null;
   }
@@ -365,6 +422,7 @@ class GameNotifier extends Notifier<GameState> {
       diceRolled: false,
       clearProductionRoll: true,
       clearEventDieFace: true,
+      clearDrawnEventCard: true,
       handAdjustmentPhase: HandAdjustmentPhase.none,
       tradePhase: TradePhase.none,
       clearPeekStackIndex: true,

@@ -9,6 +9,7 @@ import '../widgets/build_confirm_card.dart';
 import '../widgets/center_stacks_strip.dart';
 import '../widgets/dice_roll_button.dart';
 import '../widgets/dice_roll_summary_banner.dart';
+import '../widgets/event_card_reveal_card.dart';
 import '../widgets/event_die_icon.dart';
 import '../widgets/hand_dock.dart';
 import '../widgets/peek_stack_overlay.dart';
@@ -319,6 +320,21 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           ),
                         ),
                       ),
+                    // Uppslaget händelsekort (se drawEventCard) – synkat
+                    // till båda spelarna, precis som bekräftelsekortet
+                    // och kika-vyn ovan: inte en modal dialogruta.
+                    if (state.drawnEventCard != null)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          padding: const EdgeInsets.all(12),
+                          child: EventCardRevealCard(
+                            card: state.drawnEventCard!,
+                            onDismiss: () => _handleResult(
+                                context, notifier.dismissEventCard()),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -373,6 +389,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                     _handleResult(context, notifier.exchangeDraw(index)),
                 onPeekStack: (index) =>
                     _handleResult(context, notifier.choosePeekStack(index)),
+                canDrawEventCard:
+                    state.eventDieFace == EventDieFace.eventCard &&
+                        state.diceRolled &&
+                        state.isMyTurn &&
+                        state.drawnEventCard == null,
+                onDrawEventCard: () =>
+                    _handleResult(context, notifier.drawEventCard()),
               ),
               if (state.pendingRegions.isNotEmpty)
                 PendingRegionsBar(
