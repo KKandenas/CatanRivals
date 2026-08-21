@@ -18,13 +18,18 @@ class ExpansionCardView extends StatelessWidget {
   final GameCard card;
   final bool showCost;
 
+  /// Om satt, körs den här i stället för att förstora kortet vid
+  /// tryck – används t.ex. för att välja ett handkort att slänga under
+  /// handjusteringen (se [HandDock]).
+  final VoidCallback? onTap;
+
   const ExpansionCardView(
-      {super.key, required this.card, this.showCost = true});
+      {super.key, required this.card, this.showCost = true, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => showCardDetail(context, card),
+      onTap: onTap ?? () => showCardDetail(context, card),
       child: AspectRatio(
         aspectRatio: 1,
         child: ClipRRect(

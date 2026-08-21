@@ -298,15 +298,91 @@ class GameNotifier extends Notifier<GameState> {
     _syncMyPlayer();
   }
 
-  /// Lämnar över turen till motståndaren och återställer tärningsläget.
-  /// Kräver att produktionstärningen redan är slagen den här omgången.
-  String? endTurn() {
+  /// Avslutar action-fasen (regelhäftet s. 9). Om handen redan har rätt
+  /// antal kort ([GameState.handLimit]) går turen direkt vidare till
+  /// motståndaren – annars startar handjusteringen: för få kort sätter
+  /// [HandAdjustmentPhase.drawing] (dra ett kort i taget från valfri
+  /// draghög via [drawHandCard]), för många sätter
+  /// [HandAdjustmentPhase.discarding] (släng ett kort i taget till
+  /// botten av valfri draghög via [discardHandCard]). I båda fallen
+  /// lämnas turen över automatiskt så fort rätt antal är nått.
+  String? endActionPhase() {
     if (!state.isMyTurn) return 'Inte din tur.';
-    if (!state.diceRolled) return 'Slå tärningen innan du avslutar omgången.';
+    if (!state.diceRolled) return 'Slå tärningen innan du avslutar action-fasen.';
+    if (state.handAdjustmentPhase != HandAdjustmentPhase.none) return null;
 
+    final count = state.you.hand.length;
+    final limit = state.handLimit;
+    if (count < limit) {
+      state = state.copyWith(handAdjustmentPhase: HandAdjustmentPhase.drawing);
+    } else if (count > limit) {
+      state = state.copyWith(handAdjustmentPhase: HandAdjustmentPhase.discarding);
+    } else {
+      _advanceToNextPlayer();
+    }
+    return null;
+  }
+
+  /// Lämnar över turen till motståndaren och återställer tärnings- och
+  /// handjusteringsläget.
+  void _advanceToNextPlayer() {
     final next = state.activePlayerId == state.myPlayerId ? state.opponentPlayerId : state.myPlayerId;
-    state = state.copyWith(activePlayerId: next, diceRolled: false, clearProductionRoll: true);
+    state = state.copyWith(
+      activePlayerId: next,
+      diceRolled: false,
+      clearProductionRoll: true,
+      handAdjustmentPhase: HandAdjustmentPhase.none,
+    );
     _syncTurnState();
+  }
+
+  /// Drar det översta kortet från draghög [stackIndex] (0–3) till din
+  /// hand under [HandAdjustmentPhase.drawing]. Lämnar turen vidare
+  /// automatiskt så fort [GameState.handLimit] är nått.
+  String? drawHandCard(int stackIndex) {
+    if (state.handAdjustmentPhase != HandAdjustmentPhase.drawing) return null;
+    final stack = _drawStacks[stackIndex];
+    if (stack.isEmpty) return 'Den högen är tom.';
+
+    final card = stack.first;
+    _drawStacks[stackIndex] = stack.sublist(1);
+    final updatedHand = [...state.you.hand, card];
+    final done = updatedHand.length >= state.handLimit;
+
+    state = state.copyWith(
+      you: state.you.copyWith(hand: updatedHand),
+      centerStacks: Map.of(state.centerStacks)..update('draw${stackIndex + 1}', (v) => v - 1),
+    );
+    _syncMyPlayer();
+    _syncCenterStacks();
+    if (done) {
+      _advanceToNextPlayer();
+    }
+    return null;
+  }
+
+  /// Slänger [card] från din hand till botten av draghög [stackIndex]
+  /// (0–3) under [HandAdjustmentPhase.discarding] – spelaren väljer
+  /// själv vilken av de fyra högarna, ingen matchning mot korttyp
+  /// krävs. Lämnar turen vidare automatiskt så fort
+  /// [GameState.handLimit] är nått.
+  String? discardHandCard(GameCard card, int stackIndex) {
+    if (state.handAdjustmentPhase != HandAdjustmentPhase.discarding) return null;
+    if (!state.you.hand.contains(card)) return null;
+
+    _drawStacks[stackIndex] = [..._drawStacks[stackIndex], card];
+    final updatedHand = List<GameCard>.of(state.you.hand)..remove(card);
+    final done = updatedHand.length <= state.handLimit;
+
+    state = state.copyWith(
+      you: state.you.copyWith(hand: updatedHand),
+      centerStacks: Map.of(state.centerStacks)..update('draw${stackIndex + 1}', (v) => v + 1),
+    );
+    _syncMyPlayer();
+    _syncCenterStacks();
+    if (done) {
+      _advanceToNextPlayer();
+    }
     return null;
   }
 

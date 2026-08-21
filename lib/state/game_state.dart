@@ -10,6 +10,14 @@ import '../models/models.dart';
 /// med.
 enum SessionMode { local, host, guest }
 
+/// Handkortsjustering i slutet av action-fasen (regelhäftet s. 9): du
+/// ska ha exakt [GameState.handLimit] kort på hand innan turen går
+/// vidare – för få och du drar, för många och du slänger.
+/// [none] – ingen justering pågår (antingen redan klar, eller väntar på
+/// att action-fasen avslutas). [drawing]/[discarding] – väntar på att
+/// du drar från/slänger till en av de fyra draghögarna, en i taget.
+enum HandAdjustmentPhase { none, drawing, discarding }
+
 /// Allt UI:t behöver rendera spelbrädet: de två spelarna, hur många
 /// kort som återstår i center-dragstaplarna, och (om något) vilket
 /// kort som just nu dras – används för att tända giltiga rutor.
@@ -47,6 +55,10 @@ class GameState {
   final List<GameCard> pendingRegions;
   final int? pendingRegionJunction;
 
+  /// Om du just nu håller på att justera din hand till [handLimit] kort
+  /// innan turen går vidare (se [HandAdjustmentPhase]).
+  final HandAdjustmentPhase handAdjustmentPhase;
+
   const GameState({
     required this.you,
     required this.opponent,
@@ -63,6 +75,7 @@ class GameState {
     this.productionRoll,
     this.pendingRegions = const [],
     this.pendingRegionJunction,
+    this.handAdjustmentPhase = HandAdjustmentPhase.none,
   });
 
   bool get isOnline => mode != SessionMode.local;
@@ -107,6 +120,10 @@ class GameState {
 
   bool get handsReady => pendingHandChooserId == null;
 
+  /// Antal handkort du ska ha när action-fasen avslutas (regelhäftet
+  /// s. 9): 3 som grund, plus 1 per framstegspoäng du har i spel.
+  int get handLimit => you.principality.totalProgressPoints + 3;
+
   GameState copyWith({
     Player? you,
     Player? opponent,
@@ -127,6 +144,7 @@ class GameState {
     List<GameCard>? pendingRegions,
     int? pendingRegionJunction,
     bool clearPendingRegionJunction = false,
+    HandAdjustmentPhase? handAdjustmentPhase,
   }) {
     return GameState(
       you: you ?? this.you,
@@ -146,6 +164,7 @@ class GameState {
       pendingRegionJunction: clearPendingRegionJunction
           ? null
           : (pendingRegionJunction ?? this.pendingRegionJunction),
+      handAdjustmentPhase: handAdjustmentPhase ?? this.handAdjustmentPhase,
     );
   }
 }

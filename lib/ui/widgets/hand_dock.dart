@@ -18,8 +18,21 @@ class HandDock extends StatelessWidget {
   final void Function(GameCard card)? onDragStarted;
   final VoidCallback? onDragEnd;
 
-  const HandDock(
-      {super.key, required this.player, this.onDragStarted, this.onDragEnd});
+  /// Handjustering i slutet av action-fasen (se [HandAdjustmentPhase.
+  /// discarding]): om satt går varje handkort (oavsett kategori) att
+  /// trycka på för att välja det att slänga i stället för att förstora
+  /// det – normal dra-för-att-bygga är avstängd medan det här pågår.
+  final GameCard? selectedDiscardCard;
+  final void Function(GameCard card)? onSelectForDiscard;
+
+  const HandDock({
+    super.key,
+    required this.player,
+    this.onDragStarted,
+    this.onDragEnd,
+    this.selectedDiscardCard,
+    this.onSelectForDiscard,
+  });
 
   static const double _dockHeight = 92;
 
@@ -48,6 +61,10 @@ class HandDock extends StatelessWidget {
                           card: player.hand[i],
                           onDragStarted: onDragStarted,
                           onDragEnd: onDragEnd,
+                          selected: player.hand[i] == selectedDiscardCard,
+                          onSelectForDiscard: onSelectForDiscard == null
+                              ? null
+                              : () => onSelectForDiscard!(player.hand[i]),
                         ),
                       ),
               ),
@@ -65,12 +82,29 @@ class _HandCard extends StatelessWidget {
   final GameCard card;
   final void Function(GameCard card)? onDragStarted;
   final VoidCallback? onDragEnd;
+  final bool selected;
+  final VoidCallback? onSelectForDiscard;
 
-  const _HandCard({required this.card, this.onDragStarted, this.onDragEnd});
+  const _HandCard({
+    required this.card,
+    this.onDragStarted,
+    this.onDragEnd,
+    this.selected = false,
+    this.onSelectForDiscard,
+  });
 
   @override
   Widget build(BuildContext context) {
     final playable = card.category == CardCategory.expansion;
+
+    // Under handjusteringen (slänga kort) går varje kort – oavsett
+    // kategori – bara att trycka på för att välja det, ingen dra-för-
+    // att-bygga: det är inte läge att bygga mitt i handjusteringen.
+    if (onSelectForDiscard != null) {
+      return _CardFace(
+          card: card, playable: playable, selected: selected, onTap: onSelectForDiscard);
+    }
+
     final face = _CardFace(card: card, playable: playable);
 
     if (!playable) return face;
@@ -105,8 +139,15 @@ class _HandCard extends StatelessWidget {
 class _CardFace extends StatelessWidget {
   final GameCard card;
   final bool playable;
+  final bool selected;
+  final VoidCallback? onTap;
 
-  const _CardFace({required this.card, required this.playable});
+  const _CardFace({
+    required this.card,
+    required this.playable,
+    this.selected = false,
+    this.onTap,
+  });
 
   static const double _size = 72;
 
@@ -118,8 +159,15 @@ class _CardFace extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          ExpansionCardView(card: card, showCost: playable),
-          if (playable)
+          ExpansionCardView(card: card, showCost: playable, onTap: onTap),
+          if (selected)
+            DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.redAccent, width: 2.4),
+              ),
+            )
+          else if (playable)
             DecoratedBox(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(6),

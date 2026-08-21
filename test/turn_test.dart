@@ -66,7 +66,7 @@ void main() {
     expect(container.read(gameProvider).you.principality.regionAt(-1, BuildingRow.above)!.storedResources, 0);
   });
 
-  test('endTurn kräver att tärningen är slagen, sedan lämnas turen över', () {
+  test('endActionPhase kräver att tärningen är slagen, sedan lämnas turen över', () {
     final container = ProviderContainer(
       overrides: [gameSyncServiceProvider.overrideWithValue(FakeGameSyncService())],
     );
@@ -74,11 +74,11 @@ void main() {
     final notifier = container.read(gameProvider.notifier);
     notifier.playLocally();
 
-    final tooEarly = notifier.endTurn();
+    final tooEarly = notifier.endActionPhase();
     expect(tooEarly, isNotNull);
 
     notifier.rollProductionDie();
-    final error = notifier.endTurn();
+    final error = notifier.endActionPhase();
 
     expect(error, isNull);
     final state = container.read(gameProvider);
@@ -108,7 +108,7 @@ void main() {
     expect(container.read(gameProvider).you.principality.roads.containsKey(-1), isTrue);
   });
 
-  test('online: bara den aktiva spelaren får slå tärningen och avsluta omgången', () async {
+  test('online: bara den aktiva spelaren får slå tärningen och avsluta action-fasen', () async {
     final fake = FakeGameSyncService();
     final hostContainer = ProviderContainer(overrides: [gameSyncServiceProvider.overrideWithValue(fake)]);
     final guestContainer = ProviderContainer(overrides: [gameSyncServiceProvider.overrideWithValue(fake)]);
@@ -145,10 +145,10 @@ void main() {
     expect(guestContainer.read(gameProvider).productionRoll, hostContainer.read(gameProvider).productionRoll);
     expect(guestContainer.read(gameProvider).diceRolled, isTrue);
 
-    final guestEndTooEarly = guestContainer.read(gameProvider.notifier).endTurn();
+    final guestEndTooEarly = guestContainer.read(gameProvider.notifier).endActionPhase();
     expect(guestEndTooEarly, isNotNull); // inte guests tur
 
-    final hostEndError = hostContainer.read(gameProvider.notifier).endTurn();
+    final hostEndError = hostContainer.read(gameProvider.notifier).endActionPhase();
     expect(hostEndError, isNull);
     await pump();
 

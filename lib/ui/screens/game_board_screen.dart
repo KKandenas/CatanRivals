@@ -15,14 +15,17 @@ import '../widgets/roll_info_banner.dart';
 import '../widgets/top_status_bar.dart';
 
 /// Huvudskärmen, stående layout: motståndarens namn/status (smal remsa),
-/// motståndarens rike (kompakt), dragstaplar + tärning + turindikator i
+/// motståndarens rike (kompakt), dragstaplar + "Avsluta action-fas" i
 /// mitten (som i det fysiska spelets uppställning), ditt eget rike
-/// (större, i fokus) och din handkortsdocka längst ner.
+/// (större, i fokus) och din handkortsdocka längst ner. Vems tur det är
+/// visas bara i den breda bannern högst upp.
 ///
 /// Rent presentationslager – allt spelstate bor i [gameProvider]
-/// (state/game_notifier.dart). Undantaget är [_pendingBuildCard], som
-/// är rent lokalt UI-state för bekräftelsekortet (se
-/// [BuildConfirmCard]) – det behöver inte synkas mellan spelarna.
+/// (state/game_notifier.dart). Undantaget är [_pendingBuildCard] och
+/// [_selectedDiscardCard], som är rent lokalt UI-state (bekräftelse-
+/// kortet, se [BuildConfirmCard], respektive vilket handkort som är
+/// valt att slänga under handjusteringen) – de behöver inte synkas
+/// mellan spelarna.
 class GameBoardScreen extends ConsumerStatefulWidget {
   const GameBoardScreen({super.key});
 
@@ -33,6 +36,12 @@ class GameBoardScreen extends ConsumerStatefulWidget {
 class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   GameCard? _pendingBuildCard;
   VoidCallback? _pendingBuildConfirm;
+
+  /// Handkortet som just nu är valt att slänga under
+  /// [HandAdjustmentPhase.discarding] – rent lokalt UI-val (vilken
+  /// draghög det till slut hamnar i avgörs av nästa tryck, se
+  /// [CenterStacksStrip.onDiscardToStack]).
+  GameCard? _selectedDiscardCard;
 
   void _handleResult(BuildContext context, String? error) {
     if (error == null) return;
@@ -71,6 +80,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     // egen banner och där tärningen ändå aldrig är slagen.
     final showTurnEmphasis = state.handsReady;
     final canBuildNow = state.canBuildNow;
+    final isDiscarding = state.handAdjustmentPhase == HandAdjustmentPhase.discarding;
+    // Ett tidigare valt handkort hör bara hemma medan släng-läget
+    // faktiskt pågår – annars är det en kvarleva från en tidigare omgång.
+    if (!isDiscarding) _selectedDiscardCard = null;
 
     return Scaffold(
       // Rumskoden behövs bara medan den andra spelaren ännu inte gått
@@ -210,7 +223,23 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 _handleResult(context, notifier.chooseStartingStack(index)),
             isYourTurn: state.isMyTurn,
             diceRolled: state.diceRolled,
-            onEndTurn: () => _handleResult(context, notifier.endTurn()),
+            onEndTurn: () => _handleResult(context, notifier.endActionPhase()),
+            handAdjustmentPhase: state.handAdjustmentPhase,
+            handCount: state.you.hand.length,
+            handLimit: state.handLimit,
+            onDrawStack: (index) =>
+                _handleResult(context, notifier.drawHandCard(index)),
+            hasSelectedDiscardCard: _selectedDiscardCard != null,
+            onDiscardToStack: (index) {
+              final card = _selectedDiscardCard;
+              if (card == null) return;
+              final error = notifier.discardHandCard(card, index);
+              if (error == null) {
+                setState(() => _selectedDiscardCard = null);
+              } else {
+                _handleResult(context, error);
+              }
+            },
           ),
           // Info-remsa efter tärningskastet – inte en dialogruta, så
           // den täcker aldrig regionerna och +-knapparna går att
@@ -283,6 +312,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
               player: state.you,
               onDragStarted: notifier.startDrag,
               onDragEnd: notifier.endDrag,
+              selectedDiscardCard: isDiscarding ? _selectedDiscardCard : null,
+              onSelectForDiscard: isDiscarding
+                  ? (card) => setState(() => _selectedDiscardCard =
+                      _selectedDiscardCard == card ? null : card)
+                  : null,
             ),
           ),
         ],

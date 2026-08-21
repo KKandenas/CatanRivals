@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 
 import '../../data/basic_set_cards.dart';
 import '../../models/models.dart';
+import '../../state/game_state.dart';
 import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
 import 'card_detail_dialog.dart';
 
 /// Mittremsan mellan de två rikena: dragstaplarna (vägar/byar/städer/
-/// regioner), händelsekortsstapeln, och turindikatorn – precis som i
-/// det fysiska spelets uppställning, där dessa ligger mellan de två
-/// furstendömena (se regelhäftet s. 5). Produktionstärningen sitter
-/// inte här längre – den står till höger om motståndarens rike (se
+/// regioner), händelsekortsstapeln, och "Avsluta action-fas"-knappen –
+/// precis som i det fysiska spelets uppställning, där dessa ligger
+/// mellan de två furstendömena (se regelhäftet s. 5). Vems tur det är
+/// visas bara i den breda bannern högst upp (se game_board_screen.dart)
+/// – ingen egen turindikator här. Produktionstärningen sitter inte här
+/// längre – den står till höger om motståndarens rike (se
 /// [DiceRollButton] i game_board_screen.dart) för att lämna så mycket
 /// höjd som möjligt åt själva korten.
 ///
@@ -19,8 +22,13 @@ import 'card_detail_dialog.dart';
 /// (regelhäftet s. 8: "you can build any available road or settlement
 /// center card directly by paying the building costs"). Region- och
 /// händelsestaplarna är inte dragbara – regioner delas ut automatiskt
-/// när en ny by byggs, och händelsekort dras vid tärningsslag.
-/// `stackCounts` är mock-data tills en riktig dragstapel-modell finns.
+/// när en ny by byggs, och händelsekort dras vid tärningsslag. De fyra
+/// vanliga draghögarna (`draw1`–`draw4`) används både för starthands-
+/// valet och för handjusteringen i slutet av varje action-fas (se
+/// [HandAdjustmentPhase]): dra-läget gör dem tryckbara för att dra ett
+/// kort, släng-läget för att slänga det valda handkortet till botten
+/// av högen. `stackCounts` är mock-data tills en riktig
+/// dragstapel-modell finns.
 class CenterStacksStrip extends StatelessWidget {
   final Map<String, int> stackCounts;
   final bool isYourTurn;
@@ -36,9 +44,22 @@ class CenterStacksStrip extends StatelessWidget {
   final void Function(int stackIndex)? onChooseStack;
 
   /// Om tärningen redan är slagen den här omgången – styr om
-  /// "Avsluta omgång" visas.
+  /// "Avsluta action-fas" visas.
   final bool diceRolled;
   final VoidCallback? onEndTurn;
+
+  /// Handjustering i slutet av action-fasen (regelhäftet s. 9) – se
+  /// [HandAdjustmentPhase]. Under [HandAdjustmentPhase.drawing] går var
+  /// och en av de fyra draghögarna att trycka på för att dra ett kort
+  /// ([onDrawStack]); under [HandAdjustmentPhase.discarding] går de att
+  /// trycka på för att slänga det just valda handkortet dit
+  /// ([onDiscardToStack], bara aktiv när [hasSelectedDiscardCard]).
+  final HandAdjustmentPhase handAdjustmentPhase;
+  final int handCount;
+  final int handLimit;
+  final void Function(int stackIndex)? onDrawStack;
+  final void Function(int stackIndex)? onDiscardToStack;
+  final bool hasSelectedDiscardCard;
 
   const CenterStacksStrip({
     super.key,
@@ -51,6 +72,12 @@ class CenterStacksStrip extends StatelessWidget {
     this.onChooseStack,
     this.diceRolled = false,
     this.onEndTurn,
+    this.handAdjustmentPhase = HandAdjustmentPhase.none,
+    this.handCount = 0,
+    this.handLimit = 3,
+    this.onDrawStack,
+    this.onDiscardToStack,
+    this.hasSelectedDiscardCard = false,
   });
 
   @override
@@ -100,11 +127,13 @@ class CenterStacksStrip extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          _TurnIndicator(isYourTurn: isYourTurn),
           if (isYourTurn && diceRolled && !isChoosingHand) ...[
             const SizedBox(width: 8),
-            _EndTurnButton(onTap: onEndTurn),
+            if (handAdjustmentPhase == HandAdjustmentPhase.none)
+              _EndTurnButton(onTap: onEndTurn)
+            else
+              _HandAdjustmentLabel(
+                  phase: handAdjustmentPhase, count: handCount, limit: handLimit),
           ],
         ],
       ),
@@ -114,6 +143,28 @@ class CenterStacksStrip extends StatelessWidget {
   Widget _drawStackPile(int index) {
     final count = stackCounts['draw${index + 1}'] ?? 0;
     final claimed = count < 9;
+
+    if (handAdjustmentPhase == HandAdjustmentPhase.drawing) {
+      final tappable = count > 0;
+      return _StackPile(
+        asset: CatanAssets.backBasicSet,
+        count: count,
+        width: 48,
+        dimmed: !tappable,
+        highlighted: tappable,
+        onTap: tappable ? () => onDrawStack?.call(index) : null,
+      );
+    }
+    if (handAdjustmentPhase == HandAdjustmentPhase.discarding) {
+      return _StackPile(
+        asset: CatanAssets.backBasicSet,
+        count: count,
+        width: 48,
+        highlighted: hasSelectedDiscardCard,
+        onTap: hasSelectedDiscardCard ? () => onDiscardToStack?.call(index) : null,
+      );
+    }
+
     final tappable = isChoosingHand && isMyTurnToChooseHand && !claimed;
     return _StackPile(
       asset: CatanAssets.backBasicSet,
@@ -270,7 +321,7 @@ class _EndTurnButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
         ),
         child: const Text(
-          'Avsluta omgång',
+          'Avsluta action-fas',
           style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
         ),
       ),
@@ -278,21 +329,30 @@ class _EndTurnButton extends StatelessWidget {
   }
 }
 
-class _TurnIndicator extends StatelessWidget {
-  final bool isYourTurn;
+/// Visas i stället för "Avsluta action-fas" medan handjusteringen
+/// pågår – talar om vad spelaren ska göra och hur långt kvar det är
+/// (t.ex. "Dra kort: 2/4" eller "Släng kort: 5/4").
+class _HandAdjustmentLabel extends StatelessWidget {
+  final HandAdjustmentPhase phase;
+  final int count;
+  final int limit;
 
-  const _TurnIndicator({required this.isYourTurn});
+  const _HandAdjustmentLabel(
+      {required this.phase, required this.count, required this.limit});
 
   @override
   Widget build(BuildContext context) {
+    final label = phase == HandAdjustmentPhase.drawing
+        ? 'Dra kort: $count/$limit'
+        : 'Släng kort: $count/$limit';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: isYourTurn ? const Color(0xFF4F6F45) : Colors.black26,
+        color: const Color(0xFF7CBF6A),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        isYourTurn ? 'Din tur' : 'Motst.',
+        label,
         style: const TextStyle(
             color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
       ),
