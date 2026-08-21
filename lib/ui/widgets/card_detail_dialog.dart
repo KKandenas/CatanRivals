@@ -21,6 +21,17 @@ Future<void> showCardDetail(BuildContext context, GameCard card) {
   );
 }
 
+/// Texten inuti pilbanderollerna (se [_NeighborRibbon]) som flankerar
+/// namnet på kort med [GameCard.affectsBothNeighboringRegions] – "2x"
+/// för dubbel-byggnaderna, "2:1" för Stora handelsskeppet (gäller
+/// valfri grannresurs, inte en specifik), och tom sträng för kort som
+/// bara påverkar grannregionerna utan någon siffra (t.ex. Lagerhus).
+String _neighborRibbonLabel(GameCard card) {
+  if (card.doublesNeighborProduction) return '2x';
+  if (card.expansionKind == ExpansionKind.tradeShip) return '2:1';
+  return '';
+}
+
 class _CardDetailContent extends StatelessWidget {
   final GameCard card;
 
@@ -34,8 +45,12 @@ class _CardDetailContent extends StatelessWidget {
         card.skillPoints > 0 ||
         card.progressPoints > 0;
     final isTradeShip = card.expansionKind == ExpansionKind.tradeShip;
-    final hasCornerBadge =
-        card.isUnique || card.doublesNeighborProduction || isTradeShip;
+    // Handelsskepp knutna till en specifik resurs (t.ex. Sädesskepp)
+    // påverkar inte grannregionerna – de har ingen pilbanderoll (se
+    // _neighborRibbonLabel) och visar sitt bytesförhållande som en
+    // vanlig hörnbricka i stället, likt "1x"-brickan.
+    final showRatioCorner = isTradeShip && !card.affectsBothNeighboringRegions;
+    final hasCornerBadge = card.isUnique || showRatioCorner;
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 380),
@@ -78,14 +93,7 @@ class _CardDetailContent extends StatelessWidget {
                           child: _NumberBadge(number: card.productionNumber!)),
                     if (card.isUnique)
                       const Positioned(top: 8, right: 8, child: _UniqueBadge())
-                    else if (card.doublesNeighborProduction)
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child:
-                            _BigRatioBadge(label: '2X', resource: card.resource),
-                      )
-                    else if (isTradeShip)
+                    else if (showRatioCorner)
                       Positioned(
                         top: 8,
                         right: 8,
@@ -144,10 +152,11 @@ class _CardDetailContent extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (card.affectsBothNeighboringRegions)
-                          const Padding(
-                            padding: EdgeInsets.only(right: 6),
-                            child: Icon(Icons.arrow_back,
-                                size: 16, color: CatanColors.ink),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: _NeighborRibbon(
+                                label: _neighborRibbonLabel(card),
+                                pointLeft: true),
                           ),
                         Flexible(
                           child: Text(
@@ -159,10 +168,11 @@ class _CardDetailContent extends StatelessWidget {
                           ),
                         ),
                         if (card.affectsBothNeighboringRegions)
-                          const Padding(
-                            padding: EdgeInsets.only(left: 6),
-                            child: Icon(Icons.arrow_forward,
-                                size: 16, color: CatanColors.ink),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 6),
+                            child: _NeighborRibbon(
+                                label: _neighborRibbonLabel(card),
+                                pointLeft: false),
                           ),
                       ],
                     ),
@@ -288,6 +298,74 @@ class _NumberBadge extends StatelessWidget {
       child: DiceFace(value: number, size: 22, dotColor: CatanColors.ink),
     );
   }
+}
+
+/// Pilbanderoll i grönt, formad som en pil som pekar ut mot kortkanten
+/// – samma stil som originalspelets fysiska kort använder för att visa
+/// att en byggnad påverkar båda grannregionerna (se [_neighborRibbonLabel]).
+/// Tom [label] ritar bara själva pilformen, utan text (t.ex. Lagerhus,
+/// som påverkar grannarna men inte dubblar något).
+class _NeighborRibbon extends StatelessWidget {
+  final String label;
+  final bool pointLeft;
+
+  const _NeighborRibbon({required this.label, required this.pointLeft});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipPath(
+      clipper: _RibbonClipper(pointLeft: pointLeft),
+      child: Container(
+        width: 34,
+        height: 24,
+        color: const Color(0xFF6E9B5E),
+        alignment:
+            pointLeft ? const Alignment(0.35, 0) : const Alignment(-0.35, 0),
+        child: label.isEmpty
+            ? null
+            : Text(label,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+}
+
+class _RibbonClipper extends CustomClipper<Path> {
+  final bool pointLeft;
+
+  const _RibbonClipper({required this.pointLeft});
+
+  @override
+  Path getClip(Size size) {
+    final w = size.width;
+    final h = size.height;
+    final path = Path();
+    if (pointLeft) {
+      path
+        ..moveTo(w, 0)
+        ..lineTo(w * 0.35, 0)
+        ..lineTo(0, h / 2)
+        ..lineTo(w * 0.35, h)
+        ..lineTo(w, h)
+        ..close();
+    } else {
+      path
+        ..moveTo(0, 0)
+        ..lineTo(w * 0.65, 0)
+        ..lineTo(w, h / 2)
+        ..lineTo(w * 0.65, h)
+        ..lineTo(0, h)
+        ..close();
+    }
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant _RibbonClipper oldClipper) =>
+      oldClipper.pointLeft != pointLeft;
 }
 
 class _UniqueBadge extends StatelessWidget {

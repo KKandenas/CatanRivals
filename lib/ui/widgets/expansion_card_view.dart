@@ -14,6 +14,17 @@ import 'card_detail_dialog.dart';
 ///
 /// Delas mellan handkortsdockan och byggplatserna på spelbrädet så att
 /// kort ser likadana ut oavsett var de visas.
+/// Texten inuti pilbanderollerna (se [_NeighborRibbon]) som flankerar
+/// namnet på kort med [GameCard.affectsBothNeighboringRegions] – "2x"
+/// för dubbel-byggnaderna, "2:1" för Stora handelsskeppet (gäller
+/// valfri grannresurs, inte en specifik), och tom sträng för kort som
+/// bara påverkar grannregionerna utan någon siffra (t.ex. Lagerhus).
+String _neighborRibbonLabel(GameCard card) {
+  if (card.doublesNeighborProduction) return '2x';
+  if (card.expansionKind == ExpansionKind.tradeShip) return '2:1';
+  return '';
+}
+
 class ExpansionCardView extends StatelessWidget {
   final GameCard card;
   final bool showCost;
@@ -65,10 +76,11 @@ class ExpansionCardView extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       if (card.affectsBothNeighboringRegions)
-                        const Padding(
-                          padding: EdgeInsets.only(right: 2),
-                          child: Icon(Icons.arrow_back,
-                              size: 9, color: Colors.white),
+                        Padding(
+                          padding: const EdgeInsets.only(right: 2),
+                          child: _NeighborRibbon(
+                              label: _neighborRibbonLabel(card),
+                              pointLeft: true),
                         ),
                       Flexible(
                         child: Text(
@@ -85,10 +97,11 @@ class ExpansionCardView extends StatelessWidget {
                         ),
                       ),
                       if (card.affectsBothNeighboringRegions)
-                        const Padding(
-                          padding: EdgeInsets.only(left: 2),
-                          child: Icon(Icons.arrow_forward,
-                              size: 9, color: Colors.white),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 2),
+                          child: _NeighborRibbon(
+                              label: _neighborRibbonLabel(card),
+                              pointLeft: false),
                         ),
                     ],
                   ),
@@ -111,13 +124,12 @@ class ExpansionCardView extends StatelessWidget {
                     right: 2,
                     child: _UniqueBadge(),
                   )
-                else if (card.doublesNeighborProduction)
-                  Positioned(
-                    top: 2,
-                    right: 2,
-                    child: _RatioBadge(label: '2X', resource: card.resource),
-                  )
-                else if (card.expansionKind == ExpansionKind.tradeShip)
+                else if (card.expansionKind == ExpansionKind.tradeShip &&
+                    !card.affectsBothNeighboringRegions)
+                  // Handelsskepp knutna till en specifik resurs (t.ex.
+                  // Sädesskepp) påverkar inte grannregionerna – de har
+                  // ingen pilbanderoll, så bytesförhållandet visas här
+                  // som en vanlig hörnbricka i stället.
                   Positioned(
                     top: 2,
                     right: 2,
@@ -286,6 +298,73 @@ class _RatioBadge extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Liten pilbanderoll i grönt, formad som en pil som pekar ut mot
+/// kortkanten – samma stil som originalspelets fysiska kort (se
+/// card_detail_dialog.dart för motsvarande, större variant). Tom
+/// [label] ritar bara själva pilformen utan text (t.ex. Lagerhus).
+class _NeighborRibbon extends StatelessWidget {
+  final String label;
+  final bool pointLeft;
+
+  const _NeighborRibbon({required this.label, required this.pointLeft});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipPath(
+      clipper: _RibbonClipper(pointLeft: pointLeft),
+      child: Container(
+        width: 16,
+        height: 11,
+        color: const Color(0xFF6E9B5E),
+        alignment:
+            pointLeft ? const Alignment(0.35, 0) : const Alignment(-0.35, 0),
+        child: label.isEmpty
+            ? null
+            : Text(label,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 5.5,
+                    fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+}
+
+class _RibbonClipper extends CustomClipper<Path> {
+  final bool pointLeft;
+
+  const _RibbonClipper({required this.pointLeft});
+
+  @override
+  Path getClip(Size size) {
+    final w = size.width;
+    final h = size.height;
+    final path = Path();
+    if (pointLeft) {
+      path
+        ..moveTo(w, 0)
+        ..lineTo(w * 0.35, 0)
+        ..lineTo(0, h / 2)
+        ..lineTo(w * 0.35, h)
+        ..lineTo(w, h)
+        ..close();
+    } else {
+      path
+        ..moveTo(0, 0)
+        ..lineTo(w * 0.65, 0)
+        ..lineTo(w, h / 2)
+        ..lineTo(w * 0.65, h)
+        ..lineTo(0, h)
+        ..close();
+    }
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant _RibbonClipper oldClipper) =>
+      oldClipper.pointLeft != pointLeft;
 }
 
 class _UniqueBadge extends StatelessWidget {
