@@ -361,7 +361,7 @@ class BasicSetCards {
     skillPoints: 3,
     effectText:
         'The gods are expecting more offerings. And they expect you to hand them over to me!',
-    imageAsset: 'assets/images/cards/hero_inga.png',
+    imageAsset: 'assets/images/cards/heroes/hero_inga.jpg',
   );
 
   static const osmund = GameCard(
