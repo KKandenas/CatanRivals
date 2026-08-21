@@ -9,14 +9,20 @@ import 'dice_face.dart';
 /// kostnad, alla poängtyper och regeltext/krav – allt som är för
 /// litet för att läsas på det vanliga (kvadratiska, ofta bara ~70–90
 /// punkter stora) kortet i handen/på brädet.
-Future<void> showCardDetail(BuildContext context, GameCard card) {
+///
+/// Om [onTakeCard] är satt (t.ex. från [PeekStackOverlay], där man
+/// ska kunna förstora ett kort innan man bestämmer sig) visas en extra
+/// fråga längst ner – "Vill du ta detta kort?" med Ta kortet/Avbryt –
+/// i stället för dialogrutans vanliga, rena "bara stäng"-beteende.
+Future<void> showCardDetail(BuildContext context, GameCard card,
+    {VoidCallback? onTakeCard}) {
   return showDialog<void>(
     context: context,
     barrierColor: Colors.black54,
     builder: (context) => Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(24),
-      child: _CardDetailContent(card: card),
+      child: _CardDetailContent(card: card, onTakeCard: onTakeCard),
     ),
   );
 }
@@ -34,8 +40,9 @@ String _neighborRibbonLabel(GameCard card) {
 
 class _CardDetailContent extends StatelessWidget {
   final GameCard card;
+  final VoidCallback? onTakeCard;
 
-  const _CardDetailContent({required this.card});
+  const _CardDetailContent({required this.card, this.onTakeCard});
 
   @override
   Widget build(BuildContext context) {
@@ -192,6 +199,43 @@ class _CardDetailContent extends StatelessWidget {
                         card.effectText!,
                         style: const TextStyle(
                             fontSize: 14, color: CatanColors.ink, height: 1.35),
+                      ),
+                    ],
+                    if (onTakeCard != null) ...[
+                      const SizedBox(height: 14),
+                      const Text(
+                        'Vill du ta detta kort?',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: CatanColors.ink),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                  foregroundColor: CatanColors.ink,
+                                  side: const BorderSide(
+                                      color: CatanColors.woodFrame)),
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: const Text('Avbryt'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFF4F6F45)),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                onTakeCard!();
+                              },
+                              child: const Text('Ta kortet'),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ],

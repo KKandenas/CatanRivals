@@ -16,6 +16,9 @@ import '../theme/catan_colors.dart';
 ///   själva högarna (tryckbara) sitter i [CenterStacksStrip].
 /// - [TradePhase.peekPaying]: kostnaden (2 valfria resurser,
 ///   självbevakat precis som byggkostnader) + Betalt/Avbryt.
+/// - [TradePhase.peekDiscard]: en instruktionsrad – man slänger ett
+///   kort innan man kikar, precis som det gratis bytet (annars skulle
+///   handen bara växa).
 /// - [TradePhase.peekChoosingStack]: en instruktionsrad.
 /// - [TradePhase.peekViewing] visas inte här alls – se
 ///   [PeekStackOverlay], som täcker motståndarens rike i stället,
@@ -68,6 +71,10 @@ class TradePhaseCard extends StatelessWidget {
             _ActionButton(label: 'Avbryt', onTap: onCancelPeek, filled: false),
             _ActionButton(label: 'Betalt', onTap: onConfirmPeekPayment),
           ],
+        );
+      case TradePhase.peekDiscard:
+        return const _Banner(
+          label: 'Kika: slängkort – välj ett handkort, tryck sedan på en draghög.',
         );
       case TradePhase.peekChoosingStack:
         return const _Banner(

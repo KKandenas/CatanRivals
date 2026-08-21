@@ -27,16 +27,19 @@ enum HandAdjustmentPhase { none, drawing, discarding }
 /// slänger först ett handkort till valfri stapel, drar sedan ett kort
 /// från toppen av valfri (kanske annan) stapel. [peekPaying] –
 /// betalar 2 valfria resurser (självbevakat, precis som
-/// byggkostnader). [peekChoosingStack] – väljer vilken stapel att
-/// kika i. [peekViewing] – alla kort i den valda stapeln visas, ett
-/// tryck väljer vilket du behåller (resten läggs tillbaka i samma
-/// ordning – se [GameNotifier.peekTakeCard]).
+/// byggkostnader). [peekDiscard] – slänger, precis som det gratis
+/// bytet, ett handkort till valfri stapel (annars skulle handen växa
+/// med ett kort utan motsvarande byte). [peekChoosingStack] – väljer
+/// vilken stapel att kika i. [peekViewing] – alla kort i den valda
+/// stapeln visas, ett tryck väljer vilket du behåller (resten läggs
+/// tillbaka i samma ordning – se [GameNotifier.peekTakeCard]).
 enum TradePhase {
   none,
   choosing,
   exchangeDiscard,
   exchangeDraw,
   peekPaying,
+  peekDiscard,
   peekChoosingStack,
   peekViewing,
 }

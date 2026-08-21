@@ -83,13 +83,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     // egen banner och där tärningen ändå aldrig är slagen.
     final showTurnEmphasis = state.handsReady;
     final canBuildNow = state.canBuildNow;
-    // HandDocks kortval (se nedan) återanvänds för både handjusteringens
-    // släng-läge och kortbytesfasens gratisbyte – de är aldrig aktiva
-    // samtidigt (kortbytesfasen börjar först efter att handjusteringen
-    // är klar), så samma lokala UI-state (_selectedDiscardCard) räcker.
+    // HandDocks kortval (se nedan) återanvänds för handjusteringens
+    // släng-läge, kortbytesfasens gratisbyte och kika-alternativets
+    // slängsteg – de är aldrig aktiva samtidigt (kortbytesfasen börjar
+    // först efter att handjusteringen är klar), så samma lokala
+    // UI-state (_selectedDiscardCard) räcker för alla tre.
     final isDiscarding =
         state.handAdjustmentPhase == HandAdjustmentPhase.discarding ||
-            state.tradePhase == TradePhase.exchangeDiscard;
+            state.tradePhase == TradePhase.exchangeDiscard ||
+            state.tradePhase == TradePhase.peekDiscard;
     // Ett tidigare valt handkort hör bara hemma medan släng-läget
     // faktiskt pågår – annars är det en kvarleva från en tidigare omgång.
     if (!isDiscarding) _selectedDiscardCard = null;
@@ -304,13 +306,16 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   }
                 },
                 tradePhase: state.tradePhase,
-                hasSelectedExchangeCard:
-                    state.tradePhase == TradePhase.exchangeDiscard &&
-                        _selectedDiscardCard != null,
+                hasSelectedExchangeCard: (state.tradePhase ==
+                            TradePhase.exchangeDiscard ||
+                        state.tradePhase == TradePhase.peekDiscard) &&
+                    _selectedDiscardCard != null,
                 onExchangeDiscardToStack: (index) {
                   final card = _selectedDiscardCard;
                   if (card == null) return;
-                  final error = notifier.exchangeDiscard(card, index);
+                  final error = state.tradePhase == TradePhase.peekDiscard
+                      ? notifier.peekDiscardCard(card, index)
+                      : notifier.exchangeDiscard(card, index);
                   if (error == null) {
                     setState(() => _selectedDiscardCard = null);
                   } else {

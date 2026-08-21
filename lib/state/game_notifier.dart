@@ -509,9 +509,24 @@ class GameNotifier extends Notifier<GameState> {
   }
 
   /// Bekräftar att de 2 valfria resurserna är betalda – nästa steg är
-  /// att välja vilken draghög man vill kika i (se [choosePeekStack]).
+  /// att slänga ett handkort (se [peekDiscardCard]), precis som det
+  /// gratis bytet: annars skulle handen växa med ett extra kort utan
+  /// motsvarande byte, vilket skulle göra kika-alternativet strikt
+  /// bättre än de andra två.
   String? confirmPeekPayment() {
     if (state.tradePhase != TradePhase.peekPaying) return null;
+    state = state.copyWith(tradePhase: TradePhase.peekDiscard);
+    return null;
+  }
+
+  /// Slänger [card] till botten av draghög [stackIndex] – steget efter
+  /// betalningen (se [confirmPeekPayment]) och innan man väljer vilken
+  /// hög man vill kika i (se [choosePeekStack]).
+  String? peekDiscardCard(GameCard card, int stackIndex) {
+    if (state.tradePhase != TradePhase.peekDiscard) return null;
+    if (!state.you.hand.contains(card)) return null;
+
+    _discardCardToStack(card, stackIndex);
     state = state.copyWith(tradePhase: TradePhase.peekChoosingStack);
     return null;
   }

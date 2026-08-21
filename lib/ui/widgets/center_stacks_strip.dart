@@ -62,11 +62,12 @@ class CenterStacksStrip extends StatelessWidget {
   final bool hasSelectedDiscardCard;
 
   /// Kortbytesfasen (regelhäftet s. 9) – se [TradePhase]. Under
-  /// [TradePhase.exchangeDiscard] går högarna att trycka på för att
-  /// slänga det valda handkortet dit ([onExchangeDiscardToStack], bara
-  /// aktiv när [hasSelectedExchangeCard]); under
-  /// [TradePhase.exchangeDraw] för att dra ett kort ([onExchangeDrawStack]);
-  /// under [TradePhase.peekChoosingStack] för att slå upp hela högen
+  /// [TradePhase.exchangeDiscard] eller [TradePhase.peekDiscard] går
+  /// högarna att trycka på för att slänga det valda handkortet dit
+  /// ([onExchangeDiscardToStack], bara aktiv när
+  /// [hasSelectedExchangeCard]); under [TradePhase.exchangeDraw] för
+  /// att dra ett kort ([onExchangeDrawStack]); under
+  /// [TradePhase.peekChoosingStack] för att slå upp hela högen
   /// ([onPeekStack]).
   final TradePhase tradePhase;
   final void Function(int stackIndex)? onExchangeDiscardToStack;
@@ -186,7 +187,8 @@ class CenterStacksStrip extends StatelessWidget {
         onTap: hasSelectedDiscardCard ? () => onDiscardToStack?.call(index) : null,
       );
     }
-    if (tradePhase == TradePhase.exchangeDiscard) {
+    if (tradePhase == TradePhase.exchangeDiscard ||
+        tradePhase == TradePhase.peekDiscard) {
       return _StackPile(
         asset: CatanAssets.backBasicSet,
         count: count,

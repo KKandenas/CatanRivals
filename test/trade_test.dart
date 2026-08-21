@@ -65,7 +65,7 @@ void main() {
       expect(after.activePlayerId, 'opponent');
     });
 
-    test('kika: betala, välj hög, se alla kort i ordning, behåll ett – resten läggs tillbaka i samma ordning', () {
+    test('kika: betala, släng, välj hög, se alla kort i ordning, behåll ett – resten läggs tillbaka i samma ordning', () {
       final container = readyContainer();
       addTearDown(container.dispose);
       final notifier = container.read(gameProvider.notifier);
@@ -74,7 +74,19 @@ void main() {
       expect(container.read(gameProvider).tradePhase, TradePhase.peekPaying);
 
       expect(notifier.confirmPeekPayment(), isNull);
-      expect(container.read(gameProvider).tradePhase, TradePhase.peekChoosingStack);
+      expect(container.read(gameProvider).tradePhase, TradePhase.peekDiscard);
+
+      // Precis som det gratis bytet slänger man ett kort innan man
+      // kikar – annars skulle handen bara växa med ett extra kort.
+      final handBeforeDiscard = container.read(gameProvider).you.hand;
+      final discarded = handBeforeDiscard.first;
+      final stack0Before = container.read(gameProvider).centerStacks['draw1']!;
+
+      expect(notifier.peekDiscardCard(discarded, 0), isNull);
+      final afterDiscard = container.read(gameProvider);
+      expect(afterDiscard.tradePhase, TradePhase.peekChoosingStack);
+      expect(afterDiscard.you.hand.contains(discarded), isFalse);
+      expect(afterDiscard.centerStacks['draw1'], stack0Before + 1);
 
       final stackBefore = notifier.drawStack(2);
       expect(stackBefore, isNotEmpty);
@@ -145,6 +157,7 @@ void main() {
       final hand = container.read(gameProvider).you.hand;
       expect(notifier.exchangeDiscard(hand.first, 0), isNull);
       expect(notifier.exchangeDraw(0), isNull);
+      expect(notifier.peekDiscardCard(hand.first, 0), isNull);
       expect(notifier.peekTakeCard(hand.first), isNull);
       expect(container.read(gameProvider).you.hand, hasLength(5)); // oförändrad
     });
