@@ -53,7 +53,23 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     );
   }
 
+  /// Om ett kort redan väntar på bekräftelse (se [_pendingBuildCard])
+  /// ignoreras nya förfrågningar i stället för att tyst skriva över den
+  /// väntande – annars skulle ett andra kort kunna dras till en annan
+  /// byggplats innan det första hunnit bekräftas/avbrytas, vilket tyst
+  /// kastade bort det första kortets bekräftelse utan felmeddelande
+  /// (kortet stannade förvisso kvar i handen, men försvann spårlöst ur
+  /// bekräftelserutan – väldigt lätt att missa mitt i draget).
   void _requestBuildConfirm(GameCard card, VoidCallback onConfirm) {
+    if (_pendingBuildCard != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bekräfta eller avbryt förra byggnationen först.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
     setState(() {
       _pendingBuildCard = card;
       _pendingBuildConfirm = onConfirm;
