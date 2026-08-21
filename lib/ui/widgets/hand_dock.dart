@@ -25,6 +25,12 @@ class HandDock extends StatelessWidget {
   final GameCard? selectedDiscardCard;
   final void Function(GameCard card)? onSelectForDiscard;
 
+  /// Totalpoäng och brickinnehav (se [ScoreSummary]) – räknas ut i
+  /// [GameState], inte i den här rent presentationslagret-widgeten.
+  final int totalVictoryPoints;
+  final bool hasHeroToken;
+  final bool hasTradeToken;
+
   const HandDock({
     super.key,
     required this.player,
@@ -32,14 +38,20 @@ class HandDock extends StatelessWidget {
     this.onDragEnd,
     this.selectedDiscardCard,
     this.onSelectForDiscard,
+    required this.totalVictoryPoints,
+    this.hasHeroToken = false,
+    this.hasTradeToken = false,
   });
 
-  static const double _dockHeight = 92;
+  /// Exponerad så TotalScoreBoard kan placera sig ovanför dockan i
+  /// stället för att skarva ihop med dess egen ScoreSummary-ruta i
+  /// samma hörn.
+  static const double dockHeight = 92;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: _dockHeight,
+      height: dockHeight,
       color: CatanColors.woodFrameDark.withValues(alpha: 0.92),
       child: SafeArea(
         top: false,
@@ -69,7 +81,12 @@ class HandDock extends StatelessWidget {
                       ),
               ),
               const SizedBox(width: 12),
-              ScoreSummary(player: player),
+              ScoreSummary(
+                player: player,
+                totalVictoryPoints: totalVictoryPoints,
+                hasHeroToken: hasHeroToken,
+                hasTradeToken: hasTradeToken,
+              ),
             ],
           ),
         ),
@@ -102,7 +119,10 @@ class _HandCard extends StatelessWidget {
     // att-bygga: det är inte läge att bygga mitt i handjusteringen.
     if (onSelectForDiscard != null) {
       return _CardFace(
-          card: card, playable: playable, selected: selected, onTap: onSelectForDiscard);
+          card: card,
+          playable: playable,
+          selected: selected,
+          onTap: onSelectForDiscard);
     }
 
     final face = _CardFace(card: card, playable: playable);

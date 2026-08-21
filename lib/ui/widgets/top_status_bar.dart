@@ -11,9 +11,18 @@ import 'score_summary.dart';
 class TopStatusBar extends StatelessWidget {
   final Player opponent;
   final bool opponentIsRed;
+  final int totalVictoryPoints;
+  final bool hasHeroToken;
+  final bool hasTradeToken;
 
-  const TopStatusBar(
-      {super.key, required this.opponent, this.opponentIsRed = false});
+  const TopStatusBar({
+    super.key,
+    required this.opponent,
+    this.opponentIsRed = false,
+    required this.totalVictoryPoints,
+    this.hasHeroToken = false,
+    this.hasTradeToken = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +54,12 @@ class TopStatusBar extends StatelessWidget {
               Text(opponentIsRed ? '(röd)' : '(blå)',
                   style: const TextStyle(color: Colors.white54, fontSize: 11)),
               const Spacer(),
-              ScoreSummary(player: opponent),
+              ScoreSummary(
+                player: opponent,
+                totalVictoryPoints: totalVictoryPoints,
+                hasHeroToken: hasHeroToken,
+                hasTradeToken: hasTradeToken,
+              ),
               const SizedBox(width: 6),
               _StatChip(
                   icon: Icons.style, label: '${opponent.hand.length} kort'),

@@ -59,6 +59,13 @@ class GameState {
   /// innan turen går vidare (se [HandAdjustmentPhase]).
   final HandAdjustmentPhase handAdjustmentPhase;
 
+  /// Spelar-id:t för den som just nu har "Hero Token"/"Trade Token" –
+  /// bricken som ger 1 extra segerpoäng till den med minst 3 styrke-
+  /// respektive handelspoäng, och fler än motståndaren (se
+  /// [GameNotifier.recomputeTokenHolders]). `null` = ingen ("banken").
+  final String? heroTokenHolder;
+  final String? tradeTokenHolder;
+
   const GameState({
     required this.you,
     required this.opponent,
@@ -76,6 +83,8 @@ class GameState {
     this.pendingRegions = const [],
     this.pendingRegionJunction,
     this.handAdjustmentPhase = HandAdjustmentPhase.none,
+    this.heroTokenHolder,
+    this.tradeTokenHolder,
   });
 
   bool get isOnline => mode != SessionMode.local;
@@ -124,6 +133,16 @@ class GameState {
   /// s. 9): 3 som grund, plus 1 per framstegspoäng du har i spel.
   int get handLimit => you.principality.totalProgressPoints + 3;
 
+  /// [player]s totala segerpoäng: poängen från riket plus 1 vardera om
+  /// spelaren just nu har Hero Token/Trade Token (se
+  /// [GameNotifier.recomputeTokenHolders]).
+  int totalVictoryPointsFor(Player player) {
+    var total = player.principality.totalVictoryPoints;
+    if (heroTokenHolder == player.id) total += 1;
+    if (tradeTokenHolder == player.id) total += 1;
+    return total;
+  }
+
   GameState copyWith({
     Player? you,
     Player? opponent,
@@ -145,26 +164,39 @@ class GameState {
     int? pendingRegionJunction,
     bool clearPendingRegionJunction = false,
     HandAdjustmentPhase? handAdjustmentPhase,
+    String? heroTokenHolder,
+    bool clearHeroTokenHolder = false,
+    String? tradeTokenHolder,
+    bool clearTradeTokenHolder = false,
   }) {
     return GameState(
       you: you ?? this.you,
       opponent: opponent ?? this.opponent,
       centerStacks: centerStacks ?? this.centerStacks,
-      draggingCard: clearDraggingCard ? null : (draggingCard ?? this.draggingCard),
+      draggingCard:
+          clearDraggingCard ? null : (draggingCard ?? this.draggingCard),
       mode: mode ?? this.mode,
       roomCode: roomCode ?? this.roomCode,
       myPlayerId: myPlayerId ?? this.myPlayerId,
       opponentPlayerId: opponentPlayerId ?? this.opponentPlayerId,
       opponentConnected: opponentConnected ?? this.opponentConnected,
-      sessionError: clearSessionError ? null : (sessionError ?? this.sessionError),
+      sessionError:
+          clearSessionError ? null : (sessionError ?? this.sessionError),
       activePlayerId: activePlayerId ?? this.activePlayerId,
       diceRolled: diceRolled ?? this.diceRolled,
-      productionRoll: clearProductionRoll ? null : (productionRoll ?? this.productionRoll),
+      productionRoll:
+          clearProductionRoll ? null : (productionRoll ?? this.productionRoll),
       pendingRegions: pendingRegions ?? this.pendingRegions,
       pendingRegionJunction: clearPendingRegionJunction
           ? null
           : (pendingRegionJunction ?? this.pendingRegionJunction),
       handAdjustmentPhase: handAdjustmentPhase ?? this.handAdjustmentPhase,
+      heroTokenHolder: clearHeroTokenHolder
+          ? null
+          : (heroTokenHolder ?? this.heroTokenHolder),
+      tradeTokenHolder: clearTradeTokenHolder
+          ? null
+          : (tradeTokenHolder ?? this.tradeTokenHolder),
     );
   }
 }

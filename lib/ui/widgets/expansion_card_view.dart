@@ -171,9 +171,7 @@ class _CostPip extends StatelessWidget {
 }
 
 /// Kortets värde: segerpoäng (VP) och ev. styrka/handel/färdighet/
-/// framstegspoäng, staplade nere till höger. VP saknar än så länge en
-/// egen symbol (kommer senare) och visas därför bara som en siffra i
-/// en liten badge; de andra poängtyperna har redan ikoner.
+/// framstegspoäng, staplade nere till höger.
 class _PointsCorner extends StatelessWidget {
   final GameCard card;
 
@@ -193,7 +191,8 @@ class _PointsCorner extends StatelessWidget {
       if (card.progressPoints > 0)
         _PointPip(
             asset: CatanAssets.pointProgress, amount: card.progressPoints),
-      if (card.victoryPoints > 0) _VictoryPointPip(amount: card.victoryPoints),
+      if (card.victoryPoints > 0)
+        _PointPip(asset: CatanAssets.pointVictory, amount: card.victoryPoints),
     ];
     if (pips.isEmpty) return const SizedBox.shrink();
 
@@ -228,27 +227,6 @@ class _PointPip extends StatelessWidget {
           child: Image.asset(asset, width: 12, height: 12, fit: BoxFit.cover),
         ),
       ],
-    );
-  }
-}
-
-/// Platshållare för segerpoäng tills det finns en egen VP-symbol.
-class _VictoryPointPip extends StatelessWidget {
-  final int amount;
-
-  const _VictoryPointPip({required this.amount});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 12,
-      height: 12,
-      alignment: Alignment.center,
-      decoration:
-          const BoxDecoration(color: Colors.black87, shape: BoxShape.circle),
-      child: Text('$amount',
-          style: const TextStyle(
-              fontSize: 8, color: Colors.white, fontWeight: FontWeight.w700)),
     );
   }
 }

@@ -17,7 +17,8 @@ class CatanAssets {
   static const String boardBackground = '$_ui/board_background.png';
 
   /// Landskapsfoto för en resurstyp, t.ex. ResourceType.wool -> wool.png.
-  static String resourcePhoto(ResourceType type) => '$_resources/${type.name}.png';
+  static String resourcePhoto(ResourceType type) =>
+      '$_resources/${type.name}.png';
 
   static const String road = '$_locations/road_forest_path.png';
   static const String settlement = '$_locations/settlement_village.png';
@@ -34,12 +35,22 @@ class CatanAssets {
 
   /// Liten kostnadsikon (hexagon) för en resurstyp – för att visa
   /// byggkostnad kompakt på hand-/stapelkort.
-  static String resourceCostIcon(ResourceType type) => '$_icons/icon_${type.name}.png';
+  static String resourceCostIcon(ResourceType type) =>
+      '$_icons/icon_${type.name}.png';
 
   static const String pointStrength = '$_icons/icon_strength.png';
   static const String pointCommerce = '$_icons/icon_commerce.png';
   static const String pointSkill = '$_icons/icon_skill.png';
   static const String pointProgress = '$_icons/icon_progress.png';
+  static const String pointVictory = '$_icons/icon_victory.png';
+
+  /// Symboliserar "Hero Token"/"Trade Token" – de fysiska brickorna som
+  /// visar vem som just nu har flest styrke- respektive handelspoäng
+  /// (minst 3, och fler än motståndaren, se
+  /// [GameNotifier.recomputeTokenHolders]). Ligger inte hos någon
+  /// ("banken") när ingen uppfyller kravet.
+  static const String heroToken = '$_icons/icon_hero_token.png';
+  static const String tradeToken = '$_icons/icon_trade_token.png';
 
   /// Rätt bild för ett kort oavsett kategori. Regionkort och by/stad/
   /// väg-korten visas med en annan bild än [GameCard.imageAsset] (som

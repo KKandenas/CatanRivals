@@ -99,7 +99,9 @@ class _CardDetailContent extends StatelessWidget {
                                   asset: CatanAssets.pointProgress,
                                   amount: card.progressPoints),
                             if (card.victoryPoints > 0)
-                              _BigVictoryPointPip(amount: card.victoryPoints),
+                              _BigPointPip(
+                                  asset: CatanAssets.pointVictory,
+                                  amount: card.victoryPoints),
                           ],
                         ),
                       ),
@@ -241,31 +243,6 @@ class _BigPointPip extends StatelessWidget {
             child: Image.asset(asset, width: 26, height: 26, fit: BoxFit.cover),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _BigVictoryPointPip extends StatelessWidget {
-  final int amount;
-
-  const _BigVictoryPointPip({required this.amount});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 3),
-      child: Container(
-        width: 26,
-        height: 26,
-        alignment: Alignment.center,
-        decoration:
-            const BoxDecoration(color: Colors.black87, shape: BoxShape.circle),
-        child: Text('$amount',
-            style: const TextStyle(
-                fontSize: 15,
-                color: Colors.white,
-                fontWeight: FontWeight.w700)),
       ),
     );
   }

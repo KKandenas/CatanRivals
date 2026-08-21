@@ -4,13 +4,24 @@ import '../../models/models.dart';
 import '../theme/catan_assets.dart';
 
 /// Kompakt sammanfattning av en spelares aktuella ställning: totala
-/// segerpoäng (VP) samt styrka/handel/färdighet/framsteg – räknat från
-/// alla utplacerade kort i [Player.principality] (se
-/// [RealmBoard.totalVictoryPoints] med syskon-getters).
+/// segerpoäng (VP, inklusive Hero Token/Trade Token om spelaren har
+/// dem – se [GameState.totalVictoryPointsFor]) samt styrka/handel/
+/// färdighet/framsteg, räknat från alla utplacerade kort i
+/// [Player.principality] (se [RealmBoard.totalVictoryPoints] med
+/// syskon-getters).
 class ScoreSummary extends StatelessWidget {
   final Player player;
+  final int totalVictoryPoints;
+  final bool hasHeroToken;
+  final bool hasTradeToken;
 
-  const ScoreSummary({super.key, required this.player});
+  const ScoreSummary({
+    super.key,
+    required this.player,
+    required this.totalVictoryPoints,
+    this.hasHeroToken = false,
+    this.hasTradeToken = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +35,8 @@ class ScoreSummary extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _VictoryPointChip(amount: board.totalVictoryPoints),
+          _ScorePip(
+              asset: CatanAssets.pointVictory, amount: totalVictoryPoints),
           const SizedBox(width: 8),
           if (board.totalStrengthPoints > 0)
             _ScorePip(
@@ -41,32 +53,33 @@ class ScoreSummary extends StatelessWidget {
             _ScorePip(
                 asset: CatanAssets.pointProgress,
                 amount: board.totalProgressPoints),
+          if (hasHeroToken) ...[
+            const SizedBox(width: 6),
+            const _TokenIcon(asset: CatanAssets.heroToken),
+          ],
+          if (hasTradeToken) ...[
+            const SizedBox(width: 4),
+            const _TokenIcon(asset: CatanAssets.tradeToken),
+          ],
         ],
       ),
     );
   }
 }
 
-/// VP saknar än så länge en egen symbol (kommer senare), så den visas
-/// med en pokal-ikon i stället för en av kortikonerna.
-class _VictoryPointChip extends StatelessWidget {
-  final int amount;
+/// Brickan i miniatyr – bara själva ikonen (ingen siffra, till
+/// skillnad från [_ScorePip]) eftersom den alltid är värd exakt 1 VP,
+/// som redan räknas in i [ScoreSummary.totalVictoryPoints].
+class _TokenIcon extends StatelessWidget {
+  final String asset;
 
-  const _VictoryPointChip({required this.amount});
+  const _TokenIcon({required this.asset});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.emoji_events, size: 14, color: Colors.white70),
-        const SizedBox(width: 3),
-        Text('$amount',
-            style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700)),
-      ],
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: Image.asset(asset, width: 16, height: 16, fit: BoxFit.cover),
     );
   }
 }

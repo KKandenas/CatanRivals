@@ -14,7 +14,8 @@ import 'game_state.dart';
 
 /// Spelets state-provider. Läs med `ref.watch(gameProvider)` och mutera
 /// via `ref.read(gameProvider.notifier)`.
-final gameProvider = NotifierProvider<GameNotifier, GameState>(GameNotifier.new);
+final gameProvider =
+    NotifierProvider<GameNotifier, GameState>(GameNotifier.new);
 
 /// Håller och muterar [GameState]: bygga vägar/byar/städer från
 /// center-dragstaplarna, spela bygg-/enhetskort från handen, drag-state
@@ -81,7 +82,8 @@ class GameNotifier extends Notifier<GameState> {
     final stack = _drawStacks[stackIndex];
     final drawn = stack.sublist(0, 3);
     _drawStacks[stackIndex] = stack.sublist(3);
-    return player.copyWith(hand: [...player.hand, ...drawn], hasDrawnStartingHand: true);
+    return player
+        .copyWith(hand: [...player.hand, ...drawn], hasDrawnStartingHand: true);
   }
 
   @override
@@ -121,8 +123,11 @@ class GameNotifier extends Notifier<GameState> {
     // stället för att vänta på [chooseStartingStack]. I ett riktigt
     // rum (host/guest) väljer varje spelare interaktivt på sin egen
     // enhet – se [hostRoom]/[joinRoom].
-    final you = _dealStartingHand(MockGame.buildStartingPlayer('you', 'Du', isRed: true), 0);
-    final opponent = _dealStartingHand(MockGame.buildStartingPlayer('opponent', 'Motståndare', isRed: false), 1);
+    final you = _dealStartingHand(
+        MockGame.buildStartingPlayer('you', 'Du', isRed: true), 0);
+    final opponent = _dealStartingHand(
+        MockGame.buildStartingPlayer('opponent', 'Motståndare', isRed: false),
+        1);
 
     state = GameState(
       you: you,
@@ -139,8 +144,11 @@ class GameNotifier extends Notifier<GameState> {
   /// ska gå med. Returnerar den genererade rumskoden.
   Future<String> hostRoom(String myName) async {
     final roomCode = MockGame.generateRoomCode();
-    final hostPlayer = MockGame.buildStartingPlayer('host', myName, isRed: true);
-    final waitingOpponent = MockGame.buildStartingPlayer('guest', 'Väntar på motståndare …', isRed: false);
+    final hostPlayer =
+        MockGame.buildStartingPlayer('host', myName, isRed: true);
+    final waitingOpponent = MockGame.buildStartingPlayer(
+        'guest', 'Väntar på motståndare …',
+        isRed: false);
     final centerStacks = MockGame.centerStackCounts();
     _resetDecks();
 
@@ -148,10 +156,12 @@ class GameNotifier extends Notifier<GameState> {
     const initialTurnState = TurnState(activePlayerId: 'host');
     try {
       await _sync
-          .createRoom(roomCode, 'host', hostPlayer, centerStacks, initialTurnState)
+          .createRoom(
+              roomCode, 'host', hostPlayer, centerStacks, initialTurnState)
           .timeout(const Duration(seconds: 10));
     } on TimeoutException {
-      throw Exception('Fick ingen kontakt med servern. Kontrollera internetanslutningen och försök igen.');
+      throw Exception(
+          'Fick ingen kontakt med servern. Kontrollera internetanslutningen och försök igen.');
     }
 
     state = GameState(
@@ -172,10 +182,13 @@ class GameNotifier extends Notifier<GameState> {
   /// Går med i ett befintligt rum. Returnerar `null` vid lyckat
   /// gick-med, annars ett felmeddelande att visa i lobbyn.
   Future<String?> joinRoom(String roomCode, String myName) async {
-    final guestPlayer = MockGame.buildStartingPlayer('guest', myName, isRed: false);
+    final guestPlayer =
+        MockGame.buildStartingPlayer('guest', myName, isRed: false);
     String? error;
     try {
-      error = await _sync.joinRoom(roomCode, 'guest', guestPlayer).timeout(const Duration(seconds: 10));
+      error = await _sync
+          .joinRoom(roomCode, 'guest', guestPlayer)
+          .timeout(const Duration(seconds: 10));
     } on TimeoutException {
       return 'Fick ingen kontakt med servern. Kontrollera internetanslutningen och försök igen.';
     }
@@ -208,13 +221,18 @@ class GameNotifier extends Notifier<GameState> {
       (players) {
         final opponentPlayer = players[state.opponentPlayerId];
         if (opponentPlayer == null) return;
-        state = state.copyWith(opponent: opponentPlayer, opponentConnected: true, clearSessionError: true);
+        state = state.copyWith(
+            opponent: opponentPlayer,
+            opponentConnected: true,
+            clearSessionError: true);
+        recomputeTokenHolders();
       },
       // Utan den här hanteraren skulle t.ex. ett rättighetsfel i
       // Firebase-databasreglerna tysta misslyckas – "väntar på
       // motståndare" skulle stå kvar för evigt utan någon förklaring.
       onError: (Object e) {
-        state = state.copyWith(sessionError: 'Kunde inte synka med motståndaren: $e');
+        state = state.copyWith(
+            sessionError: 'Kunde inte synka med motståndaren: $e');
       },
     );
 
@@ -224,7 +242,8 @@ class GameNotifier extends Notifier<GameState> {
         state = state.copyWith(centerStacks: centerStacks);
       },
       onError: (Object e) {
-        state = state.copyWith(sessionError: 'Kunde inte synka dragstaplarna: $e');
+        state =
+            state.copyWith(sessionError: 'Kunde inte synka dragstaplarna: $e');
       },
     );
 
@@ -308,7 +327,9 @@ class GameNotifier extends Notifier<GameState> {
   /// lämnas turen över automatiskt så fort rätt antal är nått.
   String? endActionPhase() {
     if (!state.isMyTurn) return 'Inte din tur.';
-    if (!state.diceRolled) return 'Slå tärningen innan du avslutar action-fasen.';
+    if (!state.diceRolled) {
+      return 'Slå tärningen innan du avslutar action-fasen.';
+    }
     if (state.handAdjustmentPhase != HandAdjustmentPhase.none) return null;
 
     final count = state.you.hand.length;
@@ -316,7 +337,8 @@ class GameNotifier extends Notifier<GameState> {
     if (count < limit) {
       state = state.copyWith(handAdjustmentPhase: HandAdjustmentPhase.drawing);
     } else if (count > limit) {
-      state = state.copyWith(handAdjustmentPhase: HandAdjustmentPhase.discarding);
+      state =
+          state.copyWith(handAdjustmentPhase: HandAdjustmentPhase.discarding);
     } else {
       _advanceToNextPlayer();
     }
@@ -326,7 +348,9 @@ class GameNotifier extends Notifier<GameState> {
   /// Lämnar över turen till motståndaren och återställer tärnings- och
   /// handjusteringsläget.
   void _advanceToNextPlayer() {
-    final next = state.activePlayerId == state.myPlayerId ? state.opponentPlayerId : state.myPlayerId;
+    final next = state.activePlayerId == state.myPlayerId
+        ? state.opponentPlayerId
+        : state.myPlayerId;
     state = state.copyWith(
       activePlayerId: next,
       diceRolled: false,
@@ -351,7 +375,8 @@ class GameNotifier extends Notifier<GameState> {
 
     state = state.copyWith(
       you: state.you.copyWith(hand: updatedHand),
-      centerStacks: Map.of(state.centerStacks)..update('draw${stackIndex + 1}', (v) => v - 1),
+      centerStacks: Map.of(state.centerStacks)
+        ..update('draw${stackIndex + 1}', (v) => v - 1),
     );
     _syncMyPlayer();
     _syncCenterStacks();
@@ -367,7 +392,9 @@ class GameNotifier extends Notifier<GameState> {
   /// krävs. Lämnar turen vidare automatiskt så fort
   /// [GameState.handLimit] är nått.
   String? discardHandCard(GameCard card, int stackIndex) {
-    if (state.handAdjustmentPhase != HandAdjustmentPhase.discarding) return null;
+    if (state.handAdjustmentPhase != HandAdjustmentPhase.discarding) {
+      return null;
+    }
     if (!state.you.hand.contains(card)) return null;
 
     _drawStacks[stackIndex] = [..._drawStacks[stackIndex], card];
@@ -376,7 +403,8 @@ class GameNotifier extends Notifier<GameState> {
 
     state = state.copyWith(
       you: state.you.copyWith(hand: updatedHand),
-      centerStacks: Map.of(state.centerStacks)..update('draw${stackIndex + 1}', (v) => v + 1),
+      centerStacks: Map.of(state.centerStacks)
+        ..update('draw${stackIndex + 1}', (v) => v + 1),
     );
     _syncMyPlayer();
     _syncCenterStacks();
@@ -397,7 +425,9 @@ class GameNotifier extends Notifier<GameState> {
   /// ett felmeddelande.
   String? chooseStartingStack(int index) {
     if (state.handsReady) return null;
-    if (!state.isMyTurnToChooseHand) return 'Inte din tur att välja en draghög.';
+    if (!state.isMyTurnToChooseHand) {
+      return 'Inte din tur att välja en draghög.';
+    }
     final key = 'draw${index + 1}';
     if ((state.centerStacks[key] ?? 0) < 9) return 'Den högen är redan vald.';
 
@@ -444,15 +474,19 @@ class GameNotifier extends Notifier<GameState> {
     return null;
   }
 
-  String? dropExpansion(int column, BuildingRow row, int slotIndex, GameCard card) {
+  String? dropExpansion(
+      int column, BuildingRow row, int slotIndex, GameCard card) {
     final turnError = _checkCanBuild();
     if (turnError != null) return turnError;
     if (!state.you.hand.contains(card)) return null;
 
-    state.you.principality.placeExpansion(column, row, slotIndex, PlacedCard(card: card));
-    final updated = state.you.copyWith(hand: List.of(state.you.hand)..remove(card));
+    state.you.principality
+        .placeExpansion(column, row, slotIndex, PlacedCard(card: card));
+    final updated =
+        state.you.copyWith(hand: List.of(state.you.hand)..remove(card));
 
     state = state.copyWith(you: updated, clearDraggingCard: true);
+    recomputeTokenHolders();
     _syncMyPlayer();
     return null;
   }
@@ -494,7 +528,8 @@ class GameNotifier extends Notifier<GameState> {
         ..update('settlements', (v) => v - 1)
         ..update('regions', (v) => wasNewSettlementFurtherOut ? v - 2 : v),
       clearDraggingCard: true,
-      pendingRegions: wasNewSettlementFurtherOut ? [_drawRegion(), _drawRegion()] : null,
+      pendingRegions:
+          wasNewSettlementFurtherOut ? [_drawRegion(), _drawRegion()] : null,
       pendingRegionJunction: wasNewSettlementFurtherOut ? newJunction : null,
     );
     _syncMyPlayer();
@@ -536,6 +571,65 @@ class GameNotifier extends Notifier<GameState> {
       clearPendingRegionJunction: remaining.isEmpty,
     );
     _syncMyPlayer();
+    return null;
+  }
+
+  // ---------------------------------------------------------------------
+  // Hero Token / Trade Token: vem har mest styrka/handel just nu
+  // ---------------------------------------------------------------------
+
+  /// Räknar om vem som just nu har Hero Token (flest styrkepoäng) och
+  /// Trade Token (flest handelspoäng) och uppdaterar
+  /// [GameState.heroTokenHolder]/[GameState.tradeTokenHolder] om det
+  /// ändrats. Anropas efter varje ändring som kan påverka styrke-/
+  /// handelspoängen hos någon av spelarna – [dropExpansion] för dig
+  /// själv, och när motståndarens spelardata synkas in.
+  void recomputeTokenHolders() {
+    final hero = _resolveTokenHolder(
+      currentHolder: state.heroTokenHolder,
+      yourPoints: state.you.principality.totalStrengthPoints,
+      opponentPoints: state.opponent.principality.totalStrengthPoints,
+    );
+    final trade = _resolveTokenHolder(
+      currentHolder: state.tradeTokenHolder,
+      yourPoints: state.you.principality.totalCommercePoints,
+      opponentPoints: state.opponent.principality.totalCommercePoints,
+    );
+    if (hero == state.heroTokenHolder && trade == state.tradeTokenHolder) {
+      return;
+    }
+    state = state.copyWith(
+      heroTokenHolder: hero,
+      clearHeroTokenHolder: hero == null,
+      tradeTokenHolder: trade,
+      clearTradeTokenHolder: trade == null,
+    );
+  }
+
+  /// Avgör vem som ska ha en av de två brickorna: minst 3 poäng av den
+  /// aktuella typen, och fler än motståndaren. Lika poäng ändrar
+  /// ingenting – den som redan har bricken ("fick poängen först")
+  /// behåller den. Tappar den aktuella innehavaren kravet (under 3,
+  /// eller ikappad/omsprungen) går bricken till motståndaren om hen
+  /// uppfyller kravet, annars tillbaka till "banken" (`null`).
+  String? _resolveTokenHolder({
+    required String? currentHolder,
+    required int yourPoints,
+    required int opponentPoints,
+  }) {
+    final youId = state.you.id;
+    final oppId = state.opponent.id;
+    if (currentHolder == youId) {
+      if (yourPoints >= 3 && yourPoints >= opponentPoints) return youId;
+      return opponentPoints >= 3 && opponentPoints > yourPoints ? oppId : null;
+    }
+    if (currentHolder == oppId) {
+      if (opponentPoints >= 3 && opponentPoints >= yourPoints) return oppId;
+      return yourPoints >= 3 && yourPoints > opponentPoints ? youId : null;
+    }
+    // Banken: bara ett rakt övertag ger bricken, inte ett oavgjort.
+    if (yourPoints >= 3 && yourPoints > opponentPoints) return youId;
+    if (opponentPoints >= 3 && opponentPoints > yourPoints) return oppId;
     return null;
   }
 }
