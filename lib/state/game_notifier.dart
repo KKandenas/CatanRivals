@@ -412,7 +412,12 @@ class GameNotifier extends Notifier<GameState> {
   }
 
   /// Lämnar över turen till motståndaren och återställer tärnings-,
-  /// handjusterings- och kortbytesläget.
+  /// handjusterings- och kortbytesläget. [eventDieFace] rensas
+  /// medvetet INTE – den ständigt synliga symbolen bredvid
+  /// produktionstärningen (se EventDieIcon i game_board_screen.dart)
+  /// ska fortsätta visa senast slagna sida i stället för att falla
+  /// tillbaka till en tom platshållare mellan omgångar; den skrivs
+  /// bara över av nästa [rollProductionDie].
   void _advanceToNextPlayer() {
     final next = state.activePlayerId == state.myPlayerId
         ? state.opponentPlayerId
@@ -421,7 +426,6 @@ class GameNotifier extends Notifier<GameState> {
       activePlayerId: next,
       diceRolled: false,
       clearProductionRoll: true,
-      clearEventDieFace: true,
       clearDrawnEventCard: true,
       handAdjustmentPhase: HandAdjustmentPhase.none,
       tradePhase: TradePhase.none,

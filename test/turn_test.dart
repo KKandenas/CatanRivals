@@ -98,7 +98,9 @@ void main() {
     expect(state.activePlayerId, 'opponent');
     expect(state.diceRolled, isFalse);
     expect(state.productionRoll, isNull);
-    expect(state.eventDieFace, isNull);
+    expect(state.eventDieFace, isNotNull,
+        reason: 'senast slagna sidan ska fortsätta synas mellan omgångar, '
+            'se _advanceToNextPlayer');
   });
 
   test('bygga är blockerat tills tärningen är slagen på din tur', () {
@@ -172,6 +174,8 @@ void main() {
     expect(guestContainer.read(gameProvider).isMyTurn, isTrue);
     expect(guestContainer.read(gameProvider).diceRolled, isFalse);
     expect(guestContainer.read(gameProvider).productionRoll, isNull);
-    expect(guestContainer.read(gameProvider).eventDieFace, isNull);
+    expect(guestContainer.read(gameProvider).eventDieFace, isNotNull,
+        reason: 'senast slagna sidan ska fortsätta synas mellan omgångar, '
+            'synkat till gästen precis som host ser den');
   });
 }

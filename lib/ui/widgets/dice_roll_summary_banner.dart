@@ -5,23 +5,24 @@ import '../theme/catan_colors.dart';
 import 'dice_face.dart';
 import 'event_die_icon.dart';
 
-/// Popup högst upp som visar vad de två tärningarna (produktions- och
+/// Popup som visar vad de två tärningarna (produktions- och
 /// händelsetärningen, se [EventDieFace]) slog och vad som ska göras,
 /// synlig för båda spelarna (utfallen synkas redan via [TurnState]).
 /// Samma rundade pergaments-kortstil som kortförstoringen
-/// (`showCardDetail`)/`BuildConfirmCard` i stället för den gamla,
-/// platta banner-raden – produktionstärningens prickar står till
-/// vänster om "Du slog en X:a ...", händelsetärningens symbol till
-/// vänster om dess rad.
+/// (`showCardDetail`)/`BuildConfirmCard` – produktionstärningens
+/// prickar står till vänster om "Du slog en X:a ...", händelsetärningens
+/// symbol till vänster om dess rad.
 ///
 /// Ordningen på raderna beror på [EventDieFace.resolveBeforeResources]
 /// (regelhäftets referenskort: allt utom brigadanfallet görs EFTER att
 /// resurserna tagits, brigadanfallet görs INNAN) – bara instruktionen
 /// visas, appen genomför inget automatiskt.
 ///
-/// En vanlig widget i sidflödet (inte `showDialog`), precis som
-/// [TradePhaseCard] – så att regionernas +/- knappar går att trycka på
-/// medan den syns. Stängs manuellt med "OK", eller visas på nytt för
+/// Läggs ovanpå motståndarens rike i game_board_screen.dart (samma
+/// `Positioned.fill`-mönster som `BuildConfirmCard`/`PeekStackOverlay`)
+/// i stället för att trycka ner hela brädet i sidflödet – täcker bara
+/// motståndarens planhalva, dina egna regioners +/- går fortfarande
+/// att trycka på. Stängs manuellt med "OK", eller visas på nytt för
 /// varje nytt kast (se `key: ValueKey(...)` i game_board_screen.dart).
 class DiceRollSummaryBanner extends StatefulWidget {
   final int productionRoll;

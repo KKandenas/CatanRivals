@@ -213,22 +213,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 hasHeroToken: opponentHasHeroToken,
                 hasTradeToken: opponentHasTradeToken,
               ),
-              // Popup högst upp med båda tärningarnas utfall (se
-              // DiceRollSummaryBanner) – en vanlig rad i sidflödet, inte
-              // en dialogruta, så egna regioners +/- går att trycka på
-              // medan den syns. `key: ValueKey(...)` gör att den visas
-              // på nytt (återställer ev. tidigare "OK") för varje kast.
-              if (state.diceRolled &&
-                  state.productionRoll != null &&
-                  state.eventDieFace != null)
-                DiceRollSummaryBanner(
-                  key: ValueKey(
-                      '${state.productionRoll}-${state.eventDieFace}-${state.activePlayerId}'),
-                  productionRoll: state.productionRoll!,
-                  eventDieFace: state.eventDieFace!,
-                  rolledByMe: state.activePlayerIsMe,
-                  opponentName: state.opponent.name,
-                ),
               // Kortbytesfasen (regelhäftet s. 9), sist i omgången efter
               // handjusteringen – en vanlig rad högst upp (inte en
               // dialogruta), precis som DiceRollSummaryBanner ovan.
@@ -290,6 +274,30 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                         ),
                       ],
                     ),
+                    // Tärningspopupen läggs ovanpå motståndarens rike
+                    // (inte en dialogruta) i stället för att trycka ner
+                    // hela brädet i sidflödet – den täcker bara
+                    // motståndarens planhalva, dina egna regioners +/-
+                    // går fortfarande att trycka på. `key: ValueKey(...)`
+                    // gör att den visas på nytt (återställer ev. tidigare
+                    // "OK") för varje kast.
+                    if (state.diceRolled &&
+                        state.productionRoll != null &&
+                        state.eventDieFace != null)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          padding: const EdgeInsets.all(12),
+                          child: DiceRollSummaryBanner(
+                            key: ValueKey(
+                                '${state.productionRoll}-${state.eventDieFace}-${state.activePlayerId}'),
+                            productionRoll: state.productionRoll!,
+                            eventDieFace: state.eventDieFace!,
+                            rolledByMe: state.activePlayerIsMe,
+                            opponentName: state.opponent.name,
+                          ),
+                        ),
+                      ),
                     // Bekräftelsekortet läggs ovanpå motståndarens rike (inte
                     // en modal dialogruta) – så att det inte täcker dina egna
                     // regioner: du kommer åt +/- knapparna på ditt eget rike
