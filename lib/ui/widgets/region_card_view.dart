@@ -57,22 +57,28 @@ class RegionCardView extends StatelessWidget {
                   ),
                 ),
                 if (card.productionNumber != null)
-                  Positioned(
-                    top: 4,
-                    left: 4,
-                    child: Container(
-                      width: 18,
-                      height: 18,
-                      decoration: const BoxDecoration(
-                          shape: BoxShape.circle, color: CatanColors.parchment),
-                      alignment: Alignment.center,
-                      child: Text(
-                        '${card.productionNumber}',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10,
-                            color: CatanColors.ink),
-                      ),
+                  Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (onAdjust != null) ...[
+                          _AdjustButton(
+                            icon: Icons.remove,
+                            enabled: stored > 0,
+                            onTap: () => onAdjust!(-1),
+                          ),
+                          const SizedBox(width: 4),
+                        ],
+                        _ProductionDie(number: card.productionNumber!),
+                        if (onAdjust != null) ...[
+                          const SizedBox(width: 4),
+                          _AdjustButton(
+                            icon: Icons.add,
+                            enabled: stored < 3,
+                            onTap: () => onAdjust!(1),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 Positioned(
@@ -81,26 +87,6 @@ class RegionCardView extends StatelessWidget {
                   bottom: 3,
                   child: ResourcePipRow(color: Colors.white, stored: stored),
                 ),
-                if (onAdjust != null) ...[
-                  Positioned(
-                    right: 2,
-                    top: 4,
-                    child: _AdjustButton(
-                      icon: Icons.add,
-                      enabled: stored < 3,
-                      onTap: () => onAdjust!(1),
-                    ),
-                  ),
-                  Positioned(
-                    right: 2,
-                    top: 24,
-                    child: _AdjustButton(
-                      icon: Icons.remove,
-                      enabled: stored > 0,
-                      onTap: () => onAdjust!(-1),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -110,9 +96,40 @@ class RegionCardView extends StatelessWidget {
   }
 }
 
-/// Liten, tryckbar +/- knapp ovanpå regionkortet. Egen [GestureDetector]
-/// med `HitTestBehavior.opaque` så att trycket inte också når kortets
-/// egen [showCardDetail]-tryckyta bakom den.
+/// Tärningstalet som ger utdelning på den här regionen – kvadratisk
+/// som en tärning, mitt på kortet (i stället för en cirkel i hörnet),
+/// med +/- knapparna på varsin sida (se [_AdjustButton]).
+class _ProductionDie extends StatelessWidget {
+  final int number;
+
+  const _ProductionDie({required this.number});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 22,
+      height: 22,
+      decoration: BoxDecoration(
+        color: CatanColors.parchment,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: CatanColors.woodFrame, width: 1),
+        boxShadow: const [
+          BoxShadow(color: Colors.black45, blurRadius: 2, offset: Offset(0, 1))
+        ],
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        '$number',
+        style: const TextStyle(
+            fontWeight: FontWeight.bold, fontSize: 13, color: CatanColors.ink),
+      ),
+    );
+  }
+}
+
+/// Tryckbar +/- knapp intill tärningstalet. Egen [GestureDetector] med
+/// `HitTestBehavior.opaque` så att trycket inte också når kortets egen
+/// [showCardDetail]-tryckyta bakom den.
 class _AdjustButton extends StatelessWidget {
   final IconData icon;
   final bool enabled;
@@ -126,14 +143,14 @@ class _AdjustButton extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: enabled ? onTap : null,
       child: Container(
-        width: 16,
-        height: 16,
+        width: 20,
+        height: 20,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: Colors.black.withValues(alpha: enabled ? 0.72 : 0.3),
         ),
         alignment: Alignment.center,
-        child: Icon(icon, size: 11, color: Colors.white.withValues(alpha: enabled ? 1 : 0.5)),
+        child: Icon(icon, size: 14, color: Colors.white.withValues(alpha: enabled ? 1 : 0.5)),
       ),
     );
   }
