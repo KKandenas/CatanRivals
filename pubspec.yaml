@@ -38,5 +38,6 @@ flutter:
     - assets/images/cards/actions/
     - assets/images/cards/dioramas/
     - assets/images/cards/icons/
+    - assets/images/cards/events/
     - assets/images/ui/
     - assets/images/dice/

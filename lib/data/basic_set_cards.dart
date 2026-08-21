@@ -438,7 +438,7 @@ class BasicSetCards {
     effectText:
         "The player who has the strength advantage selects 3 of his opponent's buildings. The "
         'opponent must remove one of them and return it to the bottom of a matching draw stack.',
-    imageAsset: 'assets/images/cards/event_feud.png',
+    imageAsset: 'assets/images/cards/events/feud.png',
   );
 
   static const fraternalFeuds = GameCard(
@@ -448,7 +448,7 @@ class BasicSetCards {
     effectText:
         "The player who has the strength advantage selects 2 cards from the opponent's hand and "
         'returns them to the bottom of matching draw stacks.',
-    imageAsset: 'assets/images/cards/event_fraternal_feuds.png',
+    imageAsset: 'assets/images/cards/events/fraternal_feuds.png',
   );
 
   static const invention = GameCard(
@@ -458,7 +458,7 @@ class BasicSetCards {
     effectText:
         'Each player gets 1 resource of his choice for each building with a progress point – up '
         'to a maximum of 2 resources.',
-    imageAsset: 'assets/images/cards/event_invention.png',
+    imageAsset: 'assets/images/cards/events/invention.png',
   );
 
   static const tradeShipsRace = GameCard(
@@ -469,7 +469,7 @@ class BasicSetCards {
         'The player who owns the most trade ships receives any 1 resource of his choice. In case '
         'of a tie, each player receives any 1 resource of his choice (each must have at least 1 '
         'trade ship).',
-    imageAsset: 'assets/images/cards/event_trade_ships_race.png',
+    imageAsset: 'assets/images/cards/events/trade_ships_race.png',
   );
 
   static const travelingMerchant = GameCard(
@@ -478,7 +478,7 @@ class BasicSetCards {
     category: CardCategory.event,
     effectText:
         'Each player may take up to 2 resources of his choice, paying 1 gold per resource.',
-    imageAsset: 'assets/images/cards/event_traveling_merchant.png',
+    imageAsset: 'assets/images/cards/events/traveling_merchant.png',
   );
 
   static const yule = GameCard(
@@ -488,7 +488,7 @@ class BasicSetCards {
     effectText:
         'Shuffle the event card stack as performed at the beginning of the game. Afterwards, '
         'draw an event card again.',
-    imageAsset: 'assets/images/cards/event_yule.png',
+    imageAsset: 'assets/images/cards/events/yule.png',
   );
 
   static const yearOfPlenty = GameCard(
@@ -498,7 +498,7 @@ class BasicSetCards {
     effectText:
         'Each region gets 1 resource for each adjacent Storehouse and Abbey, provided that '
         'storage space is available.',
-    imageAsset: 'assets/images/cards/event_year_of_plenty.png',
+    imageAsset: 'assets/images/cards/events/year_of_plenty.png',
   );
 
   /// Samtliga korttyper i grundspelet, för iteration/uppslag.
