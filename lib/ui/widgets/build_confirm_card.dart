@@ -18,6 +18,25 @@ String _actionPhrase(GameCard card) {
   }
 }
 
+/// Sammanfattar poängen kortet ger, t.ex. "1 handelspoäng" eller
+/// "2 styrkepoäng och 1 segerpoäng". Null om kortet inte ger några poäng
+/// (t.ex. vägar och byar).
+String? _pointsPhrase(GameCard card) {
+  final parts = <String>[
+    if (card.strengthPoints > 0)
+      '${card.strengthPoints} styrkepoäng',
+    if (card.commercePoints > 0)
+      '${card.commercePoints} handelspoäng',
+    if (card.skillPoints > 0) '${card.skillPoints} kunskapspoäng',
+    if (card.progressPoints > 0)
+      '${card.progressPoints} framstegspoäng',
+    if (card.victoryPoints > 0) '${card.victoryPoints} segerpoäng',
+  ];
+  if (parts.isEmpty) return null;
+  if (parts.length == 1) return parts.first;
+  return '${parts.sublist(0, parts.length - 1).join(', ')} och ${parts.last}';
+}
+
 /// Bekräftelsekortet som visas ovanpå motståndarens rike när ett kort
 /// släpps på en giltig plats – inte en modal dialogruta, utan en vanlig
 /// widget som läggs ovanpå motståndarens (inte ditt eget) rike, så att
@@ -45,6 +64,7 @@ class BuildConfirmCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pointsPhrase = _pointsPhrase(card);
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 320),
@@ -83,12 +103,27 @@ class BuildConfirmCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(
-                        'Du har valt att ${_actionPhrase(card)}.',
-                        style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: CatanColors.ink),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Du har valt att ${_actionPhrase(card)}.',
+                            style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: CatanColors.ink),
+                          ),
+                          if (pointsPhrase != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Ger $pointsPhrase.',
+                              style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontStyle: FontStyle.italic,
+                                  color: CatanColors.ink),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   ],
