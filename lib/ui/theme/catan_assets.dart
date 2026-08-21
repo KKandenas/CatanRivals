@@ -12,9 +12,20 @@ class CatanAssets {
   static const String _locations = 'assets/images/cards/locations';
   static const String _icons = 'assets/images/cards/icons';
   static const String _ui = 'assets/images/ui';
+  static const String _dice = 'assets/images/dice';
 
   static const String lobbyBackground = '$_ui/lobby_background.png';
   static const String boardBackground = '$_ui/board_background.png';
+
+  /// Händelsetärningens sex sidor (se [EventDieFace]) – de fem
+  /// symbolerna från regelhäftets referenskort.
+  static const String eventDieBrigandAttack =
+      '$_dice/event_brigand_attack.jpg';
+  static const String eventDieTrade = '$_dice/event_trade.jpg';
+  static const String eventDieCelebration = '$_dice/event_celebration.jpg';
+  static const String eventDiePlentifulHarvest =
+      '$_dice/event_plentiful_harvest.jpg';
+  static const String eventDieEventCard = '$_dice/event_card.jpg';
 
   /// Landskapsfoto för en resurstyp, t.ex. ResourceType.wool -> wool.png.
   static String resourcePhoto(ResourceType type) =>

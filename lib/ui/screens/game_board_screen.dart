@@ -277,14 +277,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                                 onTap: () => _handleResult(
                                     context, notifier.rollProductionDie()),
                               ),
-                              // Händelsetärningen slås samtidigt (se
-                              // EventDieFace) – visas kvar här som en
-                              // ständig påminnelse om senaste utfallet,
-                              // inte bara i den tillfälliga popupen ovan.
-                              if (state.eventDieFace != null) ...[
-                                const SizedBox(height: 6),
-                                EventDieIcon(face: state.eventDieFace!),
-                              ],
+                              // Händelsetärningen slås samtidigt som
+                              // produktionstärningen (se EventDieFace) –
+                              // visas alltid tillsammans med den, även
+                              // innan första kastet (samma "väntar"-
+                              // utseende, samma storlek), inte bara i
+                              // den tillfälliga popupen ovan.
+                              const SizedBox(height: 6),
+                              EventDieIcon(face: state.eventDieFace),
                             ],
                           ),
                         ),

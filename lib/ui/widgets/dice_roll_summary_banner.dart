@@ -2,21 +2,24 @@ import 'package:flutter/material.dart';
 
 import '../../models/models.dart';
 import '../theme/catan_colors.dart';
+import 'dice_face.dart';
 import 'event_die_icon.dart';
 
-/// Popup högst upp (inte en dialogruta – se nedan) som visar vad de två
-/// tärningarna (produktions- och händelsetärningen, se [EventDieFace])
-/// slog och vad som ska göras, synlig för båda spelarna (produktions-
-/// och händelsetärningens utfall synkas redan via [TurnState]).
-/// Ersätter den gamla, enklare banner-raden som bara visade
-/// produktionstalet.
+/// Popup högst upp som visar vad de två tärningarna (produktions- och
+/// händelsetärningen, se [EventDieFace]) slog och vad som ska göras,
+/// synlig för båda spelarna (utfallen synkas redan via [TurnState]).
+/// Samma rundade pergaments-kortstil som kortförstoringen
+/// (`showCardDetail`)/`BuildConfirmCard` i stället för den gamla,
+/// platta banner-raden – produktionstärningens prickar står till
+/// vänster om "Du slog en X:a ...", händelsetärningens symbol till
+/// vänster om dess rad.
 ///
 /// Ordningen på raderna beror på [EventDieFace.resolveBeforeResources]
 /// (regelhäftets referenskort: allt utom brigadanfallet görs EFTER att
 /// resurserna tagits, brigadanfallet görs INNAN) – bara instruktionen
 /// visas, appen genomför inget automatiskt.
 ///
-/// En vanlig rad i sidflödet (inte en dialogruta), precis som
+/// En vanlig widget i sidflödet (inte `showDialog`), precis som
 /// [TradePhaseCard] – så att regionernas +/- knappar går att trycka på
 /// medan den syns. Stängs manuellt med "OK", eller visas på nytt för
 /// varje nytt kast (se `key: ValueKey(...)` i game_board_screen.dart).
@@ -48,21 +51,42 @@ class _DiceRollSummaryBannerState extends State<DiceRollSummaryBanner> {
     final who = widget.rolledByMe ? 'Du' : widget.opponentName;
     final face = widget.eventDieFace;
 
-    const resourceLine = Text(
-      'Ta dina resurser genom att trycka på +.',
-      style: TextStyle(
-          color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+    final resourceLine = Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: CatanColors.parchmentDark,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: CatanColors.woodFrame),
+          ),
+          alignment: Alignment.center,
+          child: DiceFace(
+              value: widget.productionRoll, size: 30, dotColor: CatanColors.ink),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            '$who slog en ${widget.productionRoll}:a. Ta dina resurser genom '
+            'att trycka på +.',
+            style: const TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w600, color: CatanColors.ink),
+          ),
+        ),
+      ],
     );
 
     final eventLine = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        EventDieIcon(face: face, size: 32),
-        const SizedBox(width: 8),
+        EventDieIcon(face: face, size: 40),
+        const SizedBox(width: 10),
         Expanded(
           child: RichText(
             text: TextSpan(
-              style: const TextStyle(color: Colors.white, fontSize: 13),
+              style: const TextStyle(color: CatanColors.ink, fontSize: 12.5),
               children: [
                 TextSpan(
                     text: '${face.swedishName}: ',
@@ -75,56 +99,55 @@ class _DiceRollSummaryBannerState extends State<DiceRollSummaryBanner> {
       ],
     );
 
-    return Container(
-      width: double.infinity,
-      color: CatanColors.woodFrameDark,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '$who slog en ${widget.productionRoll}:a.',
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600),
-                ),
-              ),
-              const SizedBox(width: 10),
-              GestureDetector(
-                onTap: () => setState(() => _dismissed = true),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF7CBF6A),
-                    borderRadius: BorderRadius.circular(999),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 380),
+        child: Material(
+          color: CatanColors.parchment,
+          borderRadius: BorderRadius.circular(14),
+          clipBehavior: Clip.antiAlias,
+          elevation: 8,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (face.resolveBeforeResources) ...[
+                  eventLine,
+                  const SizedBox(height: 10),
+                  resourceLine,
+                ] else ...[
+                  resourceLine,
+                  const SizedBox(height: 10),
+                  eventLine,
+                ],
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: () => setState(() => _dismissed = true),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7CBF6A),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: const Text(
+                        'OK',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700),
+                      ),
+                    ),
                   ),
-                  child: const Text(
-                    'OK',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700),
-                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          if (face.resolveBeforeResources) ...[
-            eventLine,
-            const SizedBox(height: 6),
-            resourceLine,
-          ] else ...[
-            resourceLine,
-            const SizedBox(height: 6),
-            eventLine,
-          ],
-        ],
+        ),
       ),
     );
   }
