@@ -61,6 +61,19 @@ class CenterStacksStrip extends StatelessWidget {
   final void Function(int stackIndex)? onDiscardToStack;
   final bool hasSelectedDiscardCard;
 
+  /// Kortbytesfasen (regelhäftet s. 9) – se [TradePhase]. Under
+  /// [TradePhase.exchangeDiscard] går högarna att trycka på för att
+  /// slänga det valda handkortet dit ([onExchangeDiscardToStack], bara
+  /// aktiv när [hasSelectedExchangeCard]); under
+  /// [TradePhase.exchangeDraw] för att dra ett kort ([onExchangeDrawStack]);
+  /// under [TradePhase.peekChoosingStack] för att slå upp hela högen
+  /// ([onPeekStack]).
+  final TradePhase tradePhase;
+  final void Function(int stackIndex)? onExchangeDiscardToStack;
+  final void Function(int stackIndex)? onExchangeDrawStack;
+  final void Function(int stackIndex)? onPeekStack;
+  final bool hasSelectedExchangeCard;
+
   const CenterStacksStrip({
     super.key,
     required this.stackCounts,
@@ -78,6 +91,11 @@ class CenterStacksStrip extends StatelessWidget {
     this.onDrawStack,
     this.onDiscardToStack,
     this.hasSelectedDiscardCard = false,
+    this.tradePhase = TradePhase.none,
+    this.onExchangeDiscardToStack,
+    this.onExchangeDrawStack,
+    this.onPeekStack,
+    this.hasSelectedExchangeCard = false,
   });
 
   @override
@@ -129,11 +147,15 @@ class CenterStacksStrip extends StatelessWidget {
           ),
           if (isYourTurn && diceRolled && !isChoosingHand) ...[
             const SizedBox(width: 8),
-            if (handAdjustmentPhase == HandAdjustmentPhase.none)
+            if (handAdjustmentPhase == HandAdjustmentPhase.none &&
+                tradePhase == TradePhase.none)
               _EndTurnButton(onTap: onEndTurn)
-            else
+            else if (handAdjustmentPhase != HandAdjustmentPhase.none)
               _HandAdjustmentLabel(
                   phase: handAdjustmentPhase, count: handCount, limit: handLimit),
+            // Under kortbytesfasen visas instruktionerna i stället i
+            // TradePhaseCard (se game_board_screen.dart) – ingen egen
+            // etikett här, bara högarna som tänds till.
           ],
         ],
       ),
@@ -162,6 +184,39 @@ class CenterStacksStrip extends StatelessWidget {
         width: 48,
         highlighted: hasSelectedDiscardCard,
         onTap: hasSelectedDiscardCard ? () => onDiscardToStack?.call(index) : null,
+      );
+    }
+    if (tradePhase == TradePhase.exchangeDiscard) {
+      return _StackPile(
+        asset: CatanAssets.backBasicSet,
+        count: count,
+        width: 48,
+        highlighted: hasSelectedExchangeCard,
+        onTap: hasSelectedExchangeCard
+            ? () => onExchangeDiscardToStack?.call(index)
+            : null,
+      );
+    }
+    if (tradePhase == TradePhase.exchangeDraw) {
+      final tappable = count > 0;
+      return _StackPile(
+        asset: CatanAssets.backBasicSet,
+        count: count,
+        width: 48,
+        dimmed: !tappable,
+        highlighted: tappable,
+        onTap: tappable ? () => onExchangeDrawStack?.call(index) : null,
+      );
+    }
+    if (tradePhase == TradePhase.peekChoosingStack) {
+      final tappable = count > 0;
+      return _StackPile(
+        asset: CatanAssets.backBasicSet,
+        count: count,
+        width: 48,
+        dimmed: !tappable,
+        highlighted: tappable,
+        onTap: tappable ? () => onPeekStack?.call(index) : null,
       );
     }
 

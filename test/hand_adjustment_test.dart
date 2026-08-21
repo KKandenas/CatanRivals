@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// [GameState.handLimit] (3 + framstegspoäng). Se [GameNotifier.endActionPhase].
 void main() {
   group('Handjustering', () {
-    test('rätt antal kort från start: avsluta action-fasen lämnar turen direkt', () {
+    test('rätt antal kort från start: avsluta action-fasen går direkt till kortbytesfasen', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       final notifier = container.read(gameProvider.notifier);
@@ -24,7 +24,11 @@ void main() {
       expect(error, isNull);
       final state = container.read(gameProvider);
       expect(state.handAdjustmentPhase, HandAdjustmentPhase.none);
-      expect(state.activePlayerId, 'opponent');
+      expect(state.tradePhase, TradePhase.choosing);
+      expect(state.activePlayerId, 'you'); // turen väntar på kortbytesvalet
+
+      notifier.skipTrade();
+      expect(container.read(gameProvider).activePlayerId, 'opponent');
     });
 
     test('för få handkort: dra-läge tills gränsen är nådd, sedan lämnas turen över', () {
@@ -55,11 +59,17 @@ void main() {
       expect(container.read(gameProvider).centerStacks['draw1'], drawStack0Before! - 1);
       // Fortfarande under gränsen (3 < handLimit efter att den ökat med
       // 0 framstegspoäng är fortfarande bara 3) – alltså redan klar här,
-      // eftersom handLimit är 3 och vi nu har 3 kort.
+      // eftersom handLimit är 3 och vi nu har 3 kort. Går direkt vidare
+      // till kortbytesfasen (inte turen) – se trade_test.dart.
       final after = container.read(gameProvider);
       expect(after.handAdjustmentPhase, HandAdjustmentPhase.none);
-      expect(after.activePlayerId, 'opponent');
-      expect(after.diceRolled, isFalse);
+      expect(after.tradePhase, TradePhase.choosing);
+      expect(after.activePlayerId, 'you');
+
+      notifier.skipTrade();
+      final finished = container.read(gameProvider);
+      expect(finished.activePlayerId, 'opponent');
+      expect(finished.diceRolled, isFalse);
     });
 
     test('för många handkort: släng-läge tills gränsen är nådd, sedan lämnas turen över', () {
@@ -95,8 +105,13 @@ void main() {
       final after = container.read(gameProvider);
       expect(after.you.hand, hasLength(3));
       expect(after.handAdjustmentPhase, HandAdjustmentPhase.none);
-      expect(after.activePlayerId, 'opponent');
-      expect(after.diceRolled, isFalse);
+      expect(after.tradePhase, TradePhase.choosing);
+      expect(after.activePlayerId, 'you');
+
+      notifier.skipTrade();
+      final finished = container.read(gameProvider);
+      expect(finished.activePlayerId, 'opponent');
+      expect(finished.diceRolled, isFalse);
     });
 
     test('drawHandCard/discardHandCard är no-op utanför sitt läge', () {

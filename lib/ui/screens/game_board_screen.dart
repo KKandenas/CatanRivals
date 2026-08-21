@@ -9,11 +9,13 @@ import '../widgets/build_confirm_card.dart';
 import '../widgets/center_stacks_strip.dart';
 import '../widgets/dice_roll_button.dart';
 import '../widgets/hand_dock.dart';
+import '../widgets/peek_stack_overlay.dart';
 import '../widgets/pending_regions_bar.dart';
 import '../widgets/principality_grid.dart';
 import '../widgets/roll_info_banner.dart';
 import '../widgets/top_status_bar.dart';
 import '../widgets/total_score_board.dart';
+import '../widgets/trade_phase_card.dart';
 
 /// Huvudskärmen, stående layout: motståndarens namn/status (smal remsa),
 /// motståndarens rike (kompakt), dragstaplar + "Avsluta action-fas" i
@@ -81,8 +83,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     // egen banner och där tärningen ändå aldrig är slagen.
     final showTurnEmphasis = state.handsReady;
     final canBuildNow = state.canBuildNow;
+    // HandDocks kortval (se nedan) återanvänds för både handjusteringens
+    // släng-läge och kortbytesfasens gratisbyte – de är aldrig aktiva
+    // samtidigt (kortbytesfasen börjar först efter att handjusteringen
+    // är klar), så samma lokala UI-state (_selectedDiscardCard) räcker.
     final isDiscarding =
-        state.handAdjustmentPhase == HandAdjustmentPhase.discarding;
+        state.handAdjustmentPhase == HandAdjustmentPhase.discarding ||
+            state.tradePhase == TradePhase.exchangeDiscard;
     // Ett tidigare valt handkort hör bara hemma medan släng-läget
     // faktiskt pågår – annars är det en kvarleva från en tidigare omgång.
     if (!isDiscarding) _selectedDiscardCard = null;
@@ -186,6 +193,22 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 hasHeroToken: opponentHasHeroToken,
                 hasTradeToken: opponentHasTradeToken,
               ),
+              // Kortbytesfasen (regelhäftet s. 9), sist i omgången efter
+              // handjusteringen – en vanlig rad högst upp (inte en
+              // dialogruta), precis som RollInfoBanner. TradePhase.peekViewing
+              // visas inte här utan som PeekStackOverlay nedan, eftersom
+              // den behöver plats för flera kort.
+              TradePhaseCard(
+                phase: state.tradePhase,
+                onSkip: () => _handleResult(context, notifier.skipTrade()),
+                onStartExchange: () =>
+                    _handleResult(context, notifier.startExchange()),
+                onStartPeek: () => _handleResult(context, notifier.startPeek()),
+                onConfirmPeekPayment: () =>
+                    _handleResult(context, notifier.confirmPeekPayment()),
+                onCancelPeek: () =>
+                    _handleResult(context, notifier.cancelPeek()),
+              ),
               Expanded(
                 flex: 4,
                 child: Stack(
@@ -234,6 +257,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           ),
                         ),
                       ),
+                    if (state.tradePhase == TradePhase.peekViewing &&
+                        state.peekedCards != null)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          padding: const EdgeInsets.all(12),
+                          child: PeekStackOverlay(
+                            cards: state.peekedCards!,
+                            onTakeCard: (card) => _handleResult(
+                                context, notifier.peekTakeCard(card)),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -254,7 +290,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 handLimit: state.handLimit,
                 onDrawStack: (index) =>
                     _handleResult(context, notifier.drawHandCard(index)),
-                hasSelectedDiscardCard: _selectedDiscardCard != null,
+                hasSelectedDiscardCard:
+                    state.handAdjustmentPhase == HandAdjustmentPhase.discarding &&
+                        _selectedDiscardCard != null,
                 onDiscardToStack: (index) {
                   final card = _selectedDiscardCard;
                   if (card == null) return;
@@ -265,6 +303,24 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                     _handleResult(context, error);
                   }
                 },
+                tradePhase: state.tradePhase,
+                hasSelectedExchangeCard:
+                    state.tradePhase == TradePhase.exchangeDiscard &&
+                        _selectedDiscardCard != null,
+                onExchangeDiscardToStack: (index) {
+                  final card = _selectedDiscardCard;
+                  if (card == null) return;
+                  final error = notifier.exchangeDiscard(card, index);
+                  if (error == null) {
+                    setState(() => _selectedDiscardCard = null);
+                  } else {
+                    _handleResult(context, error);
+                  }
+                },
+                onExchangeDrawStack: (index) =>
+                    _handleResult(context, notifier.exchangeDraw(index)),
+                onPeekStack: (index) =>
+                    _handleResult(context, notifier.choosePeekStack(index)),
               ),
               // Info-remsa efter tärningskastet – inte en dialogruta, så
               // den täcker aldrig regionerna och +-knapparna går att

@@ -2,6 +2,7 @@ import 'package:catan_rivals/data/basic_set_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/services/game_sync_providers.dart';
 import 'package:catan_rivals/state/game_notifier.dart';
+import 'package:catan_rivals/state/game_state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -66,7 +67,7 @@ void main() {
     expect(container.read(gameProvider).you.principality.regionAt(-1, BuildingRow.above)!.storedResources, 0);
   });
 
-  test('endActionPhase kräver att tärningen är slagen, sedan lämnas turen över', () {
+  test('endActionPhase kräver att tärningen är slagen, sedan väntar kortbytesfasen innan turen lämnas över', () {
     final container = ProviderContainer(
       overrides: [gameSyncServiceProvider.overrideWithValue(FakeGameSyncService())],
     );
@@ -81,7 +82,16 @@ void main() {
     final error = notifier.endActionPhase();
 
     expect(error, isNull);
+    // Handen har redan rätt antal kort (3 = handLimit vid spelstart),
+    // så det går direkt vidare till kortbytesfasens tre val i stället
+    // för att lämna över turen direkt – se trade_test.dart för själva
+    // bytesflödet.
+    expect(container.read(gameProvider).tradePhase, TradePhase.choosing);
+    expect(container.read(gameProvider).activePlayerId, 'you');
+
+    notifier.skipTrade();
     final state = container.read(gameProvider);
+    expect(state.tradePhase, TradePhase.none);
     expect(state.activePlayerId, 'opponent');
     expect(state.diceRolled, isFalse);
     expect(state.productionRoll, isNull);
@@ -150,6 +160,7 @@ void main() {
 
     final hostEndError = hostContainer.read(gameProvider.notifier).endActionPhase();
     expect(hostEndError, isNull);
+    hostContainer.read(gameProvider.notifier).skipTrade();
     await pump();
 
     expect(guestContainer.read(gameProvider).isMyTurn, isTrue);

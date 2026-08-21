@@ -318,13 +318,14 @@ class GameNotifier extends Notifier<GameState> {
   }
 
   /// Avslutar action-fasen (regelhäftet s. 9). Om handen redan har rätt
-  /// antal kort ([GameState.handLimit]) går turen direkt vidare till
-  /// motståndaren – annars startar handjusteringen: för få kort sätter
-  /// [HandAdjustmentPhase.drawing] (dra ett kort i taget från valfri
-  /// draghög via [drawHandCard]), för många sätter
+  /// antal kort ([GameState.handLimit]) går det direkt vidare till
+  /// kortbytesfasen ([TradePhase]) – annars startar handjusteringen:
+  /// för få kort sätter [HandAdjustmentPhase.drawing] (dra ett kort i
+  /// taget från valfri draghög via [drawHandCard]), för många sätter
   /// [HandAdjustmentPhase.discarding] (släng ett kort i taget till
   /// botten av valfri draghög via [discardHandCard]). I båda fallen
-  /// lämnas turen över automatiskt så fort rätt antal är nått.
+  /// går det vidare till kortbytesfasen automatiskt så fort rätt antal
+  /// är nått.
   String? endActionPhase() {
     if (!state.isMyTurn) return 'Inte din tur.';
     if (!state.diceRolled) {
@@ -340,13 +341,13 @@ class GameNotifier extends Notifier<GameState> {
       state =
           state.copyWith(handAdjustmentPhase: HandAdjustmentPhase.discarding);
     } else {
-      _advanceToNextPlayer();
+      _enterTradePhase();
     }
     return null;
   }
 
-  /// Lämnar över turen till motståndaren och återställer tärnings- och
-  /// handjusteringsläget.
+  /// Lämnar över turen till motståndaren och återställer tärnings-,
+  /// handjusterings- och kortbytesläget.
   void _advanceToNextPlayer() {
     final next = state.activePlayerId == state.myPlayerId
         ? state.opponentPlayerId
@@ -356,32 +357,60 @@ class GameNotifier extends Notifier<GameState> {
       diceRolled: false,
       clearProductionRoll: true,
       handAdjustmentPhase: HandAdjustmentPhase.none,
+      tradePhase: TradePhase.none,
+      clearPeekStackIndex: true,
+      clearPeekedCards: true,
     );
     _syncTurnState();
   }
 
-  /// Drar det översta kortet från draghög [stackIndex] (0–3) till din
-  /// hand under [HandAdjustmentPhase.drawing]. Lämnar turen vidare
-  /// automatiskt så fort [GameState.handLimit] är nått.
-  String? drawHandCard(int stackIndex) {
-    if (state.handAdjustmentPhase != HandAdjustmentPhase.drawing) return null;
+  /// Tar det översta kortet från draghög [stackIndex] till din hand,
+  /// och uppdaterar centerStacks/synk. Delas av [drawHandCard] (under
+  /// handjusteringen) och [exchangeDraw]/[startExchange] (under
+  /// kortbytesfasens gratisbyte) – bara vem som får anropa den och vad
+  /// som händer efteråt skiljer.
+  GameCard? _drawCardFromStack(int stackIndex) {
     final stack = _drawStacks[stackIndex];
-    if (stack.isEmpty) return 'Den högen är tom.';
+    if (stack.isEmpty) return null;
 
     final card = stack.first;
     _drawStacks[stackIndex] = stack.sublist(1);
-    final updatedHand = [...state.you.hand, card];
-    final done = updatedHand.length >= state.handLimit;
-
     state = state.copyWith(
-      you: state.you.copyWith(hand: updatedHand),
+      you: state.you.copyWith(hand: [...state.you.hand, card]),
       centerStacks: Map.of(state.centerStacks)
         ..update('draw${stackIndex + 1}', (v) => v - 1),
     );
     _syncMyPlayer();
     _syncCenterStacks();
-    if (done) {
-      _advanceToNextPlayer();
+    return card;
+  }
+
+  /// Slänger [card] till botten av draghög [stackIndex], och
+  /// uppdaterar centerStacks/synk (så motståndaren ser vilken hög –
+  /// centerStacks synkas alltid). Delas av [discardHandCard] och
+  /// [exchangeDiscard].
+  void _discardCardToStack(GameCard card, int stackIndex) {
+    _drawStacks[stackIndex] = [..._drawStacks[stackIndex], card];
+    state = state.copyWith(
+      you: state.you
+          .copyWith(hand: List<GameCard>.of(state.you.hand)..remove(card)),
+      centerStacks: Map.of(state.centerStacks)
+        ..update('draw${stackIndex + 1}', (v) => v + 1),
+    );
+    _syncMyPlayer();
+    _syncCenterStacks();
+  }
+
+  /// Drar det översta kortet från draghög [stackIndex] (0–3) till din
+  /// hand under [HandAdjustmentPhase.drawing]. Går vidare till
+  /// kortbytesfasen automatiskt så fort [GameState.handLimit] är nått.
+  String? drawHandCard(int stackIndex) {
+    if (state.handAdjustmentPhase != HandAdjustmentPhase.drawing) return null;
+    final card = _drawCardFromStack(stackIndex);
+    if (card == null) return 'Den högen är tom.';
+
+    if (state.you.hand.length >= state.handLimit) {
+      _enterTradePhase();
     }
     return null;
   }
@@ -389,7 +418,7 @@ class GameNotifier extends Notifier<GameState> {
   /// Slänger [card] från din hand till botten av draghög [stackIndex]
   /// (0–3) under [HandAdjustmentPhase.discarding] – spelaren väljer
   /// själv vilken av de fyra högarna, ingen matchning mot korttyp
-  /// krävs. Lämnar turen vidare automatiskt så fort
+  /// krävs. Går vidare till kortbytesfasen automatiskt så fort
   /// [GameState.handLimit] är nått.
   String? discardHandCard(GameCard card, int stackIndex) {
     if (state.handAdjustmentPhase != HandAdjustmentPhase.discarding) {
@@ -397,20 +426,129 @@ class GameNotifier extends Notifier<GameState> {
     }
     if (!state.you.hand.contains(card)) return null;
 
-    _drawStacks[stackIndex] = [..._drawStacks[stackIndex], card];
-    final updatedHand = List<GameCard>.of(state.you.hand)..remove(card);
-    final done = updatedHand.length <= state.handLimit;
+    _discardCardToStack(card, stackIndex);
+    if (state.you.hand.length <= state.handLimit) {
+      _enterTradePhase();
+    }
+    return null;
+  }
 
+  // ---------------------------------------------------------------------
+  // Kortbytesfasen: sist i omgången, efter handjusteringen (regelhäftet
+  // s. 9 "Trading cards") – tre val, se [TradePhase].
+  // ---------------------------------------------------------------------
+
+  void _enterTradePhase() {
     state = state.copyWith(
-      you: state.you.copyWith(hand: updatedHand),
+      handAdjustmentPhase: HandAdjustmentPhase.none,
+      tradePhase: TradePhase.choosing,
+    );
+  }
+
+  /// Väljer att inte byta något kort – lämnar turen vidare direkt.
+  String? skipTrade() {
+    if (state.tradePhase != TradePhase.choosing) return null;
+    _advanceToNextPlayer();
+    return null;
+  }
+
+  /// Startar det gratis bytet (regelhäftet s. 9): ett handkort ska
+  /// slängas till valfri draghög (se [exchangeDiscard]), sedan dras ett
+  /// kort från toppen av valfri – kanske en annan – draghög (se
+  /// [exchangeDraw]).
+  String? startExchange() {
+    if (state.tradePhase != TradePhase.choosing) return null;
+    state = state.copyWith(tradePhase: TradePhase.exchangeDiscard);
+    return null;
+  }
+
+  /// Slänger [card] till botten av draghög [stackIndex] – första
+  /// halvan av det gratis bytet (se [startExchange]). centerStacks
+  /// synkas alltid, så motståndaren ser vilken hög kortet hamnade i,
+  /// precis som regelhäftet kräver.
+  String? exchangeDiscard(GameCard card, int stackIndex) {
+    if (state.tradePhase != TradePhase.exchangeDiscard) return null;
+    if (!state.you.hand.contains(card)) return null;
+
+    _discardCardToStack(card, stackIndex);
+    state = state.copyWith(tradePhase: TradePhase.exchangeDraw);
+    return null;
+  }
+
+  /// Drar det översta kortet från draghög [stackIndex] – andra (och
+  /// sista) halvan av det gratis bytet (se [exchangeDiscard]). Lämnar
+  /// turen vidare när kortet är draget.
+  String? exchangeDraw(int stackIndex) {
+    if (state.tradePhase != TradePhase.exchangeDraw) return null;
+    final card = _drawCardFromStack(stackIndex);
+    if (card == null) return 'Den högen är tom.';
+
+    _advanceToNextPlayer();
+    return null;
+  }
+
+  /// Startar köpet av att få kika i en hel draghög (regelhäftet s. 9):
+  /// 2 valfria resurser. Precis som byggkostnader håller appen inte
+  /// koll på om spelaren har råd – kostnaden visas bara i
+  /// bekräftelserutan, och spelaren betalar själv genom att trycka −
+  /// på valfria regioner innan hen bekräftar (se [confirmPeekPayment]).
+  String? startPeek() {
+    if (state.tradePhase != TradePhase.choosing) return null;
+    state = state.copyWith(tradePhase: TradePhase.peekPaying);
+    return null;
+  }
+
+  /// Ångrar köpet av att kika – tillbaka till de tre huvudvalen, innan
+  /// någon resurs faktiskt behöver ha rörts (spelaren kan redan ha
+  /// tryckt − några gånger, men appen håller inte reda på om det
+  /// faktiskt hände, precis som med byggkostnader).
+  String? cancelPeek() {
+    if (state.tradePhase != TradePhase.peekPaying) return null;
+    state = state.copyWith(tradePhase: TradePhase.choosing);
+    return null;
+  }
+
+  /// Bekräftar att de 2 valfria resurserna är betalda – nästa steg är
+  /// att välja vilken draghög man vill kika i (se [choosePeekStack]).
+  String? confirmPeekPayment() {
+    if (state.tradePhase != TradePhase.peekPaying) return null;
+    state = state.copyWith(tradePhase: TradePhase.peekChoosingStack);
+    return null;
+  }
+
+  /// Slår upp alla kort i draghög [stackIndex], i den ordning de
+  /// faktiskt ligger (första kortet i listan är överst), så att UI kan
+  /// visa dem och spelaren väljer ett att behålla (se [peekTakeCard]).
+  String? choosePeekStack(int stackIndex) {
+    if (state.tradePhase != TradePhase.peekChoosingStack) return null;
+    state = state.copyWith(
+      tradePhase: TradePhase.peekViewing,
+      peekStackIndex: stackIndex,
+      peekedCards: List.of(_drawStacks[stackIndex]),
+    );
+    return null;
+  }
+
+  /// Behåller [card] från den uppslagna draghögen (se
+  /// [choosePeekStack]) – resten av korten läggs tillbaka i högen i
+  /// exakt samma ordning de låg i (regelhäftet kräver det), eftersom
+  /// vi bara plockar bort det valda kortet ur samma lista i stället för
+  /// att bygga om högen från grunden. Lämnar turen vidare direkt efter.
+  String? peekTakeCard(GameCard card) {
+    if (state.tradePhase != TradePhase.peekViewing) return null;
+    final stackIndex = state.peekStackIndex;
+    if (stackIndex == null) return null;
+    if (!_drawStacks[stackIndex].contains(card)) return null;
+
+    _drawStacks[stackIndex] = List.of(_drawStacks[stackIndex])..remove(card);
+    state = state.copyWith(
+      you: state.you.copyWith(hand: [...state.you.hand, card]),
       centerStacks: Map.of(state.centerStacks)
-        ..update('draw${stackIndex + 1}', (v) => v + 1),
+        ..update('draw${stackIndex + 1}', (v) => v - 1),
     );
     _syncMyPlayer();
     _syncCenterStacks();
-    if (done) {
-      _advanceToNextPlayer();
-    }
+    _advanceToNextPlayer();
     return null;
   }
 
@@ -470,6 +608,10 @@ class GameNotifier extends Notifier<GameState> {
     }
     if (!state.canBuildNow) {
       return 'Vänta tills du har slagit tärningen på din tur.';
+    }
+    if (state.handAdjustmentPhase != HandAdjustmentPhase.none ||
+        state.tradePhase != TradePhase.none) {
+      return 'Klart med handjusteringen/kortbytet innan du kan bygga vidare.';
     }
     return null;
   }

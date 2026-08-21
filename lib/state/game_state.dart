@@ -18,6 +18,29 @@ enum SessionMode { local, host, guest }
 /// du drar från/slänger till en av de fyra draghögarna, en i taget.
 enum HandAdjustmentPhase { none, drawing, discarding }
 
+/// Kortbytesfasen, sist i din omgång efter att handen är justerad
+/// (regelhäftet s. 9: "Trading cards"). Tre val: låt handen vara,
+/// byt ett kort gratis, eller betala för att kika i en hel stapel.
+///
+/// [none] – inte i bytesfasen. [choosing] – väljer ett av de tre
+/// alternativen. [exchangeDiscard]/[exchangeDraw] – det gratis bytet:
+/// slänger först ett handkort till valfri stapel, drar sedan ett kort
+/// från toppen av valfri (kanske annan) stapel. [peekPaying] –
+/// betalar 2 valfria resurser (självbevakat, precis som
+/// byggkostnader). [peekChoosingStack] – väljer vilken stapel att
+/// kika i. [peekViewing] – alla kort i den valda stapeln visas, ett
+/// tryck väljer vilket du behåller (resten läggs tillbaka i samma
+/// ordning – se [GameNotifier.peekTakeCard]).
+enum TradePhase {
+  none,
+  choosing,
+  exchangeDiscard,
+  exchangeDraw,
+  peekPaying,
+  peekChoosingStack,
+  peekViewing,
+}
+
 /// Allt UI:t behöver rendera spelbrädet: de två spelarna, hur många
 /// kort som återstår i center-dragstaplarna, och (om något) vilket
 /// kort som just nu dras – används för att tända giltiga rutor.
@@ -66,6 +89,16 @@ class GameState {
   final String? heroTokenHolder;
   final String? tradeTokenHolder;
 
+  /// Var i kortbytesfasen du är just nu (se [TradePhase]).
+  final TradePhase tradePhase;
+
+  /// Vilken draghög ([peekStackIndex], 0–3) som just nu ligger uppslagen
+  /// framför dig under [TradePhase.peekViewing], och alla dess kort i
+  /// den ordning de faktiskt ligger i högen (så att de kan läggas
+  /// tillbaka i exakt samma ordning – regelhäftet kräver det).
+  final int? peekStackIndex;
+  final List<GameCard>? peekedCards;
+
   const GameState({
     required this.you,
     required this.opponent,
@@ -85,6 +118,9 @@ class GameState {
     this.handAdjustmentPhase = HandAdjustmentPhase.none,
     this.heroTokenHolder,
     this.tradeTokenHolder,
+    this.tradePhase = TradePhase.none,
+    this.peekStackIndex,
+    this.peekedCards,
   });
 
   bool get isOnline => mode != SessionMode.local;
@@ -168,6 +204,11 @@ class GameState {
     bool clearHeroTokenHolder = false,
     String? tradeTokenHolder,
     bool clearTradeTokenHolder = false,
+    TradePhase? tradePhase,
+    int? peekStackIndex,
+    bool clearPeekStackIndex = false,
+    List<GameCard>? peekedCards,
+    bool clearPeekedCards = false,
   }) {
     return GameState(
       you: you ?? this.you,
@@ -197,6 +238,10 @@ class GameState {
       tradeTokenHolder: clearTradeTokenHolder
           ? null
           : (tradeTokenHolder ?? this.tradeTokenHolder),
+      tradePhase: tradePhase ?? this.tradePhase,
+      peekStackIndex:
+          clearPeekStackIndex ? null : (peekStackIndex ?? this.peekStackIndex),
+      peekedCards: clearPeekedCards ? null : (peekedCards ?? this.peekedCards),
     );
   }
 }
