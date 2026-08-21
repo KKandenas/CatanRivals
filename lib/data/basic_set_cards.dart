@@ -438,7 +438,7 @@ class BasicSetCards {
     effectText:
         "The player who has the strength advantage selects 3 of his opponent's buildings. The "
         'opponent must remove one of them and return it to the bottom of a matching draw stack.',
-    imageAsset: 'assets/images/cards/events/feud.png',
+    imageAsset: 'assets/images/cards/events/feud.jpg',
   );
 
   static const fraternalFeuds = GameCard(
@@ -469,7 +469,7 @@ class BasicSetCards {
         'The player who owns the most trade ships receives any 1 resource of his choice. In case '
         'of a tie, each player receives any 1 resource of his choice (each must have at least 1 '
         'trade ship).',
-    imageAsset: 'assets/images/cards/events/trade_ships_race.png',
+    imageAsset: 'assets/images/cards/events/trade_ships_race.jpg',
   );
 
   static const travelingMerchant = GameCard(
@@ -478,7 +478,7 @@ class BasicSetCards {
     category: CardCategory.event,
     effectText:
         'Each player may take up to 2 resources of his choice, paying 1 gold per resource.',
-    imageAsset: 'assets/images/cards/events/traveling_merchant.png',
+    imageAsset: 'assets/images/cards/events/traveling_merchant.jpg',
   );
 
   static const yule = GameCard(
@@ -498,7 +498,7 @@ class BasicSetCards {
     effectText:
         'Each region gets 1 resource for each adjacent Storehouse and Abbey, provided that '
         'storage space is available.',
-    imageAsset: 'assets/images/cards/events/year_of_plenty.png',
+    imageAsset: 'assets/images/cards/events/year_of_plenty.jpg',
   );
 
   /// Samtliga korttyper i grundspelet, för iteration/uppslag.
