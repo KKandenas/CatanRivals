@@ -448,7 +448,7 @@ class BasicSetCards {
     effectText:
         "The player who has the strength advantage selects 2 cards from the opponent's hand and "
         'returns them to the bottom of matching draw stacks.',
-    imageAsset: 'assets/images/cards/events/fraternal_feuds.png',
+    imageAsset: 'assets/images/cards/events/fraternal_feuds.jpg',
   );
 
   static const invention = GameCard(
