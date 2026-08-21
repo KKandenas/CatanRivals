@@ -9,6 +9,7 @@ import '../widgets/dice_roll_button.dart';
 import '../widgets/hand_dock.dart';
 import '../widgets/pending_regions_bar.dart';
 import '../widgets/principality_grid.dart';
+import '../widgets/roll_info_banner.dart';
 import '../widgets/top_status_bar.dart';
 
 /// Huvudskärmen, stående layout: motståndarens namn/status (smal remsa),
@@ -158,6 +159,18 @@ class GameBoardScreen extends ConsumerWidget {
             diceRolled: state.diceRolled,
             onEndTurn: () => _handleResult(context, notifier.endTurn()),
           ),
+          // Info-remsa efter tärningskastet – inte en dialogruta, så
+          // den täcker aldrig regionerna och +-knapparna går att
+          // trycka på medan den syns. `key: ValueKey(...)` gör att den
+          // återställs (visas på nytt, oavsett tidigare "OK") för
+          // varje nytt kast.
+          if (state.diceRolled && state.productionRoll != null)
+            RollInfoBanner(
+              key: ValueKey(state.productionRoll),
+              roll: state.productionRoll!,
+              rolledByMe: state.activePlayerIsMe,
+              opponentName: state.opponent.name,
+            ),
           if (state.pendingRegions.isNotEmpty)
             PendingRegionsBar(
               cards: state.pendingRegions,
