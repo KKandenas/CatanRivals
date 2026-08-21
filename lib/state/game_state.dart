@@ -39,6 +39,14 @@ class GameState {
   final bool diceRolled;
   final int? productionRoll;
 
+  /// Två nya, ännu oplacerade regionkort som en ny by längst ut i
+  /// kedjan just gett dig (regelhäftet s. 8) – tomma tills du dragit
+  /// vardera kortet till platsen ovanför/nedanför den nya byn (se
+  /// [GameNotifier.placePendingRegion]). `pendingRegionJunction` är
+  /// knutpunkten de hör hemma i.
+  final List<GameCard> pendingRegions;
+  final int? pendingRegionJunction;
+
   const GameState({
     required this.you,
     required this.opponent,
@@ -53,6 +61,8 @@ class GameState {
     this.activePlayerId = 'you',
     this.diceRolled = false,
     this.productionRoll,
+    this.pendingRegions = const [],
+    this.pendingRegionJunction,
   });
 
   bool get isOnline => mode != SessionMode.local;
@@ -61,6 +71,17 @@ class GameState {
   /// får slå/avsluta omgången – det är samma enhet. Online gäller den
   /// riktiga tur-spärren.
   bool get isMyTurn => !isOnline || activePlayerId == myPlayerId;
+
+  /// Om DU faktiskt är den aktiva spelaren just nu – till skillnad från
+  /// [isMyTurn] (som alltid är sant lokalt, eftersom det inte finns
+  /// någon riktig spärr mellan två spelare på samma enhet), används den
+  /// här för turvisning (banner/ram/nedtoning): den ska visa det
+  /// verkliga läget även lokalt.
+  bool get activePlayerIsMe => activePlayerId == myPlayerId;
+
+  /// Om du får bygga/köpa just nu (regelhäftet s. 7: bara den aktiva
+  /// spelaren, och bara efter att produktionstärningen är slagen).
+  bool get canBuildNow => isMyTurn && diceRolled;
 
   /// Röd/blå-tillhörighet härleds från spelar-id:t (satt av
   /// [GameNotifier.hostRoom]/[joinRoom]/mock-datan): host/"you" är
@@ -103,6 +124,9 @@ class GameState {
     bool? diceRolled,
     int? productionRoll,
     bool clearProductionRoll = false,
+    List<GameCard>? pendingRegions,
+    int? pendingRegionJunction,
+    bool clearPendingRegionJunction = false,
   }) {
     return GameState(
       you: you ?? this.you,
@@ -118,6 +142,10 @@ class GameState {
       activePlayerId: activePlayerId ?? this.activePlayerId,
       diceRolled: diceRolled ?? this.diceRolled,
       productionRoll: clearProductionRoll ? null : (productionRoll ?? this.productionRoll),
+      pendingRegions: pendingRegions ?? this.pendingRegions,
+      pendingRegionJunction: clearPendingRegionJunction
+          ? null
+          : (pendingRegionJunction ?? this.pendingRegionJunction),
     );
   }
 }

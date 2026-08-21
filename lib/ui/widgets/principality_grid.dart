@@ -24,6 +24,11 @@ typedef ColumnDropCallback = void Function(int column, GameCard card);
 /// lagrade resurser (regelhäftet s. 7: produktionstärningens utdelning).
 typedef RegionAdjustCallback = void Function(int junctionColumn, BuildingRow row, int delta);
 
+/// Anropas när ett av de två väntande, ännu oplacerade regionkorten
+/// (efter en nybyggd by, regelhäftet s. 8) släpps på platsen ovanför
+/// eller nedanför den byn.
+typedef PendingRegionDropCallback = void Function(BuildingRow row, GameCard card);
+
 /// Ritar ut ett [RealmBoard] enligt kolumnmodellen: byar/städer i en rad,
 /// vägar mellan dem, och regioner delade diagonalt i hörnen ovanför och
 /// nedanför (se "Rikets koordinatsystem"-skissen). Zoombart/panorerbart
@@ -51,6 +56,11 @@ class PrincipalityGrid extends StatelessWidget {
   final ColumnDropCallback? onDropCityUpgrade;
   final RegionAdjustCallback? onAdjustRegion;
 
+  /// Knutpunkten (om någon) som just nu väntar på att få sina 2
+  /// regionkort placerade (se [PendingRegionDropCallback]).
+  final int? pendingRegionJunction;
+  final PendingRegionDropCallback? onDropPendingRegion;
+
   const PrincipalityGrid({
     super.key,
     required this.board,
@@ -63,6 +73,8 @@ class PrincipalityGrid extends StatelessWidget {
     this.onDropSettlement,
     this.onDropCityUpgrade,
     this.onAdjustRegion,
+    this.pendingRegionJunction,
+    this.onDropPendingRegion,
   });
 
   bool get _draggingRoad => draggingCard?.category == CardCategory.road;
@@ -71,6 +83,7 @@ class PrincipalityGrid extends StatelessWidget {
   bool get _draggingCity => draggingCard?.category == CardCategory.city;
   bool get _draggingExpansion =>
       draggingCard?.category == CardCategory.expansion;
+  bool get _draggingRegion => draggingCard?.category == CardCategory.region;
 
   @override
   Widget build(BuildContext context) {
@@ -88,10 +101,8 @@ class PrincipalityGrid extends StatelessWidget {
     var contentWidth = 0.0;
     final columns = <Widget>[];
     for (var col = left; col <= right; col++) {
-      final isCity = col.isEven && (board.settlementAt(col)?.isCity ?? false);
-      final colWidth = isCity ? unit * 2 + gap : unit;
       columns.add(_buildColumn(col));
-      contentWidth += colWidth;
+      contentWidth += unit;
       if (col != right) {
         columns.add(SizedBox(width: gap));
         contentWidth += gap;
@@ -151,16 +162,15 @@ class PrincipalityGrid extends StatelessWidget {
   Widget _buildSettlementColumn(int col) {
     final node = board.settlementAt(col);
     if (node != null) {
-      final width = node.isCity ? unit * 2 + gap : unit;
       return SizedBox(
-        width: width,
+        width: unit,
         child: Column(
           children: [
-            _siteRow(col, BuildingRow.above, node.aboveSites, width),
+            _siteRow(col, BuildingRow.above, node.aboveSites),
             SizedBox(height: gap),
             SizedBox(height: unit, child: _settlementSlot(col, node)),
             SizedBox(height: gap),
-            _siteRow(col, BuildingRow.below, node.belowSites, width),
+            _siteRow(col, BuildingRow.below, node.belowSites),
           ],
         ),
       );
@@ -238,6 +248,7 @@ class PrincipalityGrid extends StatelessWidget {
     final below = board.regionAt(col, BuildingRow.below);
     final isFrontier =
         col == board.leftmostColumn - 1 || col == board.rightmostColumn + 1;
+    final isPendingJunction = interactive && col == pendingRegionJunction;
 
     return SizedBox(
       width: unit,
@@ -247,7 +258,9 @@ class PrincipalityGrid extends StatelessWidget {
               height: unit,
               child: above != null
                   ? _region(above, col, BuildingRow.above)
-                  : const SizedBox()),
+                  : (isPendingJunction
+                      ? _pendingRegionSlot(BuildingRow.above)
+                      : const SizedBox())),
           SizedBox(height: gap),
           SizedBox(height: unit, child: _roadSlot(col, road, isFrontier)),
           SizedBox(height: gap),
@@ -255,9 +268,27 @@ class PrincipalityGrid extends StatelessWidget {
               height: unit,
               child: below != null
                   ? _region(below, col, BuildingRow.below)
-                  : const SizedBox()),
+                  : (isPendingJunction
+                      ? _pendingRegionSlot(BuildingRow.below)
+                      : const SizedBox())),
         ],
       ),
+    );
+  }
+
+  /// Tom platshållare för ett av de väntande regionkorten (regelhäftet
+  /// s. 8) – bara aktiv för den knutpunkt som just fick en ny by.
+  Widget _pendingRegionSlot(BuildingRow row) {
+    return DragTarget<GameCard>(
+      onWillAcceptWithDetails: (details) =>
+          details.data.category == CardCategory.region,
+      onAcceptWithDetails: (details) =>
+          onDropPendingRegion?.call(row, details.data),
+      builder: (context, candidates, rejected) {
+        final isHovering = candidates.isNotEmpty;
+        return BuildingSiteView(
+            highlighted: isHovering || _draggingRegion, hovering: isHovering);
+      },
     );
   }
 
@@ -277,16 +308,19 @@ class PrincipalityGrid extends StatelessWidget {
     );
   }
 
-  Widget _siteRow(
-      int column, BuildingRow row, List<PlacedCard?> sites, double width) {
+  /// Byggplatserna för en by/stad, staplade ovanpå varandra (inte sida
+  /// vid sida) – en stad har 2 platser i samma riktning, men de delar
+  /// samma kolumnbredd som en vanlig by, precis som i det fysiska
+  /// spelet.
+  Widget _siteRow(int column, BuildingRow row, List<PlacedCard?> sites) {
     return SizedBox(
       height: unit,
-      width: width,
-      child: Row(
+      width: unit,
+      child: Column(
         children: [
           for (var i = 0; i < sites.length; i++) ...[
             Expanded(child: _buildingSite(column, row, i, sites[i])),
-            if (i != sites.length - 1) SizedBox(width: gap),
+            if (i != sites.length - 1) const SizedBox(height: 2),
           ],
         ],
       ),

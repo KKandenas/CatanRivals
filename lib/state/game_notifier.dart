@@ -341,9 +341,14 @@ class GameNotifier extends Notifier<GameState> {
 
   bool _canAfford(GameCard card) => state.you.principality.canAfford(card.buildingCost);
 
-  /// Kollar att stapeln inte är slut och att spelaren har råd. Null om
-  /// allt stämmer, annars ett felmeddelande.
+  /// Kollar att det är din tur och att du redan slagit tärningen
+  /// (regelhäftet s. 7: "bara den aktiva spelaren, och bara efter att
+  /// tärningarna är slagna"), att regionvalet efter en tidigare by inte
+  /// väntar, att stapeln inte är slut, och att spelaren har råd. Null
+  /// om allt stämmer, annars ett felmeddelande.
   String? _checkStack(String stackKey, GameCard card) {
+    final turnError = _checkCanBuild();
+    if (turnError != null) return turnError;
     if ((state.centerStacks[stackKey] ?? 0) <= 0) {
       return 'Inga fler ${card.name.toLowerCase()}or kvar i stapeln';
     }
@@ -353,7 +358,19 @@ class GameNotifier extends Notifier<GameState> {
     return null;
   }
 
+  String? _checkCanBuild() {
+    if (state.pendingRegions.isNotEmpty) {
+      return 'Välj plats för de nya regionkorten innan du bygger vidare.';
+    }
+    if (!state.canBuildNow) {
+      return 'Vänta tills du har slagit tärningen på din tur.';
+    }
+    return null;
+  }
+
   String? dropExpansion(int column, BuildingRow row, int slotIndex, GameCard card) {
+    final turnError = _checkCanBuild();
+    if (turnError != null) return turnError;
     if (!state.you.hand.contains(card)) return null;
     if (!_canAfford(card)) return 'Inte råd med ${card.name}';
 
@@ -382,6 +399,11 @@ class GameNotifier extends Notifier<GameState> {
     return null;
   }
 
+  /// Bygger en by. Hamnar den bortom rikets nuvarande yttergräns tar
+  /// spelaren de 2 översta korten från regionstapeln (regelhäftet s. 8)
+  /// – men i stället för att de placeras automatiskt hamnar de i
+  /// [GameState.pendingRegions], och spelaren drar själv vartdera
+  /// kortet till platsen ovanför/nedanför (se [placePendingRegion]).
   String? dropSettlement(int column, GameCard card) {
     final error = _checkStack('settlements', card);
     if (error != null) return error;
@@ -391,16 +413,8 @@ class GameNotifier extends Notifier<GameState> {
 
     state.you.principality.placeSettlement(column, PlacedCard(card: card));
 
-    // Regelhäftet s. 8: en ny by ger automatiskt de 2 översta korten
-    // från regionstapeln, placerade i den nya, ännu tomma knutpunkten.
     final newJunction = column < oldLeft ? column - 1 : column + 1;
     final wasNewSettlementFurtherOut = column < oldLeft || column > oldRight;
-    if (wasNewSettlementFurtherOut) {
-      // Regelhäftet s. 8: nydragna regioner börjar tomma (sidan med 0
-      // resurssymboler vänd mot dig).
-      state.you.principality.placeRegion(newJunction, BuildingRow.above, PlacedCard(card: _drawRegion()));
-      state.you.principality.placeRegion(newJunction, BuildingRow.below, PlacedCard(card: _drawRegion()));
-    }
 
     state.you.principality.spend(card.buildingCost);
 
@@ -409,6 +423,8 @@ class GameNotifier extends Notifier<GameState> {
         ..update('settlements', (v) => v - 1)
         ..update('regions', (v) => wasNewSettlementFurtherOut ? v - 2 : v),
       clearDraggingCard: true,
+      pendingRegions: wasNewSettlementFurtherOut ? [_drawRegion(), _drawRegion()] : null,
+      pendingRegionJunction: wasNewSettlementFurtherOut ? newJunction : null,
     );
     _syncMyPlayer();
     _syncCenterStacks();
@@ -428,6 +444,28 @@ class GameNotifier extends Notifier<GameState> {
     );
     _syncMyPlayer();
     _syncCenterStacks();
+    return null;
+  }
+
+  /// Placerar ett av de två väntande regionkorten (se [dropSettlement])
+  /// på platsen ovanför eller nedanför den nya byn. När båda är
+  /// placerade töms [GameState.pendingRegions] och byggande går bra
+  /// igen.
+  String? placePendingRegion(BuildingRow row, GameCard card) {
+    final junction = state.pendingRegionJunction;
+    if (junction == null || !state.pendingRegions.contains(card)) return null;
+    if (state.you.principality.regionAt(junction, row) != null) {
+      return 'Den platsen är redan upptagen.';
+    }
+
+    state.you.principality.placeRegion(junction, row, PlacedCard(card: card));
+    final remaining = List<GameCard>.of(state.pendingRegions)..remove(card);
+
+    state = state.copyWith(
+      pendingRegions: remaining,
+      clearPendingRegionJunction: remaining.isEmpty,
+    );
+    _syncMyPlayer();
     return null;
   }
 }

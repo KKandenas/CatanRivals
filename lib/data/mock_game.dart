@@ -22,6 +22,9 @@ class MockGame {
         BasicSetCards.siglind,
       ],
       principality: StarterCards.buildStartingPrincipality('you', isRed: true),
+      // Den här mock-datan föreställer ett rike som redan är i full
+      // gång (färdig starthand, mitt i spelet) – inte hand-valsfasen.
+      hasDrawnStartingHand: true,
     );
   }
 
@@ -34,6 +37,7 @@ class MockGame {
         BasicSetCards.brigittaTheWiseWoman,
       ],
       principality: StarterCards.buildStartingPrincipality('opponent', isRed: false),
+      hasDrawnStartingHand: true,
     );
   }
 

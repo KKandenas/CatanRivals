@@ -11,6 +11,10 @@ void main() {
     setUp(() {
       container = ProviderContainer();
       addTearDown(container.dispose);
+      // Bygga/köpa kräver nu att tärningen är slagen på din tur
+      // (regelhäftet s. 7) – slå den här så byggtesterna nedan inte
+      // behöver upprepa det själva.
+      container.read(gameProvider.notifier).rollProductionDie();
     });
 
     test('initial state has starting principalities and center stacks', () {
@@ -67,7 +71,7 @@ void main() {
       expect(after.centerStacks['roads'], roadsBefore - 1);
     });
 
-    test('dropSettlement builds beyond a dangling road and grants 2 new regions', () {
+    test('dropSettlement builds beyond a dangling road and queues 2 new regions to place', () {
       final notifier = container.read(gameProvider.notifier);
       final before = container.read(gameProvider);
       // Väg (2 lera, 1 trä) + by (1 lera, 1 säd, 1 får, 1 trä) kostar mer
@@ -82,8 +86,13 @@ void main() {
       expect(error, isNull);
       final after = container.read(gameProvider);
       expect(after.you.principality.settlementAt(-2), isNotNull);
-      expect(after.you.principality.regionAt(-3, BuildingRow.above), isNotNull);
-      expect(after.you.principality.regionAt(-3, BuildingRow.below), isNotNull);
+      // Regionerna dras direkt (stapeln minskar) men placeras inte förrän
+      // spelaren själv drar dem till ovanför/nedanför – se
+      // 'placePendingRegion' i pending_regions_test.dart.
+      expect(after.you.principality.regionAt(-3, BuildingRow.above), isNull);
+      expect(after.you.principality.regionAt(-3, BuildingRow.below), isNull);
+      expect(after.pendingRegions, hasLength(2));
+      expect(after.pendingRegionJunction, -3);
       expect(after.centerStacks['regions'], regionsBefore - 2);
     });
 

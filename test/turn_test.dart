@@ -1,3 +1,4 @@
+import 'package:catan_rivals/data/basic_set_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/services/game_sync_providers.dart';
 import 'package:catan_rivals/state/game_notifier.dart';
@@ -84,6 +85,27 @@ void main() {
     expect(state.activePlayerId, 'opponent');
     expect(state.diceRolled, isFalse);
     expect(state.productionRoll, isNull);
+  });
+
+  test('bygga är blockerat tills tärningen är slagen på din tur', () {
+    final container = ProviderContainer(
+      overrides: [gameSyncServiceProvider.overrideWithValue(FakeGameSyncService())],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(gameProvider.notifier);
+    notifier.playLocally();
+    final before = container.read(gameProvider);
+    before.you.principality.addResourceToRegion(-1, BuildingRow.below, 1);
+
+    final tooEarly = notifier.dropRoad(-1, BasicSetCards.road);
+    expect(tooEarly, isNotNull);
+    expect(container.read(gameProvider).you.principality.roads.containsKey(-1), isFalse);
+
+    notifier.rollProductionDie();
+    final error = notifier.dropRoad(-1, BasicSetCards.road);
+
+    expect(error, isNull);
+    expect(container.read(gameProvider).you.principality.roads.containsKey(-1), isTrue);
   });
 
   test('online: bara den aktiva spelaren får slå tärningen och avsluta omgången', () async {
