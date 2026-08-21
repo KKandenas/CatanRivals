@@ -98,18 +98,45 @@ class PrincipalityGrid extends StatelessWidget {
     if (board.roads.containsKey(left)) left -= 1;
     if (board.roads.containsKey(right)) right += 1;
 
-    var contentWidth = 0.0;
-    final columns = <Widget>[];
-    for (var col = left; col <= right; col++) {
-      columns.add(_buildColumn(col));
-      contentWidth += unit;
-      if (col != right) {
-        columns.add(SizedBox(width: gap));
-        contentWidth += gap;
-      }
-    }
-    final contentHeight = unit * 3 + gap * 2;
+    final cols = [for (var col = left; col <= right; col++) col];
+
+    // En stad har 2 byggplatser i varje riktning i stället för byns 1
+    // – de får sedan helt egna rader (inte mindre kort i samma rad),
+    // så hela ovanför-/nedanför-sektionen görs så hög som den bredaste
+    // (mest utbyggda) staden på brädet kräver. Övriga kolumner (byar,
+    // regioner) förblir enkortshöjd och kant-justeras mot mitten.
+    int aboveSiteCount(int col) =>
+        col.isEven ? (board.settlementAt(col)?.aboveSites.length ?? 1) : 1;
+    int belowSiteCount(int col) =>
+        col.isEven ? (board.settlementAt(col)?.belowSites.length ?? 1) : 1;
+    final maxAbove = cols.map(aboveSiteCount).reduce((a, b) => a > b ? a : b);
+    final maxBelow = cols.map(belowSiteCount).reduce((a, b) => a > b ? a : b);
+    final aboveHeight = maxAbove * unit + (maxAbove - 1) * gap;
+    final belowHeight = maxBelow * unit + (maxBelow - 1) * gap;
+
+    final contentWidth = cols.length * unit + (cols.length - 1) * gap;
+    final contentHeight = aboveHeight + gap + unit + gap + belowHeight;
     const padding = 20.0;
+
+    Widget sectionRow(double height, Widget Function(int col) cellBuilder) {
+      final children = <Widget>[];
+      for (var i = 0; i < cols.length; i++) {
+        children.add(cellBuilder(cols[i]));
+        if (i != cols.length - 1) children.add(SizedBox(width: gap));
+      }
+      return SizedBox(height: height, child: Row(children: children));
+    }
+
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        sectionRow(aboveHeight, (col) => _aboveCell(col, aboveHeight)),
+        SizedBox(height: gap),
+        sectionRow(unit, _spineCell),
+        SizedBox(height: gap),
+        sectionRow(belowHeight, (col) => _belowCell(col, belowHeight)),
+      ],
+    );
 
     return Stack(
       fit: StackFit.expand,
@@ -119,13 +146,13 @@ class PrincipalityGrid extends StatelessWidget {
         // byggplatsernas streckade kanter och korten fortfarande
         // syns tydligt – samma ljushet som den gamla gradienten hade.
         Container(color: CatanColors.parchment.withValues(alpha: 0.55)),
-        _buildInteractiveContent(contentWidth, contentHeight, padding, columns),
+        _buildInteractiveContent(contentWidth, contentHeight, padding, content),
       ],
     );
   }
 
   Widget _buildInteractiveContent(double contentWidth, double contentHeight,
-      double padding, List<Widget> columns) {
+      double padding, Widget content) {
     return InteractiveViewer(
       // Pan/zoom stängs av på det interaktiva (egna) brädet: på
       // pekskärmar tävlar InteractiveViewers egen pan-gest med
@@ -143,37 +170,61 @@ class PrincipalityGrid extends StatelessWidget {
         child: SizedBox(
           width: contentWidth + padding * 2,
           height: contentHeight + padding * 2,
-          child: Padding(
-            padding: EdgeInsets.all(padding),
-            child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: columns),
-          ),
+          child: Padding(padding: EdgeInsets.all(padding), child: content),
         ),
       ),
     );
   }
 
-  Widget _buildColumn(int col) {
-    if (col.isEven) return _buildSettlementColumn(col);
-    return _buildJunctionColumn(col);
+  /// Cellen i ovanför-sektionen för en kolumn: en region (för
+  /// knutpunktskolumner) eller den utbyggda by/stad-kolumnens
+  /// byggplatser, botten-justerade så att platsen närmast byn/staden
+  /// alltid ligger i samma rad som grannkolumnernas enda platsrad.
+  Widget _aboveCell(int col, double sectionHeight) {
+    return SizedBox(
+      width: unit,
+      height: sectionHeight,
+      child: col.isEven
+          ? _settlementSiteStack(col, BuildingRow.above)
+          : _junctionSlot(col, BuildingRow.above),
+    );
   }
 
-  Widget _buildSettlementColumn(int col) {
+  /// Motsvarande för nedanför-sektionen, topp-justerad.
+  Widget _belowCell(int col, double sectionHeight) {
+    return SizedBox(
+      width: unit,
+      height: sectionHeight,
+      child: col.isEven
+          ? _settlementSiteStack(col, BuildingRow.below)
+          : _junctionSlot(col, BuildingRow.below),
+    );
+  }
+
+  Widget _junctionSlot(int col, BuildingRow row) {
+    final region = board.regionAt(col, row);
+    final isPendingJunction = interactive && col == pendingRegionJunction;
+    final child = region != null
+        ? _region(region, col, row)
+        : (isPendingJunction ? _pendingRegionSlot(row) : const SizedBox());
+    return Align(
+      alignment: row == BuildingRow.above ? Alignment.bottomCenter : Alignment.topCenter,
+      child: SizedBox(width: unit, height: unit, child: child),
+    );
+  }
+
+  Widget _spineCell(int col) {
+    if (col.isEven) return _settlementSpine(col);
+    final isFrontier =
+        col == board.leftmostColumn - 1 || col == board.rightmostColumn + 1;
+    return SizedBox(
+        width: unit, height: unit, child: _roadSlot(col, board.roads[col], isFrontier));
+  }
+
+  Widget _settlementSpine(int col) {
     final node = board.settlementAt(col);
     if (node != null) {
-      return SizedBox(
-        width: unit,
-        child: Column(
-          children: [
-            _siteRow(col, BuildingRow.above, node.aboveSites),
-            SizedBox(height: gap),
-            SizedBox(height: unit, child: _settlementSlot(col, node)),
-            SizedBox(height: gap),
-            _siteRow(col, BuildingRow.below, node.belowSites),
-          ],
-        ),
-      );
+      return SizedBox(width: unit, height: unit, child: _settlementSlot(col, node));
     }
 
     // Ingen by/stad här – kolla om det är en giltig "spökby"-plats
@@ -186,28 +237,23 @@ class PrincipalityGrid extends StatelessWidget {
     if (interactive && (isWestPhantom || isEastPhantom)) {
       return SizedBox(
         width: unit,
-        height: unit * 3 + gap * 2,
-        child: Center(
-          child: SizedBox(
-            height: unit,
-            child: DragTarget<GameCard>(
-              onWillAcceptWithDetails: (details) =>
-                  details.data.category == CardCategory.settlement,
-              onAcceptWithDetails: (details) =>
-                  onDropSettlement?.call(col, details.data),
-              builder: (context, candidates, rejected) {
-                final isHovering = candidates.isNotEmpty;
-                return BuildingSiteView(
-                    highlighted: isHovering || _draggingSettlement,
-                    hovering: isHovering);
-              },
-            ),
-          ),
+        height: unit,
+        child: DragTarget<GameCard>(
+          onWillAcceptWithDetails: (details) =>
+              details.data.category == CardCategory.settlement,
+          onAcceptWithDetails: (details) =>
+              onDropSettlement?.call(col, details.data),
+          builder: (context, candidates, rejected) {
+            final isHovering = candidates.isNotEmpty;
+            return BuildingSiteView(
+                highlighted: isHovering || _draggingSettlement,
+                hovering: isHovering);
+          },
         ),
       );
     }
 
-    return SizedBox(width: unit, height: unit * 3 + gap * 2);
+    return SizedBox(width: unit, height: unit);
   }
 
   Widget _settlementSlot(int column, SettlementNode node) {
@@ -239,40 +285,6 @@ class PrincipalityGrid extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-
-  Widget _buildJunctionColumn(int col) {
-    final road = board.roads[col];
-    final above = board.regionAt(col, BuildingRow.above);
-    final below = board.regionAt(col, BuildingRow.below);
-    final isFrontier =
-        col == board.leftmostColumn - 1 || col == board.rightmostColumn + 1;
-    final isPendingJunction = interactive && col == pendingRegionJunction;
-
-    return SizedBox(
-      width: unit,
-      child: Column(
-        children: [
-          SizedBox(
-              height: unit,
-              child: above != null
-                  ? _region(above, col, BuildingRow.above)
-                  : (isPendingJunction
-                      ? _pendingRegionSlot(BuildingRow.above)
-                      : const SizedBox())),
-          SizedBox(height: gap),
-          SizedBox(height: unit, child: _roadSlot(col, road, isFrontier)),
-          SizedBox(height: gap),
-          SizedBox(
-              height: unit,
-              child: below != null
-                  ? _region(below, col, BuildingRow.below)
-                  : (isPendingJunction
-                      ? _pendingRegionSlot(BuildingRow.below)
-                      : const SizedBox())),
-        ],
-      ),
     );
   }
 
@@ -308,22 +320,31 @@ class PrincipalityGrid extends StatelessWidget {
     );
   }
 
-  /// Byggplatserna för en by/stad, staplade ovanpå varandra (inte sida
-  /// vid sida) – en stad har 2 platser i samma riktning, men de delar
-  /// samma kolumnbredd som en vanlig by, precis som i det fysiska
-  /// spelet.
-  Widget _siteRow(int column, BuildingRow row, List<PlacedCard?> sites) {
-    return SizedBox(
-      height: unit,
-      width: unit,
-      child: Column(
-        children: [
-          for (var i = 0; i < sites.length; i++) ...[
-            Expanded(child: _buildingSite(column, row, i, sites[i])),
-            if (i != sites.length - 1) const SizedBox(height: 2),
-          ],
+  /// Byggplatserna för en by/stad, staplade i egna, fullstora rader
+  /// (inte förminskade sida vid sida) – en stad har 2 platser i samma
+  /// riktning. Plats 0 (den ursprungliga byggplatsen) ligger alltid
+  /// närmast byn/staden, plats 1 (stadens nya, tillkomna plats) längre
+  /// bort – se [SettlementNode.upgradeToCity].
+  Widget _settlementSiteStack(int col, BuildingRow row) {
+    final node = board.settlementAt(col);
+    if (node == null) return const SizedBox();
+    final sites = row == BuildingRow.above ? node.aboveSites : node.belowSites;
+    final order = row == BuildingRow.above
+        ? [for (var i = sites.length - 1; i >= 0; i--) i] // längst bort först (överst)
+        : [for (var i = 0; i < sites.length; i++) i]; // närmast spinan först (överst)
+
+    return Column(
+      mainAxisAlignment:
+          row == BuildingRow.above ? MainAxisAlignment.end : MainAxisAlignment.start,
+      children: [
+        for (var i = 0; i < order.length; i++) ...[
+          SizedBox(
+              width: unit,
+              height: unit,
+              child: _buildingSite(col, row, order[i], sites[order[i]])),
+          if (i != order.length - 1) SizedBox(height: gap),
         ],
-      ),
+      ],
     );
   }
 

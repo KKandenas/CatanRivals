@@ -7,9 +7,12 @@ import '../theme/catan_colors.dart';
 import 'card_detail_dialog.dart';
 
 /// Mittremsan mellan de två rikena: dragstaplarna (vägar/byar/städer/
-/// regioner), händelsekortsstapeln, tärningsslaget och turindikatorn –
-/// precis som i det fysiska spelets uppställning, där dessa ligger
-/// mellan de två furstendömena (se regelhäftet s. 5).
+/// regioner), händelsekortsstapeln, och turindikatorn – precis som i
+/// det fysiska spelets uppställning, där dessa ligger mellan de två
+/// furstendömena (se regelhäftet s. 5). Produktionstärningen sitter
+/// inte här längre – den står till höger om motståndarens rike (se
+/// [DiceRollButton] i game_board_screen.dart) för att lämna så mycket
+/// höjd som möjligt åt själva korten.
 ///
 /// Vägar/byar/städer går att långtrycka-och-dra ut på det egna riket
 /// för att bygga direkt från stapeln, precis som i det fysiska spelet
@@ -32,14 +35,9 @@ class CenterStacksStrip extends StatelessWidget {
   final bool isMyTurnToChooseHand;
   final void Function(int stackIndex)? onChooseStack;
 
-  /// Omgången (regelhäftet s. 7): produktionstärningens senaste kast
-  /// (`null` = inte slagen än den här omgången), och om den redan är
-  /// slagen. Tärningen går att trycka på för att slå när det är din
-  /// tur och den inte redan är slagen; "Avsluta omgång" blir aktiv när
-  /// den väl är slagen.
-  final int? productionRoll;
+  /// Om tärningen redan är slagen den här omgången – styr om
+  /// "Avsluta omgång" visas.
   final bool diceRolled;
-  final VoidCallback? onRollDice;
   final VoidCallback? onEndTurn;
 
   const CenterStacksStrip({
@@ -51,87 +49,63 @@ class CenterStacksStrip extends StatelessWidget {
     this.isChoosingHand = false,
     this.isMyTurnToChooseHand = false,
     this.onChooseStack,
-    this.productionRoll,
     this.diceRolled = false,
-    this.onRollDice,
     this.onEndTurn,
   });
 
   @override
   Widget build(BuildContext context) {
-    final rollable = isYourTurn && !diceRolled && !isChoosingHand;
     return Container(
       color: CatanColors.woodFrameDark,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
         children: [
-          // Tärningen sitter högst upp i remsan, större och mer
-          // framträdande, med turindikatorn och "Avsluta omgång" på
-          // varsin sida – så att den syns tydligt oavsett var man
-          // tittar på brädet, och gör klart att den går att trycka på.
-          Row(
-            children: [
-              _TurnIndicator(isYourTurn: isYourTurn),
-              Expanded(
-                child: Center(
-                  child: _DiceBadge(
-                    value: productionRoll,
-                    rollable: rollable,
-                    onTap: onRollDice,
-                  ),
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _StackPile(
+                  asset: CatanAssets.road,
+                  count: stackCounts['roads'] ?? 0,
+                  card: BasicSetCards.road,
+                  onDragStarted: onDragStarted,
+                  onDragEnd: onDragEnd,
+                  width: 48,
                 ),
-              ),
-              SizedBox(
-                width: 96,
-                child: (isYourTurn && diceRolled && !isChoosingHand)
-                    ? Align(
-                        alignment: Alignment.centerRight,
-                        child: _EndTurnButton(onTap: onEndTurn),
-                      )
-                    : null,
-              ),
-            ],
+                _StackPile(
+                  asset: CatanAssets.backSettlements,
+                  count: stackCounts['settlements'] ?? 0,
+                  card: BasicSetCards.settlement,
+                  onDragStarted: onDragStarted,
+                  onDragEnd: onDragEnd,
+                  width: 48,
+                ),
+                _StackPile(
+                  asset: CatanAssets.backCities,
+                  count: stackCounts['cities'] ?? 0,
+                  card: BasicSetCards.city,
+                  onDragStarted: onDragStarted,
+                  onDragEnd: onDragEnd,
+                  width: 48,
+                ),
+                _StackPile(
+                    asset: CatanAssets.backRegions,
+                    count: stackCounts['regions'] ?? 0,
+                    width: 48),
+                for (var i = 0; i < 4; i++) _drawStackPile(i),
+                _StackPile(
+                    asset: CatanAssets.backEvent,
+                    count: stackCounts['event'] ?? 0,
+                    width: 48),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _StackPile(
-                asset: CatanAssets.road,
-                count: stackCounts['roads'] ?? 0,
-                card: BasicSetCards.road,
-                onDragStarted: onDragStarted,
-                onDragEnd: onDragEnd,
-                width: 48,
-              ),
-              _StackPile(
-                asset: CatanAssets.backSettlements,
-                count: stackCounts['settlements'] ?? 0,
-                card: BasicSetCards.settlement,
-                onDragStarted: onDragStarted,
-                onDragEnd: onDragEnd,
-                width: 48,
-              ),
-              _StackPile(
-                asset: CatanAssets.backCities,
-                count: stackCounts['cities'] ?? 0,
-                card: BasicSetCards.city,
-                onDragStarted: onDragStarted,
-                onDragEnd: onDragEnd,
-                width: 48,
-              ),
-              _StackPile(
-                  asset: CatanAssets.backRegions,
-                  count: stackCounts['regions'] ?? 0,
-                  width: 48),
-              for (var i = 0; i < 4; i++) _drawStackPile(i),
-              _StackPile(
-                  asset: CatanAssets.backEvent,
-                  count: stackCounts['event'] ?? 0,
-                  width: 48),
-            ],
-          ),
+          const SizedBox(width: 8),
+          _TurnIndicator(isYourTurn: isYourTurn),
+          if (isYourTurn && diceRolled && !isChoosingHand) ...[
+            const SizedBox(width: 8),
+            _EndTurnButton(onTap: onEndTurn),
+          ],
         ],
       ),
     );
@@ -277,66 +251,6 @@ class _CountBadge extends StatelessWidget {
             color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
       ),
     );
-  }
-}
-
-/// Produktionstärningen (regelhäftet s. 7). Visar det senaste kastet,
-/// eller ett tärningsikon att trycka på för att slå när det är din tur
-/// och tärningen inte redan är slagen den här omgången – då får den
-/// också en ljusgrön ram och texten "Tryck för att slå" under sig, så
-/// att det inte går att missa att den väntar på ett tryck.
-class _DiceBadge extends StatelessWidget {
-  final int? value;
-  final bool rollable;
-  final VoidCallback? onTap;
-
-  const _DiceBadge({required this.value, required this.rollable, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final badge = Container(
-      width: 56,
-      height: 56,
-      decoration: BoxDecoration(
-        color: rollable ? const Color(0xFF7CBF6A) : CatanColors.parchment,
-        borderRadius: BorderRadius.circular(10),
-        border: rollable ? Border.all(color: Colors.white, width: 2) : null,
-        boxShadow: [
-          BoxShadow(
-              color: rollable
-                  ? const Color(0xFF7CBF6A).withValues(alpha: 0.6)
-                  : Colors.black45,
-              blurRadius: rollable ? 10 : 3,
-              spreadRadius: rollable ? 1 : 0,
-              offset: const Offset(0, 1)),
-        ],
-      ),
-      alignment: Alignment.center,
-      child: value == null
-          ? Icon(Icons.casino,
-              size: 32, color: rollable ? Colors.white : CatanColors.inkSoft)
-          : Text('$value',
-              style: const TextStyle(
-                  color: CatanColors.ink, fontWeight: FontWeight.bold, fontSize: 26)),
-    );
-
-    final withLabel = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        badge,
-        if (rollable) ...[
-          const SizedBox(height: 3),
-          const Text(
-            'Tryck för att slå',
-            style: TextStyle(
-                color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
-          ),
-        ],
-      ],
-    );
-
-    if (!rollable) return withLabel;
-    return GestureDetector(onTap: onTap, child: withLabel);
   }
 }
 

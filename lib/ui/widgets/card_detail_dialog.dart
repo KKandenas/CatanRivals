@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/models.dart';
 import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
+import 'dice_face.dart';
 
 /// Regionkort och by/stad/väg-korten visas i sina vanliga vyer med en
 /// annan bild än [GameCard.imageAsset] (som är kvarlevor från innan
@@ -299,14 +300,13 @@ class _NumberBadge extends StatelessWidget {
     return Container(
       width: 30,
       height: 30,
-      decoration: const BoxDecoration(
-          shape: BoxShape.circle, color: CatanColors.parchment),
-      alignment: Alignment.center,
-      child: Text(
-        '$number',
-        style: const TextStyle(
-            fontWeight: FontWeight.bold, fontSize: 16, color: CatanColors.ink),
+      decoration: BoxDecoration(
+        color: CatanColors.parchment,
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: CatanColors.woodFrame, width: 1),
       ),
+      alignment: Alignment.center,
+      child: DiceFace(value: number, size: 22, dotColor: CatanColors.ink),
     );
   }
 }

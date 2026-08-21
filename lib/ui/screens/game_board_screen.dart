@@ -5,6 +5,7 @@ import '../../state/game_notifier.dart';
 import '../../state/game_state.dart';
 import '../theme/catan_colors.dart';
 import '../widgets/center_stacks_strip.dart';
+import '../widgets/dice_roll_button.dart';
 import '../widgets/hand_dock.dart';
 import '../widgets/pending_regions_bar.dart';
 import '../widgets/principality_grid.dart';
@@ -117,10 +118,32 @@ class GameBoardScreen extends ConsumerWidget {
           TopStatusBar(opponent: state.opponent, opponentIsRed: !state.amIRed),
           Expanded(
             flex: 4,
-            child: PrincipalityGrid(
-              board: state.opponent.principality,
-              unit: 58,
-              gap: 4,
+            child: Row(
+              children: [
+                Expanded(
+                  child: PrincipalityGrid(
+                    board: state.opponent.principality,
+                    unit: 58,
+                    gap: 4,
+                  ),
+                ),
+                // Tärningen står till höger om motståndarens rike i
+                // stället för i mittremsan, så att mittremsan (och
+                // därmed alla kort) kan vara så stora som möjligt.
+                Container(
+                  width: 76,
+                  color: CatanColors.woodFrameDark,
+                  alignment: Alignment.center,
+                  child: DiceRollButton(
+                    value: state.productionRoll,
+                    rollable: state.isMyTurn &&
+                        !state.diceRolled &&
+                        !(state.isOnline && !state.handsReady),
+                    onTap: () =>
+                        _handleResult(context, notifier.rollProductionDie()),
+                  ),
+                ),
+              ],
             ),
           ),
           CenterStacksStrip(
@@ -132,9 +155,7 @@ class GameBoardScreen extends ConsumerWidget {
             onChooseStack: (index) =>
                 _handleResult(context, notifier.chooseStartingStack(index)),
             isYourTurn: state.isMyTurn,
-            productionRoll: state.productionRoll,
             diceRolled: state.diceRolled,
-            onRollDice: () => _handleResult(context, notifier.rollProductionDie()),
             onEndTurn: () => _handleResult(context, notifier.endTurn()),
           ),
           if (state.pendingRegions.isNotEmpty)

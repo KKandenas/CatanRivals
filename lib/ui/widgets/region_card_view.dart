@@ -4,6 +4,7 @@ import '../../models/models.dart';
 import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
 import 'card_detail_dialog.dart';
+import 'dice_face.dart';
 import 'resource_pip_row.dart';
 
 /// Förenklad, kvadratisk vy av ett landskapskort: fotobakgrund,
@@ -118,11 +119,7 @@ class _ProductionDie extends StatelessWidget {
         ],
       ),
       alignment: Alignment.center,
-      child: Text(
-        '$number',
-        style: const TextStyle(
-            fontWeight: FontWeight.bold, fontSize: 13, color: CatanColors.ink),
-      ),
+      child: DiceFace(value: number, size: 16, dotColor: CatanColors.ink),
     );
   }
 }
