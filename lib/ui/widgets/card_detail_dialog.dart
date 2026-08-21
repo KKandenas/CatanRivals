@@ -5,25 +5,6 @@ import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
 import 'dice_face.dart';
 
-/// Regionkort och by/stad/väg-korten visas i sina vanliga vyer med en
-/// annan bild än [GameCard.imageAsset] (som är kvarlevor från innan
-/// den riktiga bildmappningen fanns) – samma upplösning återanvänds
-/// här så detaljvyn visar exakt samma bild som resten av UI:t.
-String _resolveImageAsset(GameCard card) {
-  switch (card.category) {
-    case CardCategory.region:
-      return CatanAssets.resourcePhoto(card.resource);
-    case CardCategory.settlement:
-      return CatanAssets.settlement;
-    case CardCategory.city:
-      return CatanAssets.city;
-    case CardCategory.road:
-      return CatanAssets.road;
-    default:
-      return card.imageAsset;
-  }
-}
-
 /// Visar ett kort förstorat i en dialogruta: hela bilden, namn,
 /// kostnad, alla poängtyper och regeltext/krav – allt som är för
 /// litet för att läsas på det vanliga (kvadratiska, ofta bara ~70–90
@@ -70,7 +51,7 @@ class _CardDetailContent extends StatelessWidget {
                   fit: StackFit.expand,
                   children: [
                     Image.asset(
-                      _resolveImageAsset(card),
+                      CatanAssets.resolveCardImage(card),
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) =>
                           const ColoredBox(color: CatanColors.woodFrame),

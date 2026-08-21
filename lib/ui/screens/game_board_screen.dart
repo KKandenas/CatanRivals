@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../models/models.dart';
 import '../../state/game_notifier.dart';
 import '../../state/game_state.dart';
 import '../theme/catan_colors.dart';
+import '../widgets/build_confirm_card.dart';
 import '../widgets/center_stacks_strip.dart';
 import '../widgets/dice_roll_button.dart';
 import '../widgets/hand_dock.dart';
@@ -18,9 +20,19 @@ import '../widgets/top_status_bar.dart';
 /// (större, i fokus) och din handkortsdocka längst ner.
 ///
 /// Rent presentationslager – allt spelstate bor i [gameProvider]
-/// (state/game_notifier.dart).
-class GameBoardScreen extends ConsumerWidget {
+/// (state/game_notifier.dart). Undantaget är [_pendingBuildCard], som
+/// är rent lokalt UI-state för bekräftelsekortet (se
+/// [BuildConfirmCard]) – det behöver inte synkas mellan spelarna.
+class GameBoardScreen extends ConsumerStatefulWidget {
   const GameBoardScreen({super.key});
+
+  @override
+  ConsumerState<GameBoardScreen> createState() => _GameBoardScreenState();
+}
+
+class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
+  GameCard? _pendingBuildCard;
+  VoidCallback? _pendingBuildConfirm;
 
   void _handleResult(BuildContext context, String? error) {
     if (error == null) return;
@@ -29,8 +41,28 @@ class GameBoardScreen extends ConsumerWidget {
     );
   }
 
+  void _requestBuildConfirm(GameCard card, VoidCallback onConfirm) {
+    setState(() {
+      _pendingBuildCard = card;
+      _pendingBuildConfirm = onConfirm;
+    });
+  }
+
+  void _clearPendingBuild() {
+    setState(() {
+      _pendingBuildCard = null;
+      _pendingBuildConfirm = null;
+    });
+  }
+
+  void _confirmPendingBuild() {
+    final confirm = _pendingBuildConfirm;
+    _clearPendingBuild();
+    confirm?.call();
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final state = ref.watch(gameProvider);
     final notifier = ref.read(gameProvider.notifier);
 
@@ -119,31 +151,52 @@ class GameBoardScreen extends ConsumerWidget {
           TopStatusBar(opponent: state.opponent, opponentIsRed: !state.amIRed),
           Expanded(
             flex: 4,
-            child: Row(
+            child: Stack(
               children: [
-                Expanded(
-                  child: PrincipalityGrid(
-                    board: state.opponent.principality,
-                    unit: 58,
-                    gap: 4,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: PrincipalityGrid(
+                        board: state.opponent.principality,
+                        unit: 58,
+                        gap: 4,
+                      ),
+                    ),
+                    // Tärningen står till höger om motståndarens rike i
+                    // stället för i mittremsan, så att mittremsan (och
+                    // därmed alla kort) kan vara så stora som möjligt.
+                    Container(
+                      width: 76,
+                      color: CatanColors.woodFrameDark,
+                      alignment: Alignment.center,
+                      child: DiceRollButton(
+                        value: state.productionRoll,
+                        rollable: state.isMyTurn &&
+                            !state.diceRolled &&
+                            !(state.isOnline && !state.handsReady),
+                        onTap: () =>
+                            _handleResult(context, notifier.rollProductionDie()),
+                      ),
+                    ),
+                  ],
                 ),
-                // Tärningen står till höger om motståndarens rike i
-                // stället för i mittremsan, så att mittremsan (och
-                // därmed alla kort) kan vara så stora som möjligt.
-                Container(
-                  width: 76,
-                  color: CatanColors.woodFrameDark,
-                  alignment: Alignment.center,
-                  child: DiceRollButton(
-                    value: state.productionRoll,
-                    rollable: state.isMyTurn &&
-                        !state.diceRolled &&
-                        !(state.isOnline && !state.handsReady),
-                    onTap: () =>
-                        _handleResult(context, notifier.rollProductionDie()),
+                // Bekräftelsekortet läggs ovanpå motståndarens rike (inte
+                // en modal dialogruta) – så att det inte täcker dina egna
+                // regioner: du kommer åt +/- knapparna på ditt eget rike
+                // medan det syns, och det stängs aldrig av misstag genom
+                // att man trycker utanför, bara med Betalt/Avbryt.
+                if (_pendingBuildCard != null)
+                  Positioned.fill(
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.55),
+                      padding: const EdgeInsets.all(12),
+                      child: BuildConfirmCard(
+                        card: _pendingBuildCard!,
+                        onConfirm: _confirmPendingBuild,
+                        onCancel: _clearPendingBuild,
+                      ),
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -216,6 +269,7 @@ class GameBoardScreen extends ConsumerWidget {
                   onDropCityUpgrade: (column, card) => _handleResult(
                       context, notifier.dropCityUpgrade(column, card)),
                   onAdjustRegion: notifier.adjustRegionResource,
+                  onRequestBuildConfirm: _requestBuildConfirm,
                   pendingRegionJunction: state.pendingRegionJunction,
                   onDropPendingRegion: (row, card) => _handleResult(
                       context, notifier.placePendingRegion(row, card)),

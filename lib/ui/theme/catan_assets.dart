@@ -40,4 +40,25 @@ class CatanAssets {
   static const String pointCommerce = '$_icons/icon_commerce.png';
   static const String pointSkill = '$_icons/icon_skill.png';
   static const String pointProgress = '$_icons/icon_progress.png';
+
+  /// Rätt bild för ett kort oavsett kategori. Regionkort och by/stad/
+  /// väg-korten visas med en annan bild än [GameCard.imageAsset] (som
+  /// är kvarlevor från innan den riktiga bildmappningen fanns) – den
+  /// här metoden är den enda källan till sanning för vilken bild som
+  /// faktiskt hör till ett kort, så att alla vyer (bräde, detaljruta,
+  /// bekräftelseruta) visar exakt samma bild.
+  static String resolveCardImage(GameCard card) {
+    switch (card.category) {
+      case CardCategory.region:
+        return resourcePhoto(card.resource);
+      case CardCategory.settlement:
+        return settlement;
+      case CardCategory.city:
+        return city;
+      case CardCategory.road:
+        return road;
+      default:
+        return card.imageAsset;
+    }
+  }
 }

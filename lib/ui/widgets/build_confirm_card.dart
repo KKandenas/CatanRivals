@@ -4,8 +4,7 @@ import '../../models/models.dart';
 import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
 
-/// Beskriver vad spelaren håller på att göra, för rubriken i
-/// bekräftelserutan.
+/// Beskriver vad spelaren håller på att göra, för rubriken i kortet.
 String _actionPhrase(GameCard card) {
   switch (card.category) {
     case CardCategory.road:
@@ -19,50 +18,77 @@ String _actionPhrase(GameCard card) {
   }
 }
 
-/// Bekräftelseruta som visas när ett kort släpps på en giltig plats.
+/// Bekräftelsekortet som visas ovanpå motståndarens rike när ett kort
+/// släpps på en giltig plats – inte en modal dialogruta, utan en vanlig
+/// widget som läggs ovanpå motståndarens (inte ditt eget) rike, så att
+/// dina egna regioners +/- knappar fortfarande går att trycka på medan
+/// den syns, och den stängs aldrig av misstag genom att man trycker
+/// utanför.
+///
 /// Appen håller inte koll på om spelaren har råd (regelhäftet s. 9:
-/// spelarna betalar och tar resurser själva) – rutan visar bara
+/// spelarna betalar och tar resurser själva) – kortet visar bara
 /// kostnaden och påminner om att betala genom att trycka − på
 /// respektive resurs, sedan avgör spelaren själv med "Betalt" eller
 /// "Avbryt". Kortet byggs bara om "Betalt" trycks; "Avbryt" struntar
 /// helt i draget.
-Future<void> showBuildConfirmDialog(
-  BuildContext context, {
-  required GameCard card,
-  required VoidCallback onConfirm,
-}) {
-  return showDialog<void>(
-    context: context,
-    barrierColor: Colors.black54,
-    builder: (context) => Dialog(
-      backgroundColor: Colors.transparent,
+class BuildConfirmCard extends StatelessWidget {
+  final GameCard card;
+  final VoidCallback onConfirm;
+  final VoidCallback onCancel;
+
+  const BuildConfirmCard({
+    super.key,
+    required this.card,
+    required this.onConfirm,
+    required this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 340),
+        constraints: const BoxConstraints(maxWidth: 280),
         child: Material(
           color: CatanColors.parchment,
           borderRadius: BorderRadius.circular(14),
           clipBehavior: Clip.antiAlias,
+          elevation: 10,
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: Image.asset(
+                      CatanAssets.resolveCardImage(card),
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const ColoredBox(color: CatanColors.woodFrame),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
                 Text(
                   'Du har valt att ${_actionPhrase(card)}.',
+                  textAlign: TextAlign.center,
                   style: const TextStyle(
-                      fontSize: 17,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: CatanColors.ink),
                 ),
                 if (card.buildingCost.isNotEmpty) ...[
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
                   const Text(
                     'Betala genom att trycka − på respektive resurs:',
-                    style: TextStyle(fontSize: 13.5, color: CatanColors.ink),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 13, color: CatanColors.ink),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Wrap(
+                    alignment: WrapAlignment.center,
                     spacing: 10,
                     runSpacing: 8,
                     children: [
@@ -71,7 +97,7 @@ Future<void> showBuildConfirmDialog(
                     ],
                   ),
                 ],
-                const SizedBox(height: 22),
+                const SizedBox(height: 18),
                 Row(
                   children: [
                     Expanded(
@@ -79,7 +105,7 @@ Future<void> showBuildConfirmDialog(
                         style: OutlinedButton.styleFrom(
                             foregroundColor: CatanColors.ink,
                             side: const BorderSide(color: CatanColors.woodFrame)),
-                        onPressed: () => Navigator.of(context).pop(),
+                        onPressed: onCancel,
                         child: const Text('Avbryt'),
                       ),
                     ),
@@ -88,10 +114,7 @@ Future<void> showBuildConfirmDialog(
                       child: FilledButton(
                         style: FilledButton.styleFrom(
                             backgroundColor: const Color(0xFF4F6F45)),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          onConfirm();
-                        },
+                        onPressed: onConfirm,
                         child: const Text('Betalt'),
                       ),
                     ),
@@ -102,8 +125,8 @@ Future<void> showBuildConfirmDialog(
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _CostBadge extends StatelessWidget {
