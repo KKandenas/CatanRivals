@@ -339,21 +339,21 @@ class GameNotifier extends Notifier<GameState> {
   // Bygga: spela kort från handen / center-dragstaplarna
   // ---------------------------------------------------------------------
 
-  bool _canAfford(GameCard card) => state.you.principality.canAfford(card.buildingCost);
-
   /// Kollar att det är din tur och att du redan slagit tärningen
   /// (regelhäftet s. 7: "bara den aktiva spelaren, och bara efter att
   /// tärningarna är slagna"), att regionvalet efter en tidigare by inte
-  /// väntar, att stapeln inte är slut, och att spelaren har råd. Null
-  /// om allt stämmer, annars ett felmeddelande.
+  /// väntar, och att stapeln inte är slut. Null om allt stämmer, annars
+  /// ett felmeddelande.
+  ///
+  /// Ingen kontroll av om spelaren har råd – kostnaden visas i
+  /// bekräftelserutan (se `showBuildConfirmDialog`) och spelarna
+  /// betalar själva med +/- på sina regioner, precis som i det
+  /// fysiska spelet.
   String? _checkStack(String stackKey, GameCard card) {
     final turnError = _checkCanBuild();
     if (turnError != null) return turnError;
     if ((state.centerStacks[stackKey] ?? 0) <= 0) {
       return 'Inga fler ${card.name.toLowerCase()}or kvar i stapeln';
-    }
-    if (!_canAfford(card)) {
-      return 'Inte råd med ${card.name}';
     }
     return null;
   }
@@ -372,10 +372,8 @@ class GameNotifier extends Notifier<GameState> {
     final turnError = _checkCanBuild();
     if (turnError != null) return turnError;
     if (!state.you.hand.contains(card)) return null;
-    if (!_canAfford(card)) return 'Inte råd med ${card.name}';
 
     state.you.principality.placeExpansion(column, row, slotIndex, PlacedCard(card: card));
-    state.you.principality.spend(card.buildingCost);
     final updated = state.you.copyWith(hand: List.of(state.you.hand)..remove(card));
 
     state = state.copyWith(you: updated, clearDraggingCard: true);
@@ -388,7 +386,6 @@ class GameNotifier extends Notifier<GameState> {
     if (error != null) return error;
 
     state.you.principality.placeRoad(column, PlacedCard(card: card));
-    state.you.principality.spend(card.buildingCost);
 
     state = state.copyWith(
       centerStacks: Map.of(state.centerStacks)..update('roads', (v) => v - 1),
@@ -416,8 +413,6 @@ class GameNotifier extends Notifier<GameState> {
     final newJunction = column < oldLeft ? column - 1 : column + 1;
     final wasNewSettlementFurtherOut = column < oldLeft || column > oldRight;
 
-    state.you.principality.spend(card.buildingCost);
-
     state = state.copyWith(
       centerStacks: Map.of(state.centerStacks)
         ..update('settlements', (v) => v - 1)
@@ -436,7 +431,6 @@ class GameNotifier extends Notifier<GameState> {
     if (error != null) return error;
 
     state.you.principality.upgradeToCity(column, PlacedCard(card: card));
-    state.you.principality.spend(card.buildingCost);
 
     state = state.copyWith(
       centerStacks: Map.of(state.centerStacks)..update('cities', (v) => v - 1),

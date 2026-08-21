@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/models.dart';
 import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
+import 'build_confirm_dialog.dart';
 import 'expansion_card_view.dart';
 import 'region_card_view.dart';
 import 'settlement_card_view.dart';
@@ -130,11 +131,11 @@ class PrincipalityGrid extends StatelessWidget {
     final content = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        sectionRow(aboveHeight, (col) => _aboveCell(col, aboveHeight)),
+        sectionRow(aboveHeight, (col) => _aboveCell(col, aboveHeight, context)),
         SizedBox(height: gap),
-        sectionRow(unit, _spineCell),
+        sectionRow(unit, (col) => _spineCell(col, context)),
         SizedBox(height: gap),
-        sectionRow(belowHeight, (col) => _belowCell(col, belowHeight)),
+        sectionRow(belowHeight, (col) => _belowCell(col, belowHeight, context)),
       ],
     );
 
@@ -180,23 +181,23 @@ class PrincipalityGrid extends StatelessWidget {
   /// knutpunktskolumner) eller den utbyggda by/stad-kolumnens
   /// byggplatser, botten-justerade så att platsen närmast byn/staden
   /// alltid ligger i samma rad som grannkolumnernas enda platsrad.
-  Widget _aboveCell(int col, double sectionHeight) {
+  Widget _aboveCell(int col, double sectionHeight, BuildContext context) {
     return SizedBox(
       width: unit,
       height: sectionHeight,
       child: col.isEven
-          ? _settlementSiteStack(col, BuildingRow.above)
+          ? _settlementSiteStack(col, BuildingRow.above, context)
           : _junctionSlot(col, BuildingRow.above),
     );
   }
 
   /// Motsvarande för nedanför-sektionen, topp-justerad.
-  Widget _belowCell(int col, double sectionHeight) {
+  Widget _belowCell(int col, double sectionHeight, BuildContext context) {
     return SizedBox(
       width: unit,
       height: sectionHeight,
       child: col.isEven
-          ? _settlementSiteStack(col, BuildingRow.below)
+          ? _settlementSiteStack(col, BuildingRow.below, context)
           : _junctionSlot(col, BuildingRow.below),
     );
   }
@@ -213,18 +214,21 @@ class PrincipalityGrid extends StatelessWidget {
     );
   }
 
-  Widget _spineCell(int col) {
-    if (col.isEven) return _settlementSpine(col);
+  Widget _spineCell(int col, BuildContext context) {
+    if (col.isEven) return _settlementSpine(col, context);
     final isFrontier =
         col == board.leftmostColumn - 1 || col == board.rightmostColumn + 1;
     return SizedBox(
-        width: unit, height: unit, child: _roadSlot(col, board.roads[col], isFrontier));
+        width: unit,
+        height: unit,
+        child: _roadSlot(col, board.roads[col], isFrontier, context));
   }
 
-  Widget _settlementSpine(int col) {
+  Widget _settlementSpine(int col, BuildContext context) {
     final node = board.settlementAt(col);
     if (node != null) {
-      return SizedBox(width: unit, height: unit, child: _settlementSlot(col, node));
+      return SizedBox(
+          width: unit, height: unit, child: _settlementSlot(col, node, context));
     }
 
     // Ingen by/stad här – kolla om det är en giltig "spökby"-plats
@@ -241,8 +245,11 @@ class PrincipalityGrid extends StatelessWidget {
         child: DragTarget<GameCard>(
           onWillAcceptWithDetails: (details) =>
               details.data.category == CardCategory.settlement,
-          onAcceptWithDetails: (details) =>
-              onDropSettlement?.call(col, details.data),
+          onAcceptWithDetails: (details) => showBuildConfirmDialog(
+            context,
+            card: details.data,
+            onConfirm: () => onDropSettlement?.call(col, details.data),
+          ),
           builder: (context, candidates, rejected) {
             final isHovering = candidates.isNotEmpty;
             return BuildingSiteView(
@@ -256,15 +263,18 @@ class PrincipalityGrid extends StatelessWidget {
     return SizedBox(width: unit, height: unit);
   }
 
-  Widget _settlementSlot(int column, SettlementNode node) {
+  Widget _settlementSlot(int column, SettlementNode node, BuildContext context) {
     final view = SettlementCardView(card: node.center.card);
     if (!interactive || node.isCity) return view;
 
     return DragTarget<GameCard>(
       onWillAcceptWithDetails: (details) =>
           details.data.category == CardCategory.city,
-      onAcceptWithDetails: (details) =>
-          onDropCityUpgrade?.call(column, details.data),
+      onAcceptWithDetails: (details) => showBuildConfirmDialog(
+        context,
+        card: details.data,
+        onConfirm: () => onDropCityUpgrade?.call(column, details.data),
+      ),
       builder: (context, candidates, rejected) {
         // Byggnadskortets egen bild ska alltid synas; vi lägger bara på
         // en glödande ram ovanpå när ett stadskort dras.
@@ -304,14 +314,18 @@ class PrincipalityGrid extends StatelessWidget {
     );
   }
 
-  Widget _roadSlot(int col, PlacedCard? road, bool isFrontier) {
+  Widget _roadSlot(int col, PlacedCard? road, bool isFrontier, BuildContext context) {
     if (road != null) return const RoadCardView();
     if (!interactive || !isFrontier) return const SizedBox();
 
     return DragTarget<GameCard>(
       onWillAcceptWithDetails: (details) =>
           details.data.category == CardCategory.road,
-      onAcceptWithDetails: (details) => onDropRoad?.call(col, details.data),
+      onAcceptWithDetails: (details) => showBuildConfirmDialog(
+        context,
+        card: details.data,
+        onConfirm: () => onDropRoad?.call(col, details.data),
+      ),
       builder: (context, candidates, rejected) {
         final isHovering = candidates.isNotEmpty;
         return BuildingSiteView(
@@ -325,7 +339,7 @@ class PrincipalityGrid extends StatelessWidget {
   /// riktning. Plats 0 (den ursprungliga byggplatsen) ligger alltid
   /// närmast byn/staden, plats 1 (stadens nya, tillkomna plats) längre
   /// bort – se [SettlementNode.upgradeToCity].
-  Widget _settlementSiteStack(int col, BuildingRow row) {
+  Widget _settlementSiteStack(int col, BuildingRow row, BuildContext context) {
     final node = board.settlementAt(col);
     if (node == null) return const SizedBox();
     final sites = row == BuildingRow.above ? node.aboveSites : node.belowSites;
@@ -341,23 +355,26 @@ class PrincipalityGrid extends StatelessWidget {
           SizedBox(
               width: unit,
               height: unit,
-              child: _buildingSite(col, row, order[i], sites[order[i]])),
+              child: _buildingSite(col, row, order[i], sites[order[i]], context)),
           if (i != order.length - 1) SizedBox(height: gap),
         ],
       ],
     );
   }
 
-  Widget _buildingSite(
-      int column, BuildingRow row, int slotIndex, PlacedCard? placed) {
+  Widget _buildingSite(int column, BuildingRow row, int slotIndex,
+      PlacedCard? placed, BuildContext context) {
     if (placed != null) return _expansionCard(placed);
     if (!interactive) return const BuildingSiteView();
 
     return DragTarget<GameCard>(
       onWillAcceptWithDetails: (details) =>
           details.data.category == CardCategory.expansion,
-      onAcceptWithDetails: (details) =>
-          onDropExpansion?.call(column, row, slotIndex, details.data),
+      onAcceptWithDetails: (details) => showBuildConfirmDialog(
+        context,
+        card: details.data,
+        onConfirm: () => onDropExpansion?.call(column, row, slotIndex, details.data),
+      ),
       builder: (context, candidates, rejected) {
         final isHovering = candidates.isNotEmpty;
         return BuildingSiteView(
