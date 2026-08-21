@@ -110,6 +110,23 @@ class ExpansionCardView extends StatelessWidget {
                     top: 2,
                     right: 2,
                     child: _UniqueBadge(),
+                  )
+                else if (card.doublesNeighborProduction)
+                  Positioned(
+                    top: 2,
+                    right: 2,
+                    child: _RatioBadge(label: '2X', resource: card.resource),
+                  )
+                else if (card.expansionKind == ExpansionKind.tradeShip)
+                  Positioned(
+                    top: 2,
+                    right: 2,
+                    child: _RatioBadge(
+                      label: '2:1',
+                      resource: card.resource == ResourceType.none
+                          ? null
+                          : card.resource,
+                    ),
                   ),
                 Positioned(
                   bottom: 24,
@@ -227,6 +244,46 @@ class _PointPip extends StatelessWidget {
           child: Image.asset(asset, width: 12, height: 12, fit: BoxFit.cover),
         ),
       ],
+    );
+  }
+}
+
+/// Visar "2X"/"2:1" (dubblad produktion resp. bytesförhållande, se
+/// [GameCard.doublesNeighborProduction] och [ExpansionKind.tradeShip])
+/// tillsammans med resursikonen, om kortet gäller en specifik resurs
+/// (t.ex. inte för Stort handelsskepp, som gäller valfri
+/// grannresurs). Delar hörnet med [_UniqueBadge] – ett kort är aldrig
+/// både unikt och en dubblare/handelsskepp.
+class _RatioBadge extends StatelessWidget {
+  final String label;
+  final ResourceType? resource;
+
+  const _RatioBadge({required this.label, this.resource});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+      decoration: BoxDecoration(
+          color: CatanColors.parchment, borderRadius: BorderRadius.circular(3)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 7,
+                  color: CatanColors.ink,
+                  fontWeight: FontWeight.bold)),
+          if (resource != null) ...[
+            const SizedBox(width: 2),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: Image.asset(CatanAssets.resourceCostIcon(resource!),
+                  width: 9, height: 9, fit: BoxFit.cover),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

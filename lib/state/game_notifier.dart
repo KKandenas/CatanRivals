@@ -479,6 +479,9 @@ class GameNotifier extends Notifier<GameState> {
     final turnError = _checkCanBuild();
     if (turnError != null) return turnError;
     if (!state.you.hand.contains(card)) return null;
+    if (card.isUnique && state.you.principality.hasExpansionCard(card.id)) {
+      return 'Du kan bara ha en ${card.name} i ditt rike.';
+    }
 
     state.you.principality
         .placeExpansion(column, row, slotIndex, PlacedCard(card: card));

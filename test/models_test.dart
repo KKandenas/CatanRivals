@@ -34,7 +34,7 @@ void main() {
     });
 
     test(
-        'exactly the 6 buildings that affect both neighboring regions are flagged',
+        'exactly the 7 cards that affect both neighboring regions are flagged',
         () {
       final flaggedNames = BasicSetCards.all
           .where((c) => c.affectsBothNeighboringRegions)
@@ -48,6 +48,24 @@ void main() {
         'Järngjuteri',
         'Timmerläger',
         'Vävstuga',
+        'Stort handelsskepp',
+      });
+    });
+
+    test(
+        'exactly the 5 buildings that double a neighboring resource are flagged, with that resource set',
+        () {
+      final doublers = {
+        for (final c in BasicSetCards.all)
+          if (c.doublesNeighborProduction) c.name: c.resource,
+      };
+
+      expect(doublers, {
+        'Tegelbruk': ResourceType.brick,
+        'Kvarn': ResourceType.grain,
+        'Järngjuteri': ResourceType.ore,
+        'Timmerläger': ResourceType.lumber,
+        'Vävstuga': ResourceType.wool,
       });
     });
   });
@@ -197,6 +215,19 @@ void main() {
             0, const PlacedCard(card: BasicSetCards.settlement)),
         throwsStateError,
       );
+    });
+
+    test('hasExpansionCard finds a placed expansion card by id, on either settlement',
+        () {
+      final board = StarterCards.buildStartingPrincipality('p1');
+
+      expect(board.hasExpansionCard('building-marketplace'), isFalse);
+
+      board.placeExpansion(
+          2, BuildingRow.below, 0, const PlacedCard(card: BasicSetCards.marketplace));
+
+      expect(board.hasExpansionCard('building-marketplace'), isTrue);
+      expect(board.hasExpansionCard('building-abbey'), isFalse);
     });
 
     test('upgrading to a city adds a second building site on each side', () {

@@ -221,6 +221,20 @@ class RealmBoard {
     sites[slotIndex] = expansionCard;
   }
 
+  /// Om ett kort med [cardId] redan ligger på en byggplats någonstans i
+  /// riket (byar/städers ovanför-/nedanför-platser) – används för att
+  /// kontrollera unika kort (regelhäftet: "(1x)" i kortnamnet, t.ex.
+  /// Kloster/Marknadsplats/Församlingshus), se
+  /// [GameNotifier.dropExpansion].
+  bool hasExpansionCard(String cardId) {
+    for (final node in _settlements.values) {
+      for (final site in [...node.aboveSites, ...node.belowSites]) {
+        if (site?.card.id == cardId) return true;
+      }
+    }
+    return false;
+  }
+
   /// Summan av lagrade resurser av given typ över alla regioner i riket
   /// (regelhäftet s. 3: varje region lagrar 0–3 av sin egen resurstyp).
   int resourceTotal(ResourceType type) {

@@ -65,6 +65,13 @@ class GameCard {
   /// Visas som "⬅ Namn ➡" runt kortnamnet.
   final bool affectsBothNeighboringRegions;
 
+  /// Om kortet dubblar produktionen av [resource] på de två angränsande
+  /// regionerna (regelhäftet: "Doubles the X production of the
+  /// neighboring ..."), t.ex. Kvarn för spannmål. Kräver att [resource]
+  /// faktiskt är satt (inte [ResourceType.none]) – visas som "2X" plus
+  /// resursikonen.
+  final bool doublesNeighborProduction;
+
   final int victoryPoints;
   final int strengthPoints; // yxsymbol
   final int commercePoints; // vågsymbol
@@ -94,6 +101,7 @@ class GameCard {
     this.buildingCost = const {},
     this.isUnique = false,
     this.affectsBothNeighboringRegions = false,
+    this.doublesNeighborProduction = false,
     this.victoryPoints = 0,
     this.strengthPoints = 0,
     this.commercePoints = 0,
@@ -116,6 +124,7 @@ class GameCard {
     Map<ResourceType, int>? buildingCost,
     bool? isUnique,
     bool? affectsBothNeighboringRegions,
+    bool? doublesNeighborProduction,
     int? victoryPoints,
     int? strengthPoints,
     int? commercePoints,
@@ -138,6 +147,8 @@ class GameCard {
       isUnique: isUnique ?? this.isUnique,
       affectsBothNeighboringRegions:
           affectsBothNeighboringRegions ?? this.affectsBothNeighboringRegions,
+      doublesNeighborProduction:
+          doublesNeighborProduction ?? this.doublesNeighborProduction,
       victoryPoints: victoryPoints ?? this.victoryPoints,
       strengthPoints: strengthPoints ?? this.strengthPoints,
       commercePoints: commercePoints ?? this.commercePoints,
@@ -162,6 +173,7 @@ class GameCard {
             buildingCost.map((type, amount) => MapEntry(type.name, amount)),
         'isUnique': isUnique,
         'affectsBothNeighboringRegions': affectsBothNeighboringRegions,
+        'doublesNeighborProduction': doublesNeighborProduction,
         'victoryPoints': victoryPoints,
         'strengthPoints': strengthPoints,
         'commercePoints': commercePoints,
@@ -193,6 +205,8 @@ class GameCard {
         isUnique: json['isUnique'] as bool? ?? false,
         affectsBothNeighboringRegions:
             json['affectsBothNeighboringRegions'] as bool? ?? false,
+        doublesNeighborProduction:
+            json['doublesNeighborProduction'] as bool? ?? false,
         victoryPoints: json['victoryPoints'] as int? ?? 0,
         strengthPoints: json['strengthPoints'] as int? ?? 0,
         commercePoints: json['commercePoints'] as int? ?? 0,

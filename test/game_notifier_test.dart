@@ -58,6 +58,28 @@ void main() {
       expect(after.you.principality.settlementAt(0)!.aboveSites[0]!.card.id, siglind.id);
     });
 
+    test('dropExpansion refuses a duplicate unique card (t.ex. Kloster/Marknadsplats/Församlingshus)', () {
+      final notifier = container.read(gameProvider.notifier);
+      final before = container.read(gameProvider);
+
+      // Placerar en första kopia direkt (motsvarar ett tidigare drag) –
+      // storehouse i sig är inte unikt, men eftersom GameCard-likhet
+      // bara jämför id (se GameCard.==) räcker en kopia med samma id
+      // markerad `isUnique: true` för att testa regeln isolerat, utan
+      // att behöva ett riktigt unikt kort i den fasta mock-handen.
+      before.you.principality.placeExpansion(
+          0, BuildingRow.above, 0, const PlacedCard(card: BasicSetCards.storehouse));
+      final uniqueCopy = BasicSetCards.storehouse.copyWith(isUnique: true);
+      expect(before.you.hand.contains(uniqueCopy), isTrue);
+
+      final error = notifier.dropExpansion(2, BuildingRow.above, 0, uniqueCopy);
+
+      expect(error, 'Du kan bara ha en ${uniqueCopy.name} i ditt rike.');
+      final after = container.read(gameProvider);
+      expect(after.you.hand.contains(uniqueCopy), isTrue); // slängdes inte
+      expect(after.you.principality.settlementAt(2)!.aboveSites[0], isNull);
+    });
+
     test('dropRoad builds a road at the frontier and decrements the stack', () {
       final notifier = container.read(gameProvider.notifier);
       final before = container.read(gameProvider);

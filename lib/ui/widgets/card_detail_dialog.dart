@@ -33,6 +33,9 @@ class _CardDetailContent extends StatelessWidget {
         card.commercePoints > 0 ||
         card.skillPoints > 0 ||
         card.progressPoints > 0;
+    final isTradeShip = card.expansionKind == ExpansionKind.tradeShip;
+    final hasCornerBadge =
+        card.isUnique || card.doublesNeighborProduction || isTradeShip;
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 380),
@@ -74,7 +77,25 @@ class _CardDetailContent extends StatelessWidget {
                           left: 8,
                           child: _NumberBadge(number: card.productionNumber!)),
                     if (card.isUnique)
-                      const Positioned(top: 8, right: 8, child: _UniqueBadge()),
+                      const Positioned(top: 8, right: 8, child: _UniqueBadge())
+                    else if (card.doublesNeighborProduction)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child:
+                            _BigRatioBadge(label: '2X', resource: card.resource),
+                      )
+                    else if (isTradeShip)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: _BigRatioBadge(
+                          label: '2:1',
+                          resource: card.resource == ResourceType.none
+                              ? null
+                              : card.resource,
+                        ),
+                      ),
                     if (hasPoints)
                       Positioned(
                         bottom: 8,
@@ -107,7 +128,7 @@ class _CardDetailContent extends StatelessWidget {
                       ),
                     Positioned(
                       top: 8,
-                      right: card.isUnique ? 40 : 8,
+                      right: hasCornerBadge ? 40 : 8,
                       child: _CloseButton(
                           onTap: () => Navigator.of(context).pop()),
                     ),
@@ -283,6 +304,44 @@ class _UniqueBadge extends StatelessWidget {
               fontSize: 12,
               color: CatanColors.ink,
               fontWeight: FontWeight.bold)),
+    );
+  }
+}
+
+/// Visar "2X"/"2:1" (dubblad produktion resp. bytesförhållande) i den
+/// förstorade kortvyn – samma information som [_RatioBadge] i
+/// expansion_card_view.dart, bara i den större storleken som passar
+/// dialogrutan.
+class _BigRatioBadge extends StatelessWidget {
+  final String label;
+  final ResourceType? resource;
+
+  const _BigRatioBadge({required this.label, this.resource});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+          color: CatanColors.parchment, borderRadius: BorderRadius.circular(4)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 12,
+                  color: CatanColors.ink,
+                  fontWeight: FontWeight.bold)),
+          if (resource != null) ...[
+            const SizedBox(width: 4),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: Image.asset(CatanAssets.resourceCostIcon(resource!),
+                  width: 16, height: 16, fit: BoxFit.cover),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

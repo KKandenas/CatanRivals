@@ -230,7 +230,9 @@ class BasicSetCards {
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.building,
     buildingCost: {ResourceType.brick: 1, ResourceType.ore: 1},
+    resource: ResourceType.brick,
     affectsBothNeighboringRegions: true,
+    doublesNeighborProduction: true,
     effectText: 'Doubles the brick production of the neighboring hills.',
     imageAsset: 'assets/images/cards/buildings/forge_1.png',
   );
@@ -241,7 +243,9 @@ class BasicSetCards {
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.building,
     buildingCost: {ResourceType.grain: 1, ResourceType.lumber: 1},
+    resource: ResourceType.grain,
     affectsBothNeighboringRegions: true,
+    doublesNeighborProduction: true,
     effectText: 'Doubles the grain production of the neighboring fields.',
     imageAsset: 'assets/images/cards/buildings/water_mill_1.png',
   );
@@ -252,7 +256,9 @@ class BasicSetCards {
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.building,
     buildingCost: {ResourceType.brick: 1, ResourceType.ore: 1},
+    resource: ResourceType.ore,
     affectsBothNeighboringRegions: true,
+    doublesNeighborProduction: true,
     effectText: 'Doubles the ore production of the neighboring mountains.',
     imageAsset: 'assets/images/cards/buildings/forge_2_active.png',
   );
@@ -263,7 +269,9 @@ class BasicSetCards {
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.building,
     buildingCost: {ResourceType.lumber: 1, ResourceType.ore: 1},
+    resource: ResourceType.lumber,
     affectsBothNeighboringRegions: true,
+    doublesNeighborProduction: true,
     effectText: 'Doubles the lumber production of the neighboring forests.',
     imageAsset: 'assets/images/cards/buildings/lumber_camp.png',
   );
@@ -274,7 +282,9 @@ class BasicSetCards {
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.building,
     buildingCost: {ResourceType.lumber: 1, ResourceType.wool: 1},
+    resource: ResourceType.wool,
     affectsBothNeighboringRegions: true,
+    doublesNeighborProduction: true,
     effectText: 'Doubles the wool production of the neighboring pastures.',
     imageAsset: 'assets/images/cards/buildings/storage_shed_2.png',
   );
@@ -290,6 +300,7 @@ class BasicSetCards {
     expansionKind: ExpansionKind.tradeShip,
     buildingCost: {ResourceType.lumber: 1, ResourceType.wool: 1},
     commercePoints: 1,
+    affectsBothNeighboringRegions: true,
     effectText:
         'You may trade 2 resources of the left or right neighboring region for any 1 other '
         'resource of your choice.',
