@@ -47,57 +47,69 @@ class BuildConfirmCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 280),
+        constraints: const BoxConstraints(maxWidth: 320),
         child: Material(
           color: CatanColors.parchment,
           borderRadius: BorderRadius.circular(14),
           clipBehavior: Clip.antiAlias,
           elevation: 10,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+          // Motståndarens rike (där kortet läggs, se game_board_screen.dart)
+          // kan vara ganska lågt på vissa skärmar, särskilt i liggande
+          // läge – bilden ligger därför bredvid texten (inte ovanpå) för
+          // att hålla höjden nere, och SingleChildScrollView är kvar som
+          // en extra säkerhet så att Betalt/Avbryt-knapparna aldrig blir
+          // otillgängliga, bara kräver en skroll i värsta fall.
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(12),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: AspectRatio(
-                    aspectRatio: 1,
-                    child: Image.asset(
-                      CatanAssets.resolveCardImage(card),
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const ColoredBox(color: CatanColors.woodFrame),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: SizedBox(
+                        width: 64,
+                        height: 64,
+                        child: Image.asset(
+                          CatanAssets.resolveCardImage(card),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const ColoredBox(color: CatanColors.woodFrame),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Du har valt att ${_actionPhrase(card)}.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: CatanColors.ink),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Du har valt att ${_actionPhrase(card)}.',
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: CatanColors.ink),
+                      ),
+                    ),
+                  ],
                 ),
                 if (card.buildingCost.isNotEmpty) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   const Text(
                     'Betala genom att trycka − på respektive resurs:',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13, color: CatanColors.ink),
+                    style: TextStyle(fontSize: 11.5, color: CatanColors.ink),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 10,
-                    runSpacing: 8,
+                    spacing: 8,
+                    runSpacing: 6,
                     children: [
                       for (final entry in card.buildingCost.entries)
                         _CostBadge(type: entry.key, amount: entry.value),
                     ],
                   ),
                 ],
-                const SizedBox(height: 18),
+                const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
@@ -109,7 +121,7 @@ class BuildConfirmCard extends StatelessWidget {
                         child: const Text('Avbryt'),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: FilledButton(
                         style: FilledButton.styleFrom(
