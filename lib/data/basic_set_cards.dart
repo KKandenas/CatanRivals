@@ -396,7 +396,7 @@ class BasicSetCards {
     skillPoints: 1,
     effectText:
         'A well-sharpened axe is a tried and tested starting position for a successful conversation.',
-    imageAsset: 'assets/images/cards/hero_candamir.png',
+    imageAsset: 'assets/images/cards/heroes/hero_candamir.jpg',
   );
 
   static const siglind = GameCard(
