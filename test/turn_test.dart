@@ -8,10 +8,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fake_game_sync_service.dart';
 
-/// Testar omgångens första steg (regelhäftet s. 7): slå
-/// produktionstärningen, justera resurser manuellt, och lämna över
-/// turen. Händelsetärningen och stegen efter tärningsslaget (åtgärder,
-/// handkortskontroll, byte) är inte byggda än.
+/// Testar omgångens första steg (regelhäftet s. 7): slå produktions-
+/// och händelsetärningen samtidigt (se [EventDieFace]), justera
+/// resurser manuellt, och lämna över turen.
 void main() {
   Future<void> pump() => Future<void>.delayed(Duration.zero);
 
@@ -32,6 +31,7 @@ void main() {
     final state = container.read(gameProvider);
     expect(state.diceRolled, isTrue);
     expect(state.productionRoll, inInclusiveRange(1, 6));
+    expect(state.eventDieFace, isNotNull);
   });
 
   test('tärningen går bara att slå en gång per omgång', () {
@@ -44,9 +44,11 @@ void main() {
 
     notifier.rollProductionDie();
     final firstRoll = container.read(gameProvider).productionRoll;
+    final firstEventFace = container.read(gameProvider).eventDieFace;
     notifier.rollProductionDie();
 
     expect(container.read(gameProvider).productionRoll, firstRoll);
+    expect(container.read(gameProvider).eventDieFace, firstEventFace);
   });
 
   test('adjustRegionResource justerar lagrade resurser på ditt eget rike, klämt 0-3', () {
@@ -79,6 +81,7 @@ void main() {
     expect(tooEarly, isNotNull);
 
     notifier.rollProductionDie();
+    expect(container.read(gameProvider).eventDieFace, isNotNull);
     final error = notifier.endActionPhase();
 
     expect(error, isNull);
@@ -95,6 +98,7 @@ void main() {
     expect(state.activePlayerId, 'opponent');
     expect(state.diceRolled, isFalse);
     expect(state.productionRoll, isNull);
+    expect(state.eventDieFace, isNull);
   });
 
   test('bygga är blockerat tills tärningen är slagen på din tur', () {
@@ -151,8 +155,10 @@ void main() {
     expect(hostRollError, isNull);
     await pump();
 
-    // Guests klient ska se samma tärningskast, synkat.
+    // Guests klient ska se samma tärningskast, synkat – både produktions-
+    // och händelsetärningen (se EventDieFace).
     expect(guestContainer.read(gameProvider).productionRoll, hostContainer.read(gameProvider).productionRoll);
+    expect(guestContainer.read(gameProvider).eventDieFace, hostContainer.read(gameProvider).eventDieFace);
     expect(guestContainer.read(gameProvider).diceRolled, isTrue);
 
     final guestEndTooEarly = guestContainer.read(gameProvider.notifier).endActionPhase();
@@ -166,5 +172,6 @@ void main() {
     expect(guestContainer.read(gameProvider).isMyTurn, isTrue);
     expect(guestContainer.read(gameProvider).diceRolled, isFalse);
     expect(guestContainer.read(gameProvider).productionRoll, isNull);
+    expect(guestContainer.read(gameProvider).eventDieFace, isNull);
   });
 }

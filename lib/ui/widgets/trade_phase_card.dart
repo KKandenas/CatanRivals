@@ -5,7 +5,7 @@ import '../theme/catan_colors.dart';
 
 /// Banner för kortbytesfasen (regelhäftet s. 9), sist i omgången efter
 /// handjusteringen – visas som en vanlig, icke-modal rad högst upp i
-/// sidflödet (samma mönster som [RollInfoBanner]), inte en dialogruta,
+/// sidflödet (samma mönster som `DiceRollSummaryBanner`), inte en dialogruta,
 /// så att regionernas +/- knappar fortfarande går att trycka på under
 /// [TradePhase.peekPaying] (man betalar ju genom att trycka − där).
 ///

@@ -68,10 +68,13 @@ class GameState {
   /// – matchar samma förenkling som starthandsvalet ([pendingHandChooserId]).
   final String activePlayerId;
 
-  /// Om den aktiva spelaren redan slagit produktionstärningen den här
-  /// omgången. Händelsetärningen är inte byggd än.
+  /// Om den aktiva spelaren redan slagit tärningarna den här omgången.
+  /// Produktions- och händelsetärningen slås samtidigt (se
+  /// [EventDieFace]) – [eventDieFace] är `null` bara innan första
+  /// kastet någonsin.
   final bool diceRolled;
   final int? productionRoll;
+  final EventDieFace? eventDieFace;
 
   /// Två nya, ännu oplacerade regionkort som en ny by längst ut i
   /// kedjan just gett dig (regelhäftet s. 8) – tomma tills du dragit
@@ -116,6 +119,7 @@ class GameState {
     this.activePlayerId = 'you',
     this.diceRolled = false,
     this.productionRoll,
+    this.eventDieFace,
     this.pendingRegions = const [],
     this.pendingRegionJunction,
     this.handAdjustmentPhase = HandAdjustmentPhase.none,
@@ -199,6 +203,8 @@ class GameState {
     bool? diceRolled,
     int? productionRoll,
     bool clearProductionRoll = false,
+    EventDieFace? eventDieFace,
+    bool clearEventDieFace = false,
     List<GameCard>? pendingRegions,
     int? pendingRegionJunction,
     bool clearPendingRegionJunction = false,
@@ -230,6 +236,8 @@ class GameState {
       diceRolled: diceRolled ?? this.diceRolled,
       productionRoll:
           clearProductionRoll ? null : (productionRoll ?? this.productionRoll),
+      eventDieFace:
+          clearEventDieFace ? null : (eventDieFace ?? this.eventDieFace),
       pendingRegions: pendingRegions ?? this.pendingRegions,
       pendingRegionJunction: clearPendingRegionJunction
           ? null

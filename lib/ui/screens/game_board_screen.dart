@@ -8,11 +8,12 @@ import '../theme/catan_colors.dart';
 import '../widgets/build_confirm_card.dart';
 import '../widgets/center_stacks_strip.dart';
 import '../widgets/dice_roll_button.dart';
+import '../widgets/dice_roll_summary_banner.dart';
+import '../widgets/event_die_icon.dart';
 import '../widgets/hand_dock.dart';
 import '../widgets/peek_stack_overlay.dart';
 import '../widgets/pending_regions_bar.dart';
 import '../widgets/principality_grid.dart';
-import '../widgets/roll_info_banner.dart';
 import '../widgets/top_status_bar.dart';
 import '../widgets/total_score_board.dart';
 import '../widgets/trade_phase_card.dart';
@@ -211,11 +212,28 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 hasHeroToken: opponentHasHeroToken,
                 hasTradeToken: opponentHasTradeToken,
               ),
+              // Popup högst upp med båda tärningarnas utfall (se
+              // DiceRollSummaryBanner) – en vanlig rad i sidflödet, inte
+              // en dialogruta, så egna regioners +/- går att trycka på
+              // medan den syns. `key: ValueKey(...)` gör att den visas
+              // på nytt (återställer ev. tidigare "OK") för varje kast.
+              if (state.diceRolled &&
+                  state.productionRoll != null &&
+                  state.eventDieFace != null)
+                DiceRollSummaryBanner(
+                  key: ValueKey(
+                      '${state.productionRoll}-${state.eventDieFace}-${state.activePlayerId}'),
+                  productionRoll: state.productionRoll!,
+                  eventDieFace: state.eventDieFace!,
+                  rolledByMe: state.activePlayerIsMe,
+                  opponentName: state.opponent.name,
+                ),
               // Kortbytesfasen (regelhäftet s. 9), sist i omgången efter
               // handjusteringen – en vanlig rad högst upp (inte en
-              // dialogruta), precis som RollInfoBanner. TradePhase.peekViewing
-              // visas inte här utan som PeekStackOverlay nedan, eftersom
-              // den behöver plats för flera kort.
+              // dialogruta), precis som DiceRollSummaryBanner ovan.
+              // TradePhase.peekViewing visas inte här utan som
+              // PeekStackOverlay nedan, eftersom den behöver plats för
+              // flera kort.
               TradePhaseCard(
                 phase: state.tradePhase,
                 onSkip: () => _handleResult(context, notifier.skipTrade()),
@@ -247,13 +265,26 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           width: 76,
                           color: CatanColors.woodFrameDark,
                           alignment: Alignment.center,
-                          child: DiceRollButton(
-                            value: state.productionRoll,
-                            rollable: state.isMyTurn &&
-                                !state.diceRolled &&
-                                !(state.isOnline && !state.handsReady),
-                            onTap: () => _handleResult(
-                                context, notifier.rollProductionDie()),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              DiceRollButton(
+                                value: state.productionRoll,
+                                rollable: state.isMyTurn &&
+                                    !state.diceRolled &&
+                                    !(state.isOnline && !state.handsReady),
+                                onTap: () => _handleResult(
+                                    context, notifier.rollProductionDie()),
+                              ),
+                              // Händelsetärningen slås samtidigt (se
+                              // EventDieFace) – visas kvar här som en
+                              // ständig påminnelse om senaste utfallet,
+                              // inte bara i den tillfälliga popupen ovan.
+                              if (state.eventDieFace != null) ...[
+                                const SizedBox(height: 6),
+                                EventDieIcon(face: state.eventDieFace!),
+                              ],
+                            ],
                           ),
                         ),
                       ],
@@ -343,18 +374,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 onPeekStack: (index) =>
                     _handleResult(context, notifier.choosePeekStack(index)),
               ),
-              // Info-remsa efter tärningskastet – inte en dialogruta, så
-              // den täcker aldrig regionerna och +-knapparna går att
-              // trycka på medan den syns. `key: ValueKey(...)` gör att den
-              // återställs (visas på nytt, oavsett tidigare "OK") för
-              // varje nytt kast.
-              if (state.diceRolled && state.productionRoll != null)
-                RollInfoBanner(
-                  key: ValueKey(state.productionRoll),
-                  roll: state.productionRoll!,
-                  rolledByMe: state.activePlayerIsMe,
-                  opponentName: state.opponent.name,
-                ),
               if (state.pendingRegions.isNotEmpty)
                 PendingRegionsBar(
                   cards: state.pendingRegions,

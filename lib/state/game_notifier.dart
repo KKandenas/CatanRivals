@@ -254,6 +254,8 @@ class GameNotifier extends Notifier<GameState> {
           diceRolled: turnState.diceRolled,
           productionRoll: turnState.productionRoll,
           clearProductionRoll: turnState.productionRoll == null,
+          eventDieFace: turnState.eventDieFace,
+          clearEventDieFace: turnState.eventDieFace == null,
         );
       },
       onError: (Object e) {
@@ -283,6 +285,7 @@ class GameNotifier extends Notifier<GameState> {
         activePlayerId: state.activePlayerId,
         diceRolled: state.diceRolled,
         productionRoll: state.productionRoll,
+        eventDieFace: state.eventDieFace,
       ),
     ));
   }
@@ -291,19 +294,24 @@ class GameNotifier extends Notifier<GameState> {
   // Omgången: slå produktionstärningen, justera resurser, avsluta
   // ---------------------------------------------------------------------
 
-  /// Slår produktionstärningen (1–6, regelhäftet s. 7). Båda spelarna
-  /// får utdelning på sina regioner med det talet – i det här steget
-  /// justerar man själv resurserna manuellt med +/- på varje region
-  /// (se [adjustRegionResource]) i stället för att det sker automatiskt.
-  /// Händelsetärningen och stegen efter tärningsslaget (åtgärder,
-  /// handkortskontroll, byte) är inte byggda än.
+  /// Slår produktions- och händelsetärningen samtidigt (regelhäftet
+  /// s. 7, händelsetärningens referenskort – se [EventDieFace]). Båda
+  /// spelarna får utdelning på sina regioner med produktionstalet – i
+  /// det här steget justerar man själv resurserna manuellt med +/- på
+  /// varje region (se [adjustRegionResource]) i stället för att det
+  /// sker automatiskt. Händelsetärningens utfall visas bara – vad det
+  /// faktiskt innebär (handel/fest/skörd/brigadanfall/händelsekort)
+  /// sköter spelarna själva utifrån [EventDieFace.ruleText], precis
+  /// som byggkostnader.
   String? rollProductionDie() {
     if (!state.handsReady) return null;
     if (!state.isMyTurn) return 'Inte din tur.';
     if (state.diceRolled) return null;
 
     final roll = Random().nextInt(6) + 1;
-    state = state.copyWith(productionRoll: roll, diceRolled: true);
+    final eventFace = EventDieFace.fromRoll(Random().nextInt(6));
+    state = state.copyWith(
+        productionRoll: roll, eventDieFace: eventFace, diceRolled: true);
     _syncTurnState();
     return null;
   }
@@ -356,6 +364,7 @@ class GameNotifier extends Notifier<GameState> {
       activePlayerId: next,
       diceRolled: false,
       clearProductionRoll: true,
+      clearEventDieFace: true,
       handAdjustmentPhase: HandAdjustmentPhase.none,
       tradePhase: TradePhase.none,
       clearPeekStackIndex: true,
