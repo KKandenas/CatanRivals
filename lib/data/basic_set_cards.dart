@@ -111,7 +111,8 @@ class BasicSetCards {
     category: CardCategory.action,
     expansionSet: ExpansionSet.basic,
     effectText:
-        'Play this card before rolling the dice. Choose the result of the production die roll.',
+        'Spela detta kort innan du slår tärningen. Välj resultatet på '
+        'produktionstärningens slag.',
     imageAsset: 'assets/images/cards/actions/action_fortune_teller_cards.png',
   );
 
@@ -120,8 +121,9 @@ class BasicSetCards {
     name: 'Omlokalisering',
     category: CardCategory.action,
     effectText:
-        'You may exchange 2 of your own regions or 2 of your own expansion cards. Resources '
-        'stored on regions may not be changed and card placement rules must be followed.',
+        'Du får byta plats på 2 av dina egna regioner eller 2 av dina egna '
+        'byggkort. Lagrade resurser på regioner får inte ändras, och de '
+        'vanliga placeringsreglerna måste följas.',
     imageAsset: 'assets/images/cards/actions/action_packing_tent.png',
   );
 
@@ -130,8 +132,8 @@ class BasicSetCards {
     name: 'Spejare',
     category: CardCategory.action,
     effectText:
-        'Play this card when building a settlement. Take 2 cards of your choice from the '
-        'region card stack. Reshuffle the region card stack.',
+        'Spela detta kort när du bygger en by. Ta 2 valfria kort från '
+        'regionkortsstapeln. Blanda sedan om regionkortsstapeln.',
     imageAsset: 'assets/images/cards/actions/action_telescope_scout.png',
   );
 
@@ -140,7 +142,7 @@ class BasicSetCards {
     name: 'Handelskaravan',
     category: CardCategory.action,
     effectText:
-        'Discard exactly 2 of your resources and take any 2 resources of your choice in return.',
+        'Släng exakt 2 av dina resurser och ta 2 valfria resurser i utbyte.',
     imageAsset: 'assets/images/cards/actions/action_horse_wagons.png',
   );
 
@@ -149,7 +151,7 @@ class BasicSetCards {
     name: 'Guldsmed',
     category: CardCategory.action,
     effectText:
-        'Discard 3 gold and take any 2 resources of your choice in return.',
+        'Släng 3 guld och ta 2 valfria resurser i utbyte.',
     imageAsset: 'assets/images/cards/actions/action_blacksmith_forge.png',
   );
 
@@ -170,7 +172,8 @@ class BasicSetCards {
     },
     progressPoints: 1,
     effectText:
-        'Progress is not the only thing here; you also get red wine and lots of dark beer.',
+        'Här handlar det inte bara om framsteg – det bjuds även på rödvin '
+        'och gott om mörk öl.',
     imageAsset: 'assets/images/cards/dioramas/diorama_church_building.png',
   );
 
@@ -183,9 +186,9 @@ class BasicSetCards {
     buildingCost: {ResourceType.wool: 1, ResourceType.grain: 1},
     commercePoints: 1,
     effectText:
-        "If a production number is rolled that appears more frequently on your opponent's "
-        'regions than yours, you receive 1 resource. Choose a resource your opponent can '
-        'normally receive.',
+        'Om ett produktionstal slås som förekommer oftare på motståndarens '
+        'regioner än på dina egna, får du 1 resurs. Välj en resurs som '
+        'motståndaren normalt skulle fått.',
     imageAsset: 'assets/images/cards/dioramas/diorama_busy_market.png',
   );
 
@@ -197,7 +200,7 @@ class BasicSetCards {
     isUnique: true,
     buildingCost: {ResourceType.brick: 1, ResourceType.grain: 1},
     effectText:
-        'You pay only 1 resource for choosing a card from a draw stack.',
+        'Du betalar bara 1 resurs för att välja ett kort från en draghög.',
     imageAsset: 'assets/images/cards/dioramas/diorama_village_market_2.png',
   );
 
@@ -209,7 +212,8 @@ class BasicSetCards {
     buildingCost: {ResourceType.lumber: 1, ResourceType.wool: 1},
     affectsBothNeighboringRegions: true,
     effectText:
-        'Do not count the resources on the 2 neighboring regions when the event Brigand Attack is rolled.',
+        'Räkna inte resurserna på de 2 grannregionerna när händelsen '
+        'Brigadanfall slås.',
     imageAsset: 'assets/images/cards/buildings/storehouse.png',
   );
 
@@ -220,7 +224,7 @@ class BasicSetCards {
     expansionKind: ExpansionKind.building,
     buildingCost: {ResourceType.lumber: 1, ResourceType.brick: 1},
     commercePoints: 1,
-    effectText: 'Even: Plentiful Harvest: You receive 2 gold.',
+    effectText: 'Riklig skörd: Du får 2 guld.',
     imageAsset: 'assets/images/cards/buildings/toll_bridge.png',
   );
 
@@ -233,7 +237,7 @@ class BasicSetCards {
     resource: ResourceType.brick,
     affectsBothNeighboringRegions: true,
     doublesNeighborProduction: true,
-    effectText: 'Doubles the brick production of the neighboring hills.',
+    effectText: 'Dubblar tegelproduktionen på de angränsande kullarna.',
     imageAsset: 'assets/images/cards/buildings/forge_1.png',
   );
 
@@ -246,7 +250,7 @@ class BasicSetCards {
     resource: ResourceType.grain,
     affectsBothNeighboringRegions: true,
     doublesNeighborProduction: true,
-    effectText: 'Doubles the grain production of the neighboring fields.',
+    effectText: 'Dubblar sädesproduktionen på de angränsande åkrarna.',
     imageAsset: 'assets/images/cards/buildings/water_mill_1.png',
   );
 
@@ -259,7 +263,7 @@ class BasicSetCards {
     resource: ResourceType.ore,
     affectsBothNeighboringRegions: true,
     doublesNeighborProduction: true,
-    effectText: 'Doubles the ore production of the neighboring mountains.',
+    effectText: 'Dubblar malmproduktionen på de angränsande bergen.',
     imageAsset: 'assets/images/cards/buildings/forge_2_active.png',
   );
 
@@ -272,7 +276,7 @@ class BasicSetCards {
     resource: ResourceType.lumber,
     affectsBothNeighboringRegions: true,
     doublesNeighborProduction: true,
-    effectText: 'Doubles the lumber production of the neighboring forests.',
+    effectText: 'Dubblar timmerproduktionen på de angränsande skogarna.',
     imageAsset: 'assets/images/cards/buildings/lumber_camp.png',
   );
 
@@ -285,7 +289,7 @@ class BasicSetCards {
     resource: ResourceType.wool,
     affectsBothNeighboringRegions: true,
     doublesNeighborProduction: true,
-    effectText: 'Doubles the wool production of the neighboring pastures.',
+    effectText: 'Dubblar ullproduktionen på de angränsande betesmarkerna.',
     imageAsset: 'assets/images/cards/buildings/storage_shed_2.png',
   );
 
@@ -302,8 +306,8 @@ class BasicSetCards {
     commercePoints: 1,
     affectsBothNeighboringRegions: true,
     effectText:
-        'You may trade 2 resources of the left or right neighboring region for any 1 other '
-        'resource of your choice.',
+        'Du får byta 2 resurser från vänster eller höger grannregion mot '
+        '1 valfri annan resurs.',
     imageAsset: 'assets/images/cards/heroes/trade_ship_dock_1.png',
   );
 
@@ -317,7 +321,8 @@ class BasicSetCards {
         buildingCost: {ResourceType.lumber: 1, ResourceType.wool: 1},
         commercePoints: 1,
         effectText:
-            'During your turn, you may trade 2 $resourceName for any 1 other resource as often as you wish.',
+            'Under din tur får du byta 2 ${_swedishResourceName(resource).toLowerCase()} '
+            'mot 1 valfri annan resurs, så ofta du vill.',
         imageAsset: 'assets/images/cards/heroes/trade_ship_dock_2.png',
       );
 
@@ -341,7 +346,7 @@ class BasicSetCards {
     strengthPoints: 1,
     skillPoints: 2,
     effectText:
-        "If you hit my left cheek, don't even think you'll have time to hit the right one too.",
+        'Slår du mig på ena kinden hinner du aldrig vända fram den andra.',
     imageAsset: 'assets/images/cards/heroes/hero_plain_man_1.png',
   );
 
@@ -354,7 +359,8 @@ class BasicSetCards {
     strengthPoints: 2,
     skillPoints: 1,
     effectText:
-        'I knock you out faster than you can carve the word "strategy" in this stone.',
+        'Jag slår ner dig snabbare än du hinner rista ordet "strategi" i '
+        'den där stenen.',
     imageAsset: 'assets/images/cards/heroes/hero_plain_man_2.png',
   );
 
@@ -371,7 +377,8 @@ class BasicSetCards {
     strengthPoints: 1,
     skillPoints: 3,
     effectText:
-        'The gods are expecting more offerings. And they expect you to hand them over to me!',
+        'Gudarna väntar sig fler offergåvor. Och de förväntar sig att du '
+        'lämnar dem till mig!',
     imageAsset: 'assets/images/cards/heroes/hero_inga.jpg',
   );
 
@@ -388,8 +395,9 @@ class BasicSetCards {
     strengthPoints: 2,
     skillPoints: 2,
     effectText:
-        'When it comes to gold and women, friendship stops. And it also stops when it comes to power. '
-        'Actually, friendship never lasts very long.',
+        'När det gäller guld och kvinnor tar vänskapen slut. Det gör den '
+        'även när det gäller makt. Sanningen är att vänskap sällan varar '
+        'särskilt länge.',
     imageAsset: 'assets/images/cards/heroes/hero_man_with_lamb.png',
   );
 
@@ -406,7 +414,8 @@ class BasicSetCards {
     strengthPoints: 4,
     skillPoints: 1,
     effectText:
-        'A well-sharpened axe is a tried and tested starting position for a successful conversation.',
+        'En väl slipad yxa är en beprövad utgångspunkt för ett '
+        'framgångsrikt samtal.',
     imageAsset: 'assets/images/cards/heroes/hero_candamir.jpg',
   );
 
@@ -423,7 +432,8 @@ class BasicSetCards {
     strengthPoints: 2,
     skillPoints: 3,
     effectText:
-        'Turning men into heroes belittles the importance of being a hero.',
+        'Att göra vem som helst till hjälte förringar vad det egentligen '
+        'innebär att vara en.',
     imageAsset: 'assets/images/cards/heroes/hero_pair_woman_man.png',
   );
 
@@ -436,8 +446,9 @@ class BasicSetCards {
     name: 'Fejd',
     category: CardCategory.event,
     effectText:
-        "The player who has the strength advantage selects 3 of his opponent's buildings. The "
-        'opponent must remove one of them and return it to the bottom of a matching draw stack.',
+        'Spelaren med styrkeövertaget väljer ut 3 av motståndarens '
+        'byggnader. Motståndaren måste ta bort en av dem och lägga den '
+        'underst i motsvarande draghög.',
     imageAsset: 'assets/images/cards/events/feud.jpg',
   );
 
@@ -446,8 +457,8 @@ class BasicSetCards {
     name: 'Brödrafejd',
     category: CardCategory.event,
     effectText:
-        "The player who has the strength advantage selects 2 cards from the opponent's hand and "
-        'returns them to the bottom of matching draw stacks.',
+        'Spelaren med styrkeövertaget väljer 2 kort från motståndarens '
+        'hand och lägger dem underst i motsvarande draghögar.',
     imageAsset: 'assets/images/cards/events/fraternal_feuds.jpg',
   );
 
@@ -456,8 +467,8 @@ class BasicSetCards {
     name: 'Uppfinning',
     category: CardCategory.event,
     effectText:
-        'Each player gets 1 resource of his choice for each building with a progress point – up '
-        'to a maximum of 2 resources.',
+        'Varje spelare får 1 valfri resurs för varje byggnad med en '
+        'framstegspoäng – upp till max 2 resurser.',
     imageAsset: 'assets/images/cards/events/invention.jpg',
   );
 
@@ -466,9 +477,9 @@ class BasicSetCards {
     name: 'Handelsskeppskapplöpning',
     category: CardCategory.event,
     effectText:
-        'The player who owns the most trade ships receives any 1 resource of his choice. In case '
-        'of a tie, each player receives any 1 resource of his choice (each must have at least 1 '
-        'trade ship).',
+        'Spelaren som äger flest handelsskepp får 1 valfri resurs. Vid '
+        'lika antal får båda spelarna 1 valfri resurs var (båda måste ha '
+        'minst 1 handelsskepp).',
     imageAsset: 'assets/images/cards/events/trade_ships_race.jpg',
   );
 
@@ -477,7 +488,8 @@ class BasicSetCards {
     name: 'Resande köpman',
     category: CardCategory.event,
     effectText:
-        'Each player may take up to 2 resources of his choice, paying 1 gold per resource.',
+        'Varje spelare får ta upp till 2 valfria resurser mot att betala '
+        '1 guld per resurs.',
     imageAsset: 'assets/images/cards/events/traveling_merchant.jpg',
   );
 
@@ -486,8 +498,8 @@ class BasicSetCards {
     name: 'Jul',
     category: CardCategory.event,
     effectText:
-        'Shuffle the event card stack as performed at the beginning of the game. Afterwards, '
-        'draw an event card again.',
+        'Blanda om händelsekortsstapeln på samma sätt som vid spelets '
+        'start. Dra sedan ett nytt händelsekort.',
     imageAsset: 'assets/images/cards/events/yule.jpg',
   );
 
@@ -496,8 +508,8 @@ class BasicSetCards {
     name: 'Goda året',
     category: CardCategory.event,
     effectText:
-        'Each region gets 1 resource for each adjacent Storehouse and Abbey, provided that '
-        'storage space is available.',
+        'Varje region får 1 resurs för varje angränsande Lagerhus och '
+        'Kloster, förutsatt att det finns lagringsutrymme kvar.',
     imageAsset: 'assets/images/cards/events/year_of_plenty.jpg',
   );
 
