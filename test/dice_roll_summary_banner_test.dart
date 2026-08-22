@@ -7,7 +7,8 @@ void main() {
   Finder richTextContaining(String substring) => find.byWidgetPredicate(
       (w) => w is RichText && w.text.toPlainText().contains(substring));
 
-  Future<void> pumpBanner(WidgetTester tester, EventDieFace face) async {
+  Future<void> pumpBanner(WidgetTester tester, EventDieFace face,
+      {VoidCallback? onDismiss}) async {
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
         body: DiceRollSummaryBanner(
@@ -15,6 +16,7 @@ void main() {
           eventDieFace: face,
           rolledByMe: true,
           opponentName: 'Björn',
+          onDismiss: onDismiss ?? () {},
         ),
       ),
     ));
@@ -51,13 +53,14 @@ void main() {
         reason: 'riklig skörd ska stå under resursraden');
   });
 
-  testWidgets('OK döljer bannern', (tester) async {
-    await pumpBanner(tester, EventDieFace.celebration);
-    expect(find.byType(DiceRollSummaryBanner), findsOneWidget);
+  testWidgets('OK anropar onDismiss', (tester) async {
+    var dismissed = false;
+    await pumpBanner(tester, EventDieFace.celebration,
+        onDismiss: () => dismissed = true);
 
     await tester.tap(find.text('OK'));
     await tester.pump();
 
-    expect(find.textContaining('5:a'), findsNothing);
+    expect(dismissed, isTrue);
   });
 }

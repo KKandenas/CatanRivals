@@ -22,13 +22,18 @@ import 'event_die_icon.dart';
 /// `Positioned.fill`-mönster som `BuildConfirmCard`/`PeekStackOverlay`)
 /// i stället för att trycka ner hela brädet i sidflödet – täcker bara
 /// motståndarens planhalva, dina egna regioners +/- går fortfarande
-/// att trycka på. Stängs manuellt med "OK", eller visas på nytt för
-/// varje nytt kast (se `key: ValueKey(...)` i game_board_screen.dart).
-class DiceRollSummaryBanner extends StatefulWidget {
+/// att trycka på. Stängs manuellt med "OK" (se [onDismiss] – hela
+/// `Positioned.fill`-täckningen, inte bara den här widgeten, måste
+/// försvinna då, annars blockerar den svarta bakgrunden fortfarande
+/// motståndarens rike/kortförstoring resten av action-fasen, se
+/// game_board_screen.dart), eller visas på nytt för varje nytt kast
+/// (se `key: ValueKey(...)` i game_board_screen.dart).
+class DiceRollSummaryBanner extends StatelessWidget {
   final int productionRoll;
   final EventDieFace eventDieFace;
   final bool rolledByMe;
   final String opponentName;
+  final VoidCallback onDismiss;
 
   const DiceRollSummaryBanner({
     super.key,
@@ -36,21 +41,13 @@ class DiceRollSummaryBanner extends StatefulWidget {
     required this.eventDieFace,
     required this.rolledByMe,
     required this.opponentName,
+    required this.onDismiss,
   });
 
   @override
-  State<DiceRollSummaryBanner> createState() => _DiceRollSummaryBannerState();
-}
-
-class _DiceRollSummaryBannerState extends State<DiceRollSummaryBanner> {
-  bool _dismissed = false;
-
-  @override
   Widget build(BuildContext context) {
-    if (_dismissed) return const SizedBox.shrink();
-
-    final who = widget.rolledByMe ? 'Du' : widget.opponentName;
-    final face = widget.eventDieFace;
+    final who = rolledByMe ? 'Du' : opponentName;
+    final face = eventDieFace;
 
     final resourceLine = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,12 +62,12 @@ class _DiceRollSummaryBannerState extends State<DiceRollSummaryBanner> {
           ),
           alignment: Alignment.center,
           child: DiceFace(
-              value: widget.productionRoll, size: 30, dotColor: CatanColors.ink),
+              value: productionRoll, size: 30, dotColor: CatanColors.ink),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: Text(
-            '$who slog en ${widget.productionRoll}:a. Ta dina resurser genom '
+            '$who slog en $productionRoll:a. Ta dina resurser genom '
             'att trycka på +.',
             style: const TextStyle(
                 fontSize: 13, fontWeight: FontWeight.w600, color: CatanColors.ink),
@@ -127,7 +124,7 @@ class _DiceRollSummaryBannerState extends State<DiceRollSummaryBanner> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: GestureDetector(
-                    onTap: () => setState(() => _dismissed = true),
+                    onTap: onDismiss,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 20, vertical: 8),

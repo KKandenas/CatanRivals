@@ -35,6 +35,12 @@ class CenterStacksStrip extends StatelessWidget {
   final void Function(GameCard card)? onDragStarted;
   final VoidCallback? onDragEnd;
 
+  /// Om väg-/by-/stadshögarna går att dra ut på riket just nu (se
+  /// [GameState.canBuildRightNow]) – annars bara tryckbara för att
+  /// förstora kortet, i stället för att gå att dra ut och mötas av ett
+  /// felmeddelande efter "Betalt".
+  final bool canBuild;
+
   /// Starthandsvalet (regelhäftet s. 6): om `true` går draghögarna att
   /// trycka på (i stället för att dra korten) för att välja hög och ta
   /// dess 3 översta kort som starthand – bara när det är ens egen tur
@@ -88,6 +94,7 @@ class CenterStacksStrip extends StatelessWidget {
     this.isYourTurn = true,
     this.onDragStarted,
     this.onDragEnd,
+    this.canBuild = true,
     this.isChoosingHand = false,
     this.isMyTurnToChooseHand = false,
     this.onChooseStack,
@@ -125,6 +132,7 @@ class CenterStacksStrip extends StatelessWidget {
                   card: BasicSetCards.road,
                   onDragStarted: onDragStarted,
                   onDragEnd: onDragEnd,
+                  canBuild: canBuild,
                   width: 48,
                 ),
                 _StackPile(
@@ -133,6 +141,7 @@ class CenterStacksStrip extends StatelessWidget {
                   card: BasicSetCards.settlement,
                   onDragStarted: onDragStarted,
                   onDragEnd: onDragEnd,
+                  canBuild: canBuild,
                   width: 48,
                 ),
                 _StackPile(
@@ -141,6 +150,7 @@ class CenterStacksStrip extends StatelessWidget {
                   card: BasicSetCards.city,
                   onDragStarted: onDragStarted,
                   onDragEnd: onDragEnd,
+                  canBuild: canBuild,
                   width: 48,
                 ),
                 _StackPile(
@@ -257,6 +267,10 @@ class _StackPile extends StatelessWidget {
   final void Function(GameCard card)? onDragStarted;
   final VoidCallback? onDragEnd;
 
+  /// Om [card] går att dra ut just nu (se [CenterStacksStrip.canBuild])
+  /// – annars bara tryckbar för att förstora, inte dragbar.
+  final bool canBuild;
+
   /// Tryckbar (i stället för dragbar) – används av draghögarna under
   /// starthandsvalet.
   final VoidCallback? onTap;
@@ -275,6 +289,7 @@ class _StackPile extends StatelessWidget {
     this.card,
     this.onDragStarted,
     this.onDragEnd,
+    this.canBuild = true,
     this.onTap,
     this.highlighted = false,
     this.dimmed = false,
@@ -312,7 +327,7 @@ class _StackPile extends StatelessWidget {
 
     final content = onTap != null
         ? GestureDetector(onTap: onTap, child: dimmedPile)
-        : card != null && count > 0
+        : card != null && count > 0 && canBuild
             ? LongPressDraggable<GameCard>(
                 data: card,
                 delay: const Duration(milliseconds: 180),

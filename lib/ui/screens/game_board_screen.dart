@@ -53,6 +53,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   /// [CenterStacksStrip.onDiscardToStack]).
   GameCard? _selectedDiscardCard;
 
+  /// Nyckeln (samma som `key: ValueKey(...)` på [DiceRollSummaryBanner]
+  /// nedan) för det senast med "OK" stängda tärningskastet – rent
+  /// lokalt UI-state. Måste ligga här (inte inuti banner-widgeten
+  /// själv) för att HELA `Positioned.fill`-täckningen (den mörka
+  /// bakgrunden, inte bara bannerns eget innehåll) ska försvinna vid
+  /// "OK" – annars blockerar den svarta bakgrunden fortfarande
+  /// motståndarens rike/kortförstoring resten av action-fasen.
+  String? _dismissedDiceRollKey;
+
   void _handleResult(BuildContext context, String? error) {
     if (error == null) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -131,6 +140,22 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     // egen banner och där tärningen ändå aldrig är slagen.
     final showTurnEmphasis = state.handsReady;
     final canBuildNow = state.canBuildNow;
+    // Om det går att bygga/dra kort just nu, utöver bara "din tur och
+    // tärningen slagen" (se [GameState.canBuildRightNow]) – styr om
+    // vägar/byar/städer och byggkort över huvud taget går att dra ut
+    // (se HandDock/CenterStacksStrip), i stället för att de går att
+    // dra och sedan mötas av ett felmeddelande efter "Betalt".
+    final canBuildRightNow = state.canBuildRightNow;
+    // Båda tärningarna slås alltid tillsammans (se
+    // GameNotifier.rollProductionDie) – samma villkor styr om vardera
+    // ikonen går att trycka på.
+    final diceRollable = state.isMyTurn &&
+        !state.diceRolled &&
+        !(state.isOnline && !state.handsReady);
+    void rollDice() =>
+        _handleResult(context, notifier.rollProductionDie());
+    final diceRollKey =
+        '${state.productionRoll}-${state.eventDieFace}-${state.activePlayerId}';
     // HandDocks kortval (se nedan) återanvänds för handjusteringens
     // släng-läge, kortbytesfasens gratisbyte och kika-alternativets
     // slängsteg – de är aldrig aktiva samtidigt (kortbytesfasen börjar
@@ -285,20 +310,23 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                             children: [
                               DiceRollButton(
                                 value: state.productionRoll,
-                                rollable: state.isMyTurn &&
-                                    !state.diceRolled &&
-                                    !(state.isOnline && !state.handsReady),
-                                onTap: () => _handleResult(
-                                    context, notifier.rollProductionDie()),
+                                rollable: diceRollable,
+                                onTap: rollDice,
                               ),
                               // Händelsetärningen slås samtidigt som
                               // produktionstärningen (se EventDieFace) –
                               // visas alltid tillsammans med den, även
                               // innan första kastet (samma "väntar"-
                               // utseende, samma storlek), inte bara i
-                              // den tillfälliga popupen ovan.
+                              // den tillfälliga popupen ovan. Båda
+                              // tärningarna går att trycka på för att
+                              // slå (de slås alltid ihop).
                               const SizedBox(height: 6),
-                              EventDieIcon(face: state.eventDieFace),
+                              EventDieIcon(
+                                face: state.eventDieFace,
+                                rollable: diceRollable,
+                                onTap: rollDice,
+                              ),
                             ],
                           ),
                         ),
@@ -310,21 +338,25 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                     // motståndarens planhalva, dina egna regioners +/-
                     // går fortfarande att trycka på. `key: ValueKey(...)`
                     // gör att den visas på nytt (återställer ev. tidigare
-                    // "OK") för varje kast.
+                    // "OK") för varje kast. Hela täckningen (mörk
+                    // bakgrund + banner) döljs vid "OK" – se
+                    // [_dismissedDiceRollKey].
                     if (state.diceRolled &&
                         state.productionRoll != null &&
-                        state.eventDieFace != null)
+                        state.eventDieFace != null &&
+                        _dismissedDiceRollKey != diceRollKey)
                       Positioned.fill(
                         child: Container(
                           color: Colors.black.withValues(alpha: 0.55),
                           padding: const EdgeInsets.all(12),
                           child: DiceRollSummaryBanner(
-                            key: ValueKey(
-                                '${state.productionRoll}-${state.eventDieFace}-${state.activePlayerId}'),
+                            key: ValueKey(diceRollKey),
                             productionRoll: state.productionRoll!,
                             eventDieFace: state.eventDieFace!,
                             rolledByMe: state.activePlayerIsMe,
                             opponentName: state.opponent.name,
+                            onDismiss: () => setState(
+                                () => _dismissedDiceRollKey = diceRollKey),
                           ),
                         ),
                       ),
@@ -412,6 +444,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 stackCounts: state.centerStacks,
                 onDragStarted: notifier.startDrag,
                 onDragEnd: notifier.endDrag,
+                canBuild: canBuildRightNow,
                 isChoosingHand: state.isOnline && !state.handsReady,
                 isMyTurnToChooseHand: state.isMyTurnToChooseHand,
                 onChooseStack: (index) =>
@@ -544,6 +577,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   onDragEnd: notifier.endDrag,
                   onUseActionCard: (card) =>
                       _handleUseActionCard(context, card, notifier),
+                  diceRolled: state.diceRolled,
+                  canBuild: canBuildRightNow,
                   selectedDiscardCard:
                       isDiscarding ? _selectedDiscardCard : null,
                   onSelectForDiscard: isDiscarding

@@ -30,6 +30,20 @@ class HandDock extends StatelessWidget {
   /// vad "använda" innebär för respektive kort.
   final void Function(GameCard card)? onUseActionCard;
 
+  /// Om tärningen redan är slagen den här omgången – Brigitta får bara
+  /// spelas INNAN tärningen slås (regelhäftet: "Play this card before
+  /// rolling the dice"), så ett tryck på den visar bara den vanliga,
+  /// rena kortförstoringen (ingen "Vill du använda kortet?"-fråga) när
+  /// det här är sant, i stället för att låta spelaren välja ett tal och
+  /// sedan möta ett felmeddelande.
+  final bool diceRolled;
+
+  /// Om bygg-/enhetskort går att dra ut på riket just nu (se
+  /// [GameState.canBuildRightNow]) – annars visas de bara, precis som
+  /// handlingskort, i stället för att gå att dra och sedan mötas av ett
+  /// felmeddelande efter "Betalt".
+  final bool canBuild;
+
   /// Handjustering i slutet av action-fasen (se [HandAdjustmentPhase.
   /// discarding]): om satt går varje handkort (oavsett kategori) att
   /// trycka på för att välja det att slänga i stället för att förstora
@@ -49,6 +63,8 @@ class HandDock extends StatelessWidget {
     this.onDragStarted,
     this.onDragEnd,
     this.onUseActionCard,
+    this.diceRolled = false,
+    this.canBuild = true,
     this.selectedDiscardCard,
     this.onSelectForDiscard,
     required this.totalVictoryPoints,
@@ -87,6 +103,8 @@ class HandDock extends StatelessWidget {
                           onDragStarted: onDragStarted,
                           onDragEnd: onDragEnd,
                           onUseActionCard: onUseActionCard,
+                          diceRolled: diceRolled,
+                          canBuild: canBuild,
                           selected: player.hand[i] == selectedDiscardCard,
                           onSelectForDiscard: onSelectForDiscard == null
                               ? null
@@ -114,6 +132,8 @@ class _HandCard extends StatelessWidget {
   final void Function(GameCard card)? onDragStarted;
   final VoidCallback? onDragEnd;
   final void Function(GameCard card)? onUseActionCard;
+  final bool diceRolled;
+  final bool canBuild;
   final bool selected;
   final VoidCallback? onSelectForDiscard;
 
@@ -122,6 +142,8 @@ class _HandCard extends StatelessWidget {
     this.onDragStarted,
     this.onDragEnd,
     this.onUseActionCard,
+    this.diceRolled = false,
+    this.canBuild = true,
     this.selected = false,
     this.onSelectForDiscard,
   });
@@ -131,8 +153,13 @@ class _HandCard extends StatelessWidget {
     final playable = card.category == CardCategory.expansion;
     // Spejare undantas: den frågas automatiskt vid by-bygge i stället
     // (se klassdocen på [HandDock]), inte via ett tryck i handen.
+    // Brigitta undantas efter att tärningen redan slagits – kortet
+    // måste spelas INNAN slaget (regelhäftet), annars visas bara den
+    // vanliga kortförstoringen utan "använd"-frågan.
+    final isBrigitta = card.baseId == BasicSetCards.brigittaTheWiseWoman.id;
     final isUsableAction = card.category == CardCategory.action &&
-        card.baseId != BasicSetCards.scout.id;
+        card.baseId != BasicSetCards.scout.id &&
+        !(isBrigitta && diceRolled);
 
     // Under handjusteringen (slänga kort) går varje kort – oavsett
     // kategori – bara att trycka på för att välja det, ingen dra-för-
@@ -153,7 +180,11 @@ class _HandCard extends StatelessWidget {
     final face =
         _CardFace(card: card, playable: playable, onTap: useActionTap);
 
-    if (!playable) return face;
+    // Bygg-/enhetskort är bara dragbara när det faktiskt går att bygga
+    // just nu (se [GameState.canBuildRightNow]) – annars bara den
+    // vanliga kortförstoringen, i stället för att kortet går att dra
+    // ut och mötas av ett felmeddelande efter "Betalt".
+    if (!playable || !canBuild) return face;
 
     return LongPressDraggable<GameCard>(
       data: card,
@@ -206,18 +237,30 @@ class _CardFace extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           ExpansionCardView(card: card, showCost: playable, onTap: onTap),
+          // IgnorePointer är avgörande här: en odekorerad ram ovanpå
+          // ExpansionCardView i samma Stack fångar annars trycket själv
+          // (träffar den tomma DecoratedBox:en, inte kortet under) –
+          // det gjorde t.ex. byggnads-/hjältekort (playable==true)
+          // helt otryckbara under handjusteringens slängval, som bara
+          // skickar med `onTap` hit via _CardFace, inte via
+          // LongPressDraggable (som har sin egen, yttre gesthantering
+          // och därför inte drabbades).
           if (selected)
-            DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.redAccent, width: 2.4),
+            IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.redAccent, width: 2.4),
+                ),
               ),
             )
           else if (playable)
-            DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: const Color(0xFF7CBF6A), width: 1.6),
+            IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFF7CBF6A), width: 1.6),
+                ),
               ),
             ),
         ],

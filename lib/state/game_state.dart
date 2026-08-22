@@ -180,6 +180,20 @@ class GameState {
   /// spelaren, och bara efter att produktionstärningen är slagen).
   bool get canBuildNow => isMyTurn && diceRolled;
 
+  /// Som [canBuildNow], men speglar även [GameNotifier._checkCanBuild]s
+  /// övriga spärrar (väntande regionval, Spejare-frågan, Omlokalisering,
+  /// handjustering, kortbytesfasen) – styr om vägar/byar/städer och
+  /// byggkort över huvud taget går att dra/släppa just nu (se
+  /// [HandDock]/[CenterStacksStrip]), i stället för att man ska behöva
+  /// försöka och få ett felmeddelande efteråt.
+  bool get canBuildRightNow =>
+      canBuildNow &&
+      pendingRegions.isEmpty &&
+      !awaitingScoutDecision &&
+      !relocationActive &&
+      handAdjustmentPhase == HandAdjustmentPhase.none &&
+      tradePhase == TradePhase.none;
+
   /// Röd/blå-tillhörighet härleds från spelar-id:t (satt av
   /// [GameNotifier.hostRoom]/[joinRoom]/mock-datan): host/"you" är
   /// alltid röd, guest/"opponent" är alltid blå – matchar vilken
