@@ -217,8 +217,21 @@ class GameCard {
         imageAsset: json['imageAsset'] as String,
       );
 
+  /// Korttypens id utan draghögens per-kopia-suffix ("-draw-N", se
+  /// [BasicSetDrawDeck]/[EventDeck]) – två fysiska kopior av samma
+  /// korttyp (t.ex. de två Spejare-korten) har olika [id] men samma
+  /// [baseId]. Använd den här, inte [id], för att avgöra vilken
+  /// *sorts* kort ett handkort är (t.ex. "är det här en Spejare?") –
+  /// [id] är bara rätt när man jämför mot exakt samma fysiska
+  /// kortexemplar (t.ex. `hand.contains(card)`/`hand.remove(card)`).
+  String get baseId {
+    final match = RegExp(r'^(.*)-draw-\d+$').firstMatch(id);
+    return match?.group(1) ?? id;
+  }
+
   /// Två [GameCard] räknas som samma kort om de har samma id, eftersom
-  /// varje fysiskt kortexemplar är unikt (jämfört med kortets *typ*).
+  /// varje fysiskt kortexemplar är unikt (jämfört med kortets *typ*,
+  /// se [baseId]).
   @override
   bool operator ==(Object other) => other is GameCard && other.id == id;
 

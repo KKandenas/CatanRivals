@@ -70,7 +70,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   /// självbevakade och behöver inget mer än att tas bort från handen.
   void _handleUseActionCard(
       BuildContext context, GameCard card, GameNotifier notifier) {
-    if (card.id == BasicSetCards.brigittaTheWiseWoman.id) {
+    if (card.baseId == BasicSetCards.brigittaTheWiseWoman.id) {
       showBrigittaNumberPicker(
         context,
         onPick: (number) =>
@@ -78,7 +78,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
       );
       return;
     }
-    if (card.id == BasicSetCards.relocation.id) {
+    if (card.baseId == BasicSetCards.relocation.id) {
       _handleResult(context, notifier.startRelocation());
       return;
     }

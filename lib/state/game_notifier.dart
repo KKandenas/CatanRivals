@@ -335,7 +335,7 @@ class GameNotifier extends Notifier<GameState> {
     if (chosenNumber < 1 || chosenNumber > 6) return null;
     GameCard? card;
     for (final c in state.you.hand) {
-      if (c.id == BasicSetCards.brigittaTheWiseWoman.id) {
+      if (c.baseId == BasicSetCards.brigittaTheWiseWoman.id) {
         card = c;
         break;
       }
@@ -820,7 +820,7 @@ class GameNotifier extends Notifier<GameState> {
     final newJunction = column < oldLeft ? column - 1 : column + 1;
     final wasNewSettlementFurtherOut = column < oldLeft || column > oldRight;
     final hasScout = wasNewSettlementFurtherOut &&
-        state.you.hand.any((c) => c.id == BasicSetCards.scout.id);
+        state.you.hand.any((c) => c.baseId == BasicSetCards.scout.id);
 
     state = state.copyWith(
       centerStacks: Map.of(state.centerStacks)
@@ -884,7 +884,7 @@ class GameNotifier extends Notifier<GameState> {
     _regionDeck = List.of(_regionDeck)..shuffle();
     GameCard? scoutCard;
     for (final c in state.you.hand) {
-      if (c.id == BasicSetCards.scout.id) {
+      if (c.baseId == BasicSetCards.scout.id) {
         scoutCard = c;
         break;
       }
@@ -952,7 +952,7 @@ class GameNotifier extends Notifier<GameState> {
   /// förlora kortet.
   String? startRelocation() {
     if (!state.isMyTurn) return 'Inte din tur.';
-    if (!state.you.hand.any((c) => c.id == BasicSetCards.relocation.id)) {
+    if (!state.you.hand.any((c) => c.baseId == BasicSetCards.relocation.id)) {
       return null;
     }
     state =
@@ -1015,7 +1015,7 @@ class GameNotifier extends Notifier<GameState> {
 
     GameCard? relocationCard;
     for (final c in state.you.hand) {
-      if (c.id == BasicSetCards.relocation.id) {
+      if (c.baseId == BasicSetCards.relocation.id) {
         relocationCard = c;
         break;
       }

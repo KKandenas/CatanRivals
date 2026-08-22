@@ -132,7 +132,7 @@ class _HandCard extends StatelessWidget {
     // Spejare undantas: den frågas automatiskt vid by-bygge i stället
     // (se klassdocen på [HandDock]), inte via ett tryck i handen.
     final isUsableAction = card.category == CardCategory.action &&
-        card.id != BasicSetCards.scout.id;
+        card.baseId != BasicSetCards.scout.id;
 
     // Under handjusteringen (slänga kort) går varje kort – oavsett
     // kategori – bara att trycka på för att välja det, ingen dra-för-
