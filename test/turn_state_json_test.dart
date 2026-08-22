@@ -25,4 +25,24 @@ void main() {
     final restored = TurnState.fromJson(json);
     expect(restored.peekingStackIndex, isNull);
   });
+
+  test('toJson/fromJson: winnerId följer med när satt', () {
+    const state = TurnState(activePlayerId: 'you', winnerId: 'you');
+    final json = state.toJson();
+
+    expect(json['winnerId'], 'you');
+
+    final restored = TurnState.fromJson(json);
+    expect(restored.winnerId, 'you');
+  });
+
+  test('toJson/fromJson: winnerId utelämnas/blir null innan någon vunnit', () {
+    const state = TurnState(activePlayerId: 'you');
+    final json = state.toJson();
+
+    expect(json.containsKey('winnerId'), isFalse);
+
+    final restored = TurnState.fromJson(json);
+    expect(restored.winnerId, isNull);
+  });
 }

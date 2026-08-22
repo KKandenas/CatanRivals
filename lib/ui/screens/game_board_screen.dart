@@ -18,6 +18,7 @@ import '../widgets/event_die_icon.dart';
 import '../widgets/feud_building_instruction_bar.dart';
 import '../widgets/feud_resolution_card.dart';
 import '../widgets/fraternal_feuds_hand_picker.dart';
+import '../widgets/game_over_overlay.dart';
 import '../widgets/hand_dock.dart';
 import '../widgets/peek_stack_overlay.dart';
 import '../widgets/pending_regions_bar.dart';
@@ -30,6 +31,7 @@ import '../widgets/stack_choice_overlay.dart';
 import '../widgets/top_status_bar.dart';
 import '../widgets/total_score_board.dart';
 import '../widgets/trade_phase_card.dart';
+import 'lobby_screen.dart';
 
 /// Huvudskärmen, stående layout: motståndarens namn/status (smal remsa),
 /// motståndarens rike (kompakt), dragstaplar + "Avsluta action-fas" i
@@ -793,6 +795,22 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
               ),
             ],
           ),
+          if (state.winnerId != null)
+            GameOverOverlay(
+              youWon: state.winnerId == state.myPlayerId,
+              youName: state.you.name,
+              youPoints: youTotalVictoryPoints,
+              youHaveHeroToken: youHaveHeroToken,
+              youHaveTradeToken: youHaveTradeToken,
+              opponentName: state.opponent.name,
+              opponentPoints: opponentTotalVictoryPoints,
+              opponentHasHeroToken: opponentHasHeroToken,
+              opponentHasTradeToken: opponentHasTradeToken,
+              onNewLocalMatch:
+                  state.isOnline ? null : () => notifier.playLocally(),
+              onToMainMenu: () => Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const LobbyScreen())),
+            ),
         ],
       ),
     );

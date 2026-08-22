@@ -24,6 +24,13 @@ class TurnState {
   /// hög, utan att se innehållet själv. `null` när ingen kikar just nu.
   final int? peekingStackIndex;
 
+  /// Id på spelaren som vunnit (regelhäftet: 7 eller fler segerpoäng
+  /// vid slutet av sin egen runda), satt i
+  /// [GameNotifier._advanceToNextPlayer] – `null` så länge ingen vunnit.
+  /// När satt lämnas turen INTE över (spelet fryser i vinnarens
+  /// slutställning) – se [GameOverOverlay] i game_board_screen.dart.
+  final String? winnerId;
+
   const TurnState({
     required this.activePlayerId,
     this.diceRolled = false,
@@ -31,6 +38,7 @@ class TurnState {
     this.eventDieFace,
     this.drawnEventCard,
     this.peekingStackIndex,
+    this.winnerId,
   });
 
   Map<String, dynamic> toJson() => {
@@ -40,6 +48,7 @@ class TurnState {
         if (eventDieFace != null) 'eventDieFace': eventDieFace!.name,
         if (drawnEventCard != null) 'drawnEventCard': drawnEventCard!.toJson(),
         if (peekingStackIndex != null) 'peekingStackIndex': peekingStackIndex,
+        if (winnerId != null) 'winnerId': winnerId,
       };
 
   factory TurnState.fromJson(Map<String, dynamic> json) => TurnState(
@@ -54,5 +63,6 @@ class TurnState {
             : GameCard.fromJson(
                 Map<String, dynamic>.from(json['drawnEventCard'] as Map)),
         peekingStackIndex: json['peekingStackIndex'] as int?,
+        winnerId: json['winnerId'] as String?,
       );
 }

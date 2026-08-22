@@ -115,6 +115,14 @@ class GameState {
   /// att se innehållet. `null` när ingen kikar.
   final int? peekingStackIndex;
 
+  /// Id på spelaren som vunnit (regelhäftet: 7 eller fler segerpoäng
+  /// vid slutet av sin egen runda, se [totalVictoryPointsFor]), synkat
+  /// (se [TurnState.winnerId]/[GameNotifier._advanceToNextPlayer]).
+  /// `null` så länge ingen vunnit. Turen lämnas medvetet INTE över när
+  /// det här sätts – spelet fryser i vinnarens slutställning, se
+  /// [GameOverOverlay] i game_board_screen.dart.
+  final String? winnerId;
+
   /// Händelsekortet som just nu ligger uppslaget för alla att läsa,
   /// draget när händelsetärningen visade "?" (se [EventDieFace.eventCard]
   /// och [GameNotifier.drawEventCard]) – synkas till båda spelarna,
@@ -184,6 +192,7 @@ class GameState {
     this.peekStackIndex,
     this.peekedCards,
     this.peekingStackIndex,
+    this.winnerId,
     this.drawnEventCard,
     this.awaitingScoutDecision = false,
     this.scoutChoices,
@@ -311,6 +320,7 @@ class GameState {
     bool clearPeekedCards = false,
     int? peekingStackIndex,
     bool clearPeekingStackIndex = false,
+    String? winnerId,
     GameCard? drawnEventCard,
     bool clearDrawnEventCard = false,
     bool? awaitingScoutDecision,
@@ -362,6 +372,7 @@ class GameState {
       peekingStackIndex: clearPeekingStackIndex
           ? null
           : (peekingStackIndex ?? this.peekingStackIndex),
+      winnerId: winnerId ?? this.winnerId,
       drawnEventCard: clearDrawnEventCard
           ? null
           : (drawnEventCard ?? this.drawnEventCard),

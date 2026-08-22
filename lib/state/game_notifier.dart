@@ -261,6 +261,7 @@ class GameNotifier extends Notifier<GameState> {
           clearDrawnEventCard: turnState.drawnEventCard == null,
           peekingStackIndex: turnState.peekingStackIndex,
           clearPeekingStackIndex: turnState.peekingStackIndex == null,
+          winnerId: turnState.winnerId,
         );
       },
       onError: (Object e) {
@@ -293,6 +294,7 @@ class GameNotifier extends Notifier<GameState> {
         eventDieFace: state.eventDieFace,
         drawnEventCard: state.drawnEventCard,
         peekingStackIndex: state.peekingStackIndex,
+        winnerId: state.winnerId,
       ),
     ));
   }
@@ -604,12 +606,23 @@ class GameNotifier extends Notifier<GameState> {
   /// ska fortsätta visa senast slagna sida i stället för att falla
   /// tillbaka till en tom platshållare mellan omgångar; den skrivs
   /// bara över av nästa [rollProductionDie].
+  ///
+  /// Kollar också vinstvillkoret (regelhäftet: 7 eller fler segerpoäng
+  /// vid slutet av sin egen runda, se [GameState.totalVictoryPointsFor])
+  /// – bara här, eftersom det här är enda stället en runda faktiskt tar
+  /// slut (se [skipTrade]/[exchangeDraw]/[peekTakeCard]). Om du vann
+  /// lämnas turen INTE över – [GameState.winnerId] sätts i stället och
+  /// spelet fryser i din slutställning (se [GameOverOverlay]).
   void _advanceToNextPlayer() {
-    final next = state.activePlayerId == state.myPlayerId
-        ? state.opponentPlayerId
-        : state.myPlayerId;
+    final youWon = state.totalVictoryPointsFor(state.you) >= 7;
+    final next = youWon
+        ? state.activePlayerId
+        : (state.activePlayerId == state.myPlayerId
+            ? state.opponentPlayerId
+            : state.myPlayerId);
     state = state.copyWith(
       activePlayerId: next,
+      winnerId: youWon ? state.myPlayerId : null,
       diceRolled: false,
       clearProductionRoll: true,
       clearDrawnEventCard: true,
