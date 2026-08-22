@@ -132,6 +132,24 @@ class GameState {
   final bool relocationActive;
   final RelocationSelection? relocationFirst;
 
+  /// Fejd (regelhäftet: "the opponent must remove one of them"): du är
+  /// den utan styrkeövertaget och riket blir tryckbart – tryck på en
+  /// av dina egna byggnader (inte skepp/hjältar) för att ta bort den
+  /// (se [GameNotifier.selectFeudBuilding]/[strengthAdvantagePlayerId]).
+  /// [feudPickedBuilding] är den valda platsen, `null` tills något
+  /// tryckts – då väntar bara valet av vilken draghög den ska läggas
+  /// underst i (se [GameNotifier.resolveFeudBuildingRemoval]).
+  final bool feudBuildingPickActive;
+  final RelocationSelection? feudPickedBuilding;
+
+  /// Brödrafejd (regelhäftet: "selects 2 cards from the opponent's
+  /// hand") – bara möjligt i lokalt läge (kräver att mutera
+  /// motståndarens hand direkt, se [GameNotifier.startFraternalFeudsPick]).
+  /// [fraternalFeudsPicked] samlar de redan valda korten (0–2) medan
+  /// [fraternalFeudsPicking] är sant.
+  final bool fraternalFeudsPicking;
+  final List<GameCard> fraternalFeudsPicked;
+
   const GameState({
     required this.you,
     required this.opponent,
@@ -160,6 +178,10 @@ class GameState {
     this.scoutChoices,
     this.relocationActive = false,
     this.relocationFirst,
+    this.feudBuildingPickActive = false,
+    this.feudPickedBuilding,
+    this.fraternalFeudsPicking = false,
+    this.fraternalFeudsPicked = const [],
   });
 
   bool get isOnline => mode != SessionMode.local;
@@ -193,6 +215,18 @@ class GameState {
       !relocationActive &&
       handAdjustmentPhase == HandAdjustmentPhase.none &&
       tradePhase == TradePhase.none;
+
+  /// Spelar-id:t för den som just nu har flest styrkepoäng (styrke-
+  /// övertaget, regelhäftets krav på flera handlings-/händelsekort som
+  /// Fejd/Brödrafejd/Rövare) – till skillnad från [heroTokenHolder]
+  /// finns ingen minimigräns på 3 poäng, bara ett rakt övertag. `null`
+  /// vid oavgjort (ingen har övertaget).
+  String? get strengthAdvantagePlayerId {
+    final yours = you.principality.totalStrengthPoints;
+    final theirs = opponent.principality.totalStrengthPoints;
+    if (yours == theirs) return null;
+    return yours > theirs ? myPlayerId : opponentPlayerId;
+  }
 
   /// Röd/blå-tillhörighet härleds från spelar-id:t (satt av
   /// [GameNotifier.hostRoom]/[joinRoom]/mock-datan): host/"you" är
@@ -272,6 +306,11 @@ class GameState {
     bool? relocationActive,
     RelocationSelection? relocationFirst,
     bool clearRelocationFirst = false,
+    bool? feudBuildingPickActive,
+    RelocationSelection? feudPickedBuilding,
+    bool clearFeudPickedBuilding = false,
+    bool? fraternalFeudsPicking,
+    List<GameCard>? fraternalFeudsPicked,
   }) {
     return GameState(
       you: you ?? this.you,
@@ -318,6 +357,15 @@ class GameState {
       relocationFirst: clearRelocationFirst
           ? null
           : (relocationFirst ?? this.relocationFirst),
+      feudBuildingPickActive:
+          feudBuildingPickActive ?? this.feudBuildingPickActive,
+      feudPickedBuilding: clearFeudPickedBuilding
+          ? null
+          : (feudPickedBuilding ?? this.feudPickedBuilding),
+      fraternalFeudsPicking:
+          fraternalFeudsPicking ?? this.fraternalFeudsPicking,
+      fraternalFeudsPicked:
+          fraternalFeudsPicked ?? this.fraternalFeudsPicked,
     );
   }
 }

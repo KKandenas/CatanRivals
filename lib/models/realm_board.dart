@@ -301,6 +301,22 @@ class RealmBoard {
     sitesB[slotB] = cardA;
   }
 
+  /// Tar bort och returnerar bygg-/enhetskortet på en byggplats (Fejd,
+  /// regelhäftet: "the opponent must remove one of them"). `null` om
+  /// platsen redan var tom. Kastar [StateError] om det inte finns
+  /// någon by/stad i kolumnen.
+  PlacedCard? removeExpansion(int column, BuildingRow row, int slotIndex) {
+    final node = _settlements[column];
+    if (node == null) {
+      throw StateError('Ingen by/stad i kolumn $column.');
+    }
+    final sites = row == BuildingRow.above ? node.aboveSites : node.belowSites;
+    if (slotIndex >= sites.length) return null;
+    final removed = sites[slotIndex];
+    sites[slotIndex] = null;
+    return removed;
+  }
+
   /// Om ett kort med [cardId] redan ligger på en byggplats någonstans i
   /// riket (byar/städers ovanför-/nedanför-platser) – används för att
   /// kontrollera unika kort (regelhäftet: "(1x)" i kortnamnet, t.ex.

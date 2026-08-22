@@ -13,6 +13,9 @@ import '../widgets/dice_roll_button.dart';
 import '../widgets/dice_roll_summary_banner.dart';
 import '../widgets/event_card_reveal_card.dart';
 import '../widgets/event_die_icon.dart';
+import '../widgets/feud_building_instruction_bar.dart';
+import '../widgets/feud_resolution_card.dart';
+import '../widgets/fraternal_feuds_hand_picker.dart';
 import '../widgets/hand_dock.dart';
 import '../widgets/peek_stack_overlay.dart';
 import '../widgets/pending_regions_bar.dart';
@@ -20,6 +23,7 @@ import '../widgets/principality_grid.dart';
 import '../widgets/relocation_instruction_bar.dart';
 import '../widgets/scout_prompt_card.dart';
 import '../widgets/scout_region_picker.dart';
+import '../widgets/stack_choice_overlay.dart';
 import '../widgets/top_status_bar.dart';
 import '../widgets/total_score_board.dart';
 import '../widgets/trade_phase_card.dart';
@@ -61,6 +65,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   /// "OK" – annars blockerar den svarta bakgrunden fortfarande
   /// motståndarens rike/kortförstoring resten av action-fasen.
   String? _dismissedDiceRollKey;
+
+  /// Brödrafejd: kortet du precis valt från motståndarens hand, i
+  /// väntan på att du väljer vilken draghög det ska läggas underst i
+  /// (se [GameNotifier.pickFraternalFeudsCard]) – rent lokalt UI-val,
+  /// precis som [_pendingBuildCard].
+  GameCard? _pendingFraternalFeudsCard;
 
   void _handleResult(BuildContext context, String? error) {
     if (error == null) return;
@@ -168,6 +178,21 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     // Ett tidigare valt handkort hör bara hemma medan släng-läget
     // faktiskt pågår – annars är det en kvarleva från en tidigare omgång.
     if (!isDiscarding) _selectedDiscardCard = null;
+
+    // Fejd/Brödrafejd (styrkeövertag avgör vem som förlorar ett kort,
+    // se FeudResolutionCard) ersätter den vanliga EventCardRevealCard
+    // för just de här två korten. `showFeudResolution` är sant bara
+    // under själva "vem har övertaget"-steget – när en av
+    // väljar-flödena startat (feudBuildingPickActive/
+    // fraternalFeudsPicking) visas i stället de egna överlagren nedan.
+    final drawnEventBaseId = state.drawnEventCard?.baseId;
+    final isFeudCard = drawnEventBaseId == BasicSetCards.feud.id;
+    final isFraternalFeudsCard =
+        drawnEventBaseId == BasicSetCards.fraternalFeuds.id;
+    final showFeudResolution = (isFeudCard || isFraternalFeudsCard) &&
+        !state.feudBuildingPickActive &&
+        !state.fraternalFeudsPicking;
+    if (!state.fraternalFeudsPicking) _pendingFraternalFeudsCard = null;
 
     // Hero Token/Trade Token (se GameNotifier.recomputeTokenHolders) –
     // räknas ut en gång här och delas mellan ScoreSummary-rutorna och
@@ -392,8 +417,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                       ),
                     // Uppslaget händelsekort (se drawEventCard) – synkat
                     // till båda spelarna, precis som bekräftelsekortet
-                    // och kika-vyn ovan: inte en modal dialogruta.
-                    if (state.drawnEventCard != null)
+                    // och kika-vyn ovan: inte en modal dialogruta. Fejd
+                    // och Brödrafejd visas i stället med
+                    // FeudResolutionCard (se nedan), eftersom de kräver
+                    // att veta vem som har styrkeövertaget.
+                    if (state.drawnEventCard != null &&
+                        !isFeudCard &&
+                        !isFraternalFeudsCard)
                       Positioned.fill(
                         child: Container(
                           color: Colors.black.withValues(alpha: 0.55),
@@ -402,6 +432,88 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                             card: state.drawnEventCard!,
                             onDismiss: () => _handleResult(
                                 context, notifier.dismissEventCard()),
+                          ),
+                        ),
+                      ),
+                    if (showFeudResolution)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          padding: const EdgeInsets.all(12),
+                          child: FeudResolutionCard(
+                            card: state.drawnEventCard!,
+                            isTie: state.strengthAdvantagePlayerId == null,
+                            youHaveAdvantage:
+                                state.strengthAdvantagePlayerId ==
+                                    state.myPlayerId,
+                            isOnline: state.isOnline,
+                            opponentName: state.opponent.name,
+                            onDismiss: () => _handleResult(
+                                context, notifier.dismissEventCard()),
+                            onStartFeudPick: () => _handleResult(context,
+                                notifier.startFeudBuildingPick()),
+                            onStartFraternalFeudsPick: () => _handleResult(
+                                context, notifier.startFraternalFeudsPick()),
+                          ),
+                        ),
+                      ),
+                    // Fejd: efter att en egen byggnad valts (se
+                    // PrincipalityGrid.onSelectFeudBuilding nedan) väntar
+                    // bara valet av vilken draghög den ska läggas underst
+                    // i.
+                    if (state.feudBuildingPickActive &&
+                        state.feudPickedBuilding != null)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          padding: const EdgeInsets.all(12),
+                          child: StackChoiceOverlay(
+                            title:
+                                'Vilken draghög ska byggnaden läggas underst i?',
+                            onChooseStack: (index) => _handleResult(
+                                context,
+                                notifier.resolveFeudBuildingRemoval(index)),
+                            onCancel: () => _handleResult(
+                                context, notifier.cancelFeudBuildingPick()),
+                          ),
+                        ),
+                      ),
+                    // Brödrafejd (bara lokalt läge, se
+                    // GameNotifier.startFraternalFeudsPick): motståndarens
+                    // hand öppen för fritt val, sedan (per valt kort) vilken
+                    // draghög det ska läggas underst i.
+                    if (state.fraternalFeudsPicking &&
+                        _pendingFraternalFeudsCard == null)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          padding: const EdgeInsets.all(12),
+                          child: FraternalFeudsHandPicker(
+                            hand: state.opponent.hand,
+                            pickedCount: state.fraternalFeudsPicked.length,
+                            onPick: (card) => setState(
+                                () => _pendingFraternalFeudsCard = card),
+                          ),
+                        ),
+                      ),
+                    if (state.fraternalFeudsPicking &&
+                        _pendingFraternalFeudsCard != null)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          padding: const EdgeInsets.all(12),
+                          child: StackChoiceOverlay(
+                            title:
+                                'Vilken draghög ska kortet läggas underst i?',
+                            onChooseStack: (index) {
+                              final card = _pendingFraternalFeudsCard!;
+                              setState(
+                                  () => _pendingFraternalFeudsCard = null);
+                              _handleResult(context,
+                                  notifier.pickFraternalFeudsCard(card, index));
+                            },
+                            onCancel: () => setState(
+                                () => _pendingFraternalFeudsCard = null),
                           ),
                         ),
                       ),
@@ -512,6 +624,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   onCancel: () =>
                       _handleResult(context, notifier.cancelRelocation()),
                 ),
+              if (state.feudBuildingPickActive)
+                FeudBuildingInstructionBar(
+                  onCancel: () => _handleResult(
+                      context, notifier.cancelFeudBuildingPick()),
+                ),
               Expanded(
                 flex: 5,
                 child: AnimatedContainer(
@@ -565,6 +682,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                               context,
                               notifier.selectRelocationTarget(
                                   kind, column, row, slot)),
+                      feudBuildingPickActive: state.feudBuildingPickActive,
+                      feudPickedBuilding: state.feudPickedBuilding,
+                      onSelectFeudBuilding: (column, row, slot) =>
+                          _handleResult(context,
+                              notifier.selectFeudBuilding(column, row, slot)),
                     ),
                   ),
                 ),

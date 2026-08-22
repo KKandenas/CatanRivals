@@ -89,6 +89,16 @@ class PrincipalityGrid extends StatelessWidget {
   final RelocationSelection? relocationFirst;
   final RelocationSelectCallback? onSelectRelocationTarget;
 
+  /// Fejd (se [GameNotifier.selectFeudBuilding]): om aktiv blir bara
+  /// egna, ockuperade byggplatser med ett byggnadskort (inte
+  /// skepp/hjältar) tryckbara – markerade med en gul ram efter valet,
+  /// tills draghögen väljs (se [FeudResolutionCard]/StackChoiceOverlay
+  /// i game_board_screen.dart).
+  final bool feudBuildingPickActive;
+  final RelocationSelection? feudPickedBuilding;
+  final void Function(int column, BuildingRow row, int slotIndex)?
+      onSelectFeudBuilding;
+
   const PrincipalityGrid({
     super.key,
     required this.board,
@@ -107,6 +117,9 @@ class PrincipalityGrid extends StatelessWidget {
     this.relocationActive = false,
     this.relocationFirst,
     this.onSelectRelocationTarget,
+    this.feudBuildingPickActive = false,
+    this.feudPickedBuilding,
+    this.onSelectFeudBuilding,
   });
 
   bool get _draggingRoad => draggingCard?.category == CardCategory.road;
@@ -439,19 +452,29 @@ class PrincipalityGrid extends StatelessWidget {
       PlacedCard placed, int column, BuildingRow row, int slotIndex) {
     final canSelect =
         relocationActive && interactive && onSelectRelocationTarget != null;
+    final canPickForFeud = feudBuildingPickActive &&
+        interactive &&
+        onSelectFeudBuilding != null &&
+        placed.card.expansionKind == ExpansionKind.building;
     final view = ExpansionCardView(
       card: placed.card,
       showCost: false,
       onTap: canSelect
           ? () => onSelectRelocationTarget!(
               RelocationTargetKind.expansion, column, row, slotIndex)
-          : null,
+          : canPickForFeud
+              ? () => onSelectFeudBuilding!(column, row, slotIndex)
+              : null,
     );
-    final selected = relocationActive &&
-        relocationFirst?.kind == RelocationTargetKind.expansion &&
-        relocationFirst?.column == column &&
-        relocationFirst?.row == row &&
-        relocationFirst?.slotIndex == slotIndex;
+    final selected = (relocationActive &&
+            relocationFirst?.kind == RelocationTargetKind.expansion &&
+            relocationFirst?.column == column &&
+            relocationFirst?.row == row &&
+            relocationFirst?.slotIndex == slotIndex) ||
+        (feudBuildingPickActive &&
+            feudPickedBuilding?.column == column &&
+            feudPickedBuilding?.row == row &&
+            feudPickedBuilding?.slotIndex == slotIndex);
     return selected ? _withSelectionRing(view) : view;
   }
 

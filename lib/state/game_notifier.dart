@@ -407,6 +407,134 @@ class GameNotifier extends Notifier<GameState> {
     return null;
   }
 
+  // ---------------------------------------------------------------------
+  // Fejd: spelaren utan styrkeövertaget tar bort en av sina egna
+  // byggnader (inte skepp/hjältar) och lägger den underst i en
+  // draghög. Fungerar i både lokalt och online läge – till skillnad
+  // från Brödrafejd (se nedan) rör den bara din egen data.
+  // ---------------------------------------------------------------------
+
+  /// Startar bygg-väljaren när du är den utan styrkeövertaget (se
+  /// [GameState.strengthAdvantagePlayerId]). No-op om det inte finns
+  /// något uppslaget Fejd-kort, om det är oavgjort, eller om det är du
+  /// som har övertaget (då är det motståndaren som ska välja bort en
+  /// byggnad, inte du).
+  String? startFeudBuildingPick() {
+    if (state.drawnEventCard == null) return null;
+    final advantage = state.strengthAdvantagePlayerId;
+    if (advantage == null || advantage == state.myPlayerId) return null;
+    state = state.copyWith(
+        feudBuildingPickActive: true, clearFeudPickedBuilding: true);
+    return null;
+  }
+
+  /// Avbryter bygg-väljaren utan att göra något.
+  String? cancelFeudBuildingPick() {
+    state = state.copyWith(
+        feudBuildingPickActive: false, clearFeudPickedBuilding: true);
+    return null;
+  }
+
+  /// Väljer vilken av dina egna byggnader (inte skepp/hjältar –
+  /// regelhäftet gäller bara byggnader för Fejd) som ska bort. Nästa
+  /// steg är att välja vilken draghög den ska läggas underst i (se
+  /// [resolveFeudBuildingRemoval]).
+  String? selectFeudBuilding(int column, BuildingRow row, int slotIndex) {
+    if (!state.feudBuildingPickActive) return null;
+    final placed =
+        _expansionAt(state.you.principality, column, row, slotIndex);
+    if (placed == null) return null;
+    if (placed.card.expansionKind != ExpansionKind.building) {
+      return 'Fejd gäller bara byggnader, inte skepp eller hjältar.';
+    }
+    state = state.copyWith(
+      feudPickedBuilding: RelocationSelection(
+          kind: RelocationTargetKind.expansion,
+          column: column,
+          row: row,
+          slotIndex: slotIndex),
+    );
+    return null;
+  }
+
+  /// Tar bort den valda byggnaden och lägger den underst i draghög
+  /// [stackIndex] – avslutar Fejd.
+  String? resolveFeudBuildingRemoval(int stackIndex) {
+    final picked = state.feudPickedBuilding;
+    if (picked == null) return null;
+
+    final removed = state.you.principality
+        .removeExpansion(picked.column, picked.row, picked.slotIndex);
+    if (removed == null) return null;
+
+    _drawStacks[stackIndex] = [..._drawStacks[stackIndex], removed.card];
+    state = state.copyWith(
+      you: state.you,
+      centerStacks: Map.of(state.centerStacks)
+        ..update('draw${stackIndex + 1}', (v) => v + 1),
+      feudBuildingPickActive: false,
+      clearFeudPickedBuilding: true,
+      clearDrawnEventCard: true,
+    );
+    _syncMyPlayer();
+    _syncCenterStacks();
+    _syncTurnState();
+    return null;
+  }
+
+  // ---------------------------------------------------------------------
+  // Brödrafejd: spelaren MED styrkeövertaget väljer 2 kort från
+  // motståndarens hand. Bara i lokalt läge – varje klient äger bara
+  // sin egen spelardata (se [_syncMyPlayer]), så en ändring i
+  // motståndarens hand skulle aldrig nå fram i ett riktigt rum. Där
+  // hålls kortet självbevakat i stället (se game_board_screen.dart).
+  // ---------------------------------------------------------------------
+
+  /// Startar handväljaren när du har styrkeövertaget. No-op online,
+  /// utan uppslaget Brödrafejd-kort, vid oavgjort, eller om det är
+  /// motståndaren som har övertaget.
+  String? startFraternalFeudsPick() {
+    if (state.isOnline) return null;
+    if (state.drawnEventCard == null) return null;
+    if (state.strengthAdvantagePlayerId != state.myPlayerId) return null;
+    state = state.copyWith(
+        fraternalFeudsPicking: true, fraternalFeudsPicked: const []);
+    return null;
+  }
+
+  /// Avbryter handväljaren utan att göra något.
+  String? cancelFraternalFeudsPick() {
+    state = state.copyWith(
+        fraternalFeudsPicking: false, fraternalFeudsPicked: const []);
+    return null;
+  }
+
+  /// Väljer [card] från motståndarens hand och lägger den underst i
+  /// draghög [stackIndex]. Upprepas tills 2 kort är valda, då avslutas
+  /// Brödrafejd automatiskt.
+  String? pickFraternalFeudsCard(GameCard card, int stackIndex) {
+    if (!state.fraternalFeudsPicking) return null;
+    if (!state.opponent.hand.contains(card)) return null;
+
+    _drawStacks[stackIndex] = [..._drawStacks[stackIndex], card];
+    final updatedOpponent = state.opponent
+        .copyWith(hand: List.of(state.opponent.hand)..remove(card));
+    final picked = [...state.fraternalFeudsPicked, card];
+    final done = picked.length >= 2;
+
+    state = state.copyWith(
+      opponent: updatedOpponent,
+      centerStacks: Map.of(state.centerStacks)
+        ..update('draw${stackIndex + 1}', (v) => v + 1),
+      fraternalFeudsPicked: picked,
+      fraternalFeudsPicking: !done,
+      clearDrawnEventCard: done,
+    );
+    _syncCenterStacks();
+    if (done) _syncTurnState();
+    return null;
+  }
+
   /// Spelar ett självbevakat handlingskort (Handelskaravan/Guldsmed):
   /// tar bara bort kortet från handen – spelaren justerar sedan själv
   /// resurserna manuellt med +/- på sina regioner utifrån kortets
@@ -485,6 +613,10 @@ class GameNotifier extends Notifier<GameState> {
       clearScoutChoices: true,
       relocationActive: false,
       clearRelocationFirst: true,
+      feudBuildingPickActive: false,
+      clearFeudPickedBuilding: true,
+      fraternalFeudsPicking: false,
+      fraternalFeudsPicked: const [],
     );
     _syncTurnState();
   }
@@ -748,6 +880,9 @@ class GameNotifier extends Notifier<GameState> {
     }
     if (state.relocationActive) {
       return 'Avsluta Omlokaliseringen innan du bygger vidare.';
+    }
+    if (state.feudBuildingPickActive || state.fraternalFeudsPicking) {
+      return 'Avsluta händelsekortet innan du bygger vidare.';
     }
     if (state.pendingRegions.isNotEmpty) {
       return 'Välj plats för de nya regionkorten innan du bygger vidare.';

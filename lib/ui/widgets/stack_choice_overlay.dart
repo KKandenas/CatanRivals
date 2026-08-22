@@ -1,0 +1,94 @@
+import 'package:flutter/material.dart';
+
+import '../theme/catan_assets.dart';
+import '../theme/catan_colors.dart';
+
+/// Litet val av vilken av de fyra draghögarna ett kort ska läggas
+/// underst i – delas av Fejds bygg-borttagning och Brödrafejds
+/// handkortsval (se [GameNotifier.resolveFeudBuildingRemoval]/
+/// [GameNotifier.pickFraternalFeudsCard]), som båda slutar med precis
+/// det valet efter att själva kortet redan är utpekat.
+class StackChoiceOverlay extends StatelessWidget {
+  final String title;
+  final void Function(int stackIndex) onChooseStack;
+  final VoidCallback? onCancel;
+
+  const StackChoiceOverlay({
+    super.key,
+    required this.title,
+    required this.onChooseStack,
+    this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 320),
+        child: Material(
+          color: CatanColors.parchment,
+          borderRadius: BorderRadius.circular(14),
+          clipBehavior: Clip.antiAlias,
+          elevation: 10,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: CatanColors.ink),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    for (var i = 0; i < 4; i++)
+                      GestureDetector(
+                        onTap: () => onChooseStack(i),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: SizedBox(
+                            width: 56,
+                            height: 56,
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.asset(CatanAssets.backBasicSet,
+                                    fit: BoxFit.cover),
+                                DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                        color: const Color(0xFF7CBF6A),
+                                        width: 1.6),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                if (onCancel != null) ...[
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                        foregroundColor: CatanColors.ink,
+                        side: const BorderSide(color: CatanColors.woodFrame)),
+                    onPressed: onCancel,
+                    child: const Text('Avbryt'),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
