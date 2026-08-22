@@ -91,9 +91,9 @@ void main() {
     });
 
     test('cards with a requirement expose it', () {
-      expect(EraOfGoldCards.tradeMaster.requirement, 'Merchant Guild');
+      expect(EraOfGoldCards.tradeMaster.requirement, 'Köpmansgille');
       expect(EraOfGoldCards.goldCache.requirement,
-          'Hero with at least 1 strength point');
+          'Hjälte med minst 1 styrkepoäng');
     });
   });
 
@@ -119,9 +119,9 @@ void main() {
 
     test('the two Chapels protect against opposite production rolls', () {
       expect(
-          EraOfTurmoilCards.chapelLowRoll.effectText, contains('1, 2, or 3'));
+          EraOfTurmoilCards.chapelLowRoll.effectText, contains('1, 2 eller 3'));
       expect(
-          EraOfTurmoilCards.chapelHighRoll.effectText, contains('4, 5, or 6'));
+          EraOfTurmoilCards.chapelHighRoll.effectText, contains('4, 5 eller 6'));
     });
 
     test('attack action cards requiring Hedge Tavern are flagged', () {
@@ -131,7 +131,7 @@ void main() {
         EraOfTurmoilCards.traitor,
       ]) {
         expect(card.actionKind, ActionKind.attack);
-        expect(card.requirement, 'Hedge Tavern');
+        expect(card.requirement, 'Värdshus');
       }
     });
   });
@@ -158,7 +158,8 @@ void main() {
 
     test('University is unique and requires Abbey or Library', () {
       expect(EraOfProgressCards.university.isUnique, isTrue);
-      expect(EraOfProgressCards.university.requirement, 'Abbey or Library');
+      expect(EraOfProgressCards.university.requirement,
+          'Kloster eller Bibliotek');
     });
 
     test('Chief Cannoneer is a unit, not a hero, and has no skill points', () {

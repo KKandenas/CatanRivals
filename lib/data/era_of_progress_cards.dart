@@ -25,8 +25,8 @@ class EraOfProgressCards {
     actionKind: ActionKind.neutral,
     expansionSet: ExpansionSet.eraOfProgress,
     effectText:
-        'You once more receive the resource of each region whose number you rolled at the '
-        'beginning of your turn.',
+        'Du får på nytt resursen från varje region vars tal du slog '
+        'i början av din tur.',
     imageAsset: 'assets/images/cards/action_benjamin.png',
   );
 
@@ -36,10 +36,10 @@ class EraOfProgressCards {
     category: CardCategory.action,
     actionKind: ActionKind.neutral,
     expansionSet: ExpansionSet.eraOfProgress,
-    requirement: 'Bath House',
+    requirement: 'Badhus',
     effectText:
-        'Each region bordering your Bath House receives 1 resource. If you have various Bath '
-        'Houses, you may only use 1 of them.',
+        'Varje region som gränsar till ditt Badhus får 1 resurs. Har '
+        'du flera Badhus får du bara använda ett av dem.',
     imageAsset: 'assets/images/cards/action_doctor.png',
   );
 
@@ -49,8 +49,8 @@ class EraOfProgressCards {
     category: CardCategory.action,
     actionKind: ActionKind.attack,
     expansionSet: ExpansionSet.eraOfProgress,
-    requirement: 'Town Hall, or fewer victory points than your opponent',
-    effectText: "You may choose 1 card from the discard pile (Tournament: from your opponent's discard pile).",
+    requirement: 'Rådhus, eller färre segerpoäng än motståndaren',
+    effectText: 'Du får välja 1 kort från kasserade kort (turneringsspel: från motståndarens kasserade kort).',
     imageAsset: 'assets/images/cards/action_guido.png',
   );
 
@@ -60,8 +60,8 @@ class EraOfProgressCards {
     category: CardCategory.action,
     actionKind: ActionKind.neutral,
     expansionSet: ExpansionSet.eraOfProgress,
-    requirement: 'Library, or fewer victory points than your opponent',
-    effectText: 'You may choose 1 card from the discard pile (Tournament: from your own discard pile).',
+    requirement: 'Bibliotek, eller färre segerpoäng än motståndaren',
+    effectText: 'Du får välja 1 kort från kasserade kort (turneringsspel: från dina egna kasserade kort).',
     imageAsset: 'assets/images/cards/action_gustav.png',
   );
 
@@ -71,8 +71,8 @@ class EraOfProgressCards {
     category: CardCategory.action,
     actionKind: ActionKind.neutral,
     expansionSet: ExpansionSet.eraOfProgress,
-    requirement: 'University',
-    effectText: 'You receive up to 2 ore.',
+    requirement: 'Universitet',
+    effectText: 'Du får upp till 2 malm.',
     imageAsset: 'assets/images/cards/action_mineral_mining.png',
   );
 
@@ -82,8 +82,8 @@ class EraOfProgressCards {
     category: CardCategory.action,
     actionKind: ActionKind.neutral,
     expansionSet: ExpansionSet.eraOfProgress,
-    requirement: 'University',
-    effectText: 'You receive up to 2 grain.',
+    requirement: 'Universitet',
+    effectText: 'Du får upp till 2 säd.',
     imageAsset: 'assets/images/cards/action_three_field_system.png',
   );
 
@@ -97,13 +97,14 @@ class EraOfProgressCards {
     category: CardCategory.expansion,
     expansionKind: ExpansionKind.otherUnit,
     expansionSet: ExpansionSet.eraOfProgress,
-    requirement: 'University',
+    requirement: 'Universitet',
     buildingCost: {ResourceType.lumber: 1, ResourceType.ore: 1},
     strengthPoints: 4,
     effectText:
-        "I'll show you how to produce a romantic castle ruin. Is a unit but not a hero – you "
-        'may place 2 Chief Cannoneers in your principality. Cards referring to heroes do not '
-        'apply to it; cards referring to units do.',
+        'Jag ska visa dig hur man skapar en romantisk slottsruin. Är '
+        'en enhet men ingen hjälte – du får ha 2 Kanonmästare i ditt '
+        'rike. Kort som gäller hjältar gäller inte den, men kort som '
+        'gäller enheter gör det.',
     imageAsset: 'assets/images/cards/unit_chief_cannoneer.png',
   );
 
@@ -117,7 +118,7 @@ class EraOfProgressCards {
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfProgress,
     buildingCost: {ResourceType.brick: 1, ResourceType.wool: 1, ResourceType.ore: 1},
-    effectText: 'Protects all 4 regions bordering this city from the effects of the event Plague.',
+    effectText: 'Skyddar alla 4 regioner som gränsar till den här staden från effekterna av händelsen Pest.',
     imageAsset: 'assets/images/cards/city_expansion_bath_house.png',
   );
 
@@ -126,9 +127,9 @@ class EraOfProgressCards {
     name: 'Byggkran',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfProgress,
-    requirement: 'University',
+    requirement: 'Universitet',
     buildingCost: {ResourceType.lumber: 1},
-    effectText: 'Every city expansion you build that costs more than 4 resources costs you 1 resource less.',
+    effectText: 'Varje stadsutbyggnad du bygger som kostar mer än 4 resurser kostar 1 resurs mindre.',
     imageAsset: 'assets/images/cards/city_expansion_building_crane.png',
   );
 
@@ -139,7 +140,7 @@ class EraOfProgressCards {
     expansionSet: ExpansionSet.eraOfProgress,
     buildingCost: {ResourceType.lumber: 1, ResourceType.grain: 2},
     progressPoints: 1,
-    effectText: 'When you build the Library, you may immediately choose a card from a draw stack (Tournament: from your own stack).',
+    effectText: 'När du bygger Biblioteket får du omedelbart välja ett kort från en draghög (turneringsspel: från din egen hög).',
     imageAsset: 'assets/images/cards/city_expansion_library.png',
   );
 
@@ -148,9 +149,9 @@ class EraOfProgressCards {
     name: 'Parlament',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfProgress,
-    requirement: '2 progress points',
+    requirement: '2 framstegspoäng',
     buildingCost: {ResourceType.lumber: 1, ResourceType.brick: 1, ResourceType.wool: 1},
-    effectText: 'For the benefit of the people and their representatives in particular.',
+    effectText: 'Till folkets fromma, och särskilt deras företrädares.',
     imageAsset: 'assets/images/cards/city_expansion_parliament.png',
   );
 
@@ -161,8 +162,8 @@ class EraOfProgressCards {
     expansionSet: ExpansionSet.eraOfProgress,
     buildingCost: {ResourceType.wool: 1, ResourceType.gold: 1},
     effectText:
-        'When the event Plague occurs, you receive any 1 resource of your choice. You receive '
-        'this resource whether you previously lost resources or not.',
+        'När händelsen Pest inträffar får du 1 valfri resurs. Du får '
+        'den oavsett om du tidigare förlorat resurser eller inte.',
     imageAsset: 'assets/images/cards/city_expansion_pharmacy.png',
   );
 
@@ -171,11 +172,11 @@ class EraOfProgressCards {
     name: 'Rådhus',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfProgress,
-    requirement: 'Parish Hall',
+    requirement: 'Församlingshus',
     buildingCost: {ResourceType.wool: 1, ResourceType.ore: 1, ResourceType.brick: 1},
     effectText:
-        'Place the Town Hall on your Parish Hall. At the end of your turn, you no longer pay '
-        'for choosing a card.',
+        'Placera Rådhuset på ditt Församlingshus. I slutet av din tur '
+        'betalar du inte längre för att välja ett kort.',
     imageAsset: 'assets/images/cards/city_expansion_town_hall.png',
   );
 
@@ -185,10 +186,10 @@ class EraOfProgressCards {
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfProgress,
     isUnique: true,
-    requirement: 'Abbey or Library',
+    requirement: 'Kloster eller Bibliotek',
     buildingCost: {ResourceType.lumber: 1, ResourceType.grain: 1, ResourceType.wool: 1},
     progressPoints: 1,
-    effectText: 'Formerly, there was a hedge-tavern here. Now there are two of them next door.',
+    effectText: 'Här låg tidigare ett värdshus. Nu finns det två stycken alldeles intill.',
     imageAsset: 'assets/images/cards/city_expansion_university.png',
   );
 
@@ -201,7 +202,7 @@ class EraOfProgressCards {
     name: 'Pest',
     category: CardCategory.event,
     expansionSet: ExpansionSet.eraOfProgress,
-    effectText: 'Every region bordering a city loses 1 resource.',
+    effectText: 'Varje region som gränsar till en stad förlorar 1 resurs.',
     imageAsset: 'assets/images/cards/event_plague.png',
   );
 
