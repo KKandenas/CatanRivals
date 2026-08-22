@@ -37,20 +37,19 @@ enum EventDieFace {
         EventDieFace.eventCard => 'Händelsekort',
       };
 
-  /// Regeltexten ordagrant från referenskortet, på engelska precis som
-  /// kortens egen `effectText` (se [GameCard]) – appen visar bara
-  /// texten, spelarna genomför den själva.
+  /// Regeltexten från referenskortet – appen visar bara texten,
+  /// spelarna genomför den själva.
   String get ruleText => switch (this) {
         EventDieFace.brigandAttack =>
-          'A player who has more than 7 resources loses all their gold and wool supplies.',
+          'En spelare som har fler än 7 resurser förlorar alla sina lager av guld och ull.',
         EventDieFace.trade =>
-          'If one of the players has the trade advantage, they receive 1 resource of their choice from their opponent.',
+          'Om en av spelarna har handelsövertaget får den spelaren 1 valfri resurs från motståndaren.',
         EventDieFace.celebration =>
-          'If one of the players has the most skill points, they alone receive 1 resource of their choice. Otherwise, each player receives 1 resource of their choice.',
+          'Om en av spelarna har flest kunskapspoäng får bara den spelaren 1 valfri resurs. Annars får båda spelarna 1 valfri resurs var.',
         EventDieFace.plentifulHarvest =>
-          'Each player receives 1 resource of their choice.',
+          'Varje spelare får 1 valfri resurs.',
         EventDieFace.eventCard =>
-          'The player who rolled the dice draws the topmost event card and reads the event aloud. All players affected by the event resolve the event (it can be none, one, or both players).',
+          'Spelaren som slog tärningen drar det översta händelsekortet och läser upp händelsen högt. Alla spelare som påverkas av händelsen genomför den (det kan gälla ingen, en eller båda spelarna).',
       };
 
   /// Om det här utfallet ska hanteras INNAN spelarna tar sina vanliga
