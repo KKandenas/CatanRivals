@@ -88,6 +88,13 @@ class CenterStacksStrip extends StatelessWidget {
   final bool canDrawEventCard;
   final VoidCallback? onDrawEventCard;
 
+  /// Vilken av de fyra draghögarna (0–3) motståndaren just nu kikar i
+  /// (se [GameState.peekingStackIndex]/[GameNotifier.choosePeekStack])
+  /// – `null` annars. Bara index, aldrig vilka kort som ligger där.
+  /// Skickas alltid som `null` för den som själv kikar (den spelaren
+  /// ser redan hela högen i PeekStackOverlay, se game_board_screen.dart).
+  final int? peekingStackIndex;
+
   const CenterStacksStrip({
     super.key,
     required this.stackCounts,
@@ -113,6 +120,7 @@ class CenterStacksStrip extends StatelessWidget {
     this.hasSelectedExchangeCard = false,
     this.canDrawEventCard = false,
     this.onDrawEventCard,
+    this.peekingStackIndex,
   });
 
   @override
@@ -184,6 +192,9 @@ class CenterStacksStrip extends StatelessWidget {
             // Under kortbytesfasen visas instruktionerna i stället i
             // TradePhaseCard (se game_board_screen.dart) – ingen egen
             // etikett här, bara högarna som tänds till.
+          ] else if (!isYourTurn && peekingStackIndex != null) ...[
+            const SizedBox(width: 8),
+            _PeekingLabel(stackIndex: peekingStackIndex!),
           ],
         ],
       ),
@@ -193,6 +204,7 @@ class CenterStacksStrip extends StatelessWidget {
   Widget _drawStackPile(int index) {
     final count = stackCounts['draw${index + 1}'] ?? 0;
     final claimed = count < 9;
+    final peeking = peekingStackIndex == index;
 
     if (handAdjustmentPhase == HandAdjustmentPhase.drawing) {
       final tappable = count > 0;
@@ -202,6 +214,7 @@ class CenterStacksStrip extends StatelessWidget {
         width: 48,
         dimmed: !tappable,
         highlighted: tappable,
+        peeking: peeking,
         onTap: tappable ? () => onDrawStack?.call(index) : null,
       );
     }
@@ -211,6 +224,7 @@ class CenterStacksStrip extends StatelessWidget {
         count: count,
         width: 48,
         highlighted: hasSelectedDiscardCard,
+        peeking: peeking,
         onTap:
             hasSelectedDiscardCard ? () => onDiscardToStack?.call(index) : null,
       );
@@ -222,6 +236,7 @@ class CenterStacksStrip extends StatelessWidget {
         count: count,
         width: 48,
         highlighted: hasSelectedExchangeCard,
+        peeking: peeking,
         onTap: hasSelectedExchangeCard
             ? () => onExchangeDiscardToStack?.call(index)
             : null,
@@ -235,6 +250,7 @@ class CenterStacksStrip extends StatelessWidget {
         width: 48,
         dimmed: !tappable,
         highlighted: tappable,
+        peeking: peeking,
         onTap: tappable ? () => onExchangeDrawStack?.call(index) : null,
       );
     }
@@ -246,6 +262,7 @@ class CenterStacksStrip extends StatelessWidget {
         width: 48,
         dimmed: !tappable,
         highlighted: tappable,
+        peeking: peeking,
         onTap: tappable ? () => onPeekStack?.call(index) : null,
       );
     }
@@ -257,12 +274,13 @@ class CenterStacksStrip extends StatelessWidget {
       width: 48,
       dimmed: isChoosingHand && claimed,
       highlighted: tappable,
+      peeking: peeking,
       onTap: tappable ? () => onChooseStack?.call(index) : null,
     );
   }
 }
 
-class _StackPile extends StatelessWidget {
+class _StackPile extends StatefulWidget {
   final String asset;
   final int count;
   final double width;
@@ -288,6 +306,12 @@ class _StackPile extends StatelessWidget {
   /// Nedtonad – en redan vald draghög under starthandsvalet.
   final bool dimmed;
 
+  /// Om motståndaren just nu kikar i den här högen (se
+  /// [CenterStacksStrip.peekingStackIndex]) – en stadig gyllene glöd,
+  /// till skillnad från [_StackFlash] som bara blinkar till en kort
+  /// stund vid en släng-/dra-händelse.
+  final bool peeking;
+
   const _StackPile({
     required this.asset,
     required this.count,
@@ -299,11 +323,73 @@ class _StackPile extends StatelessWidget {
     this.onTap,
     this.highlighted = false,
     this.dimmed = false,
+    this.peeking = false,
   });
 
   @override
+  State<_StackPile> createState() => _StackPileState();
+}
+
+/// Vilken sorts förändring högen just fick, för [_StackFlash]-färgen –
+/// [discard] (antalet ökade: någon slängde/lade tillbaka ett kort hit)
+/// eller [draw] (antalet minskade: någon drog/tog ett kort härifrån).
+enum _StackFlashKind { discard, draw }
+
+class _StackPileState extends State<_StackPile>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _flashController;
+  late final Animation<double> _flashOpacity;
+  _StackFlashKind? _flashKind;
+
+  @override
+  void initState() {
+    super.initState();
+    _flashController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1400));
+    // Snabb intoning, en kort stund kvar på topp, sedan en längre
+    // uttoning – "blinkar till" i stället för en jämn puls, så det syns
+    // tydligt i ögonvrån utan att bli ett störande, ständigt pulserande
+    // ljus.
+    _flashOpacity = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 12),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 18),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 70),
+    ]).animate(_flashController);
+  }
+
+  @override
+  void didUpdateWidget(covariant _StackPile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Nyckelad enbart på [count] – oavsett om ändringen kom från en
+    // egen lokal handling eller synkades in från motståndaren (se
+    // GameNotifier._syncCenterStacks/_centerStacksSub), eftersom
+    // antalet är den enda datan som faktiskt delas mellan klienterna.
+    // Ökning = ett kort slängdes/lades hit, minskning = ett kort
+    // drogs/togs härifrån – se [_StackFlashKind].
+    if (widget.count != oldWidget.count) {
+      _flashKind = widget.count > oldWidget.count
+          ? _StackFlashKind.discard
+          : _StackFlashKind.draw;
+      _flashController.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _flashController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final glowing = card != null || highlighted;
+    final glowing = widget.card != null || widget.highlighted;
+    // Gyllene "kikar"-glöd går före den vanliga gröna tryckbar-glöden –
+    // ovanligare och mer värd att lägga märke till.
+    final borderColor = widget.peeking
+        ? const Color(0xFFC9A227)
+        : glowing
+            ? const Color(0xFF7CBF6A)
+            : CatanColors.woodFrame;
     final pile = AspectRatio(
       aspectRatio: 1,
       child: ClipRRect(
@@ -311,41 +397,47 @@ class _StackPile extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             border: Border.all(
-                color:
-                    glowing ? const Color(0xFF7CBF6A) : CatanColors.woodFrame,
-                width: glowing ? 1.6 : 1),
+                color: borderColor, width: widget.peeking || glowing ? 2 : 1),
+            boxShadow: widget.peeking
+                ? [
+                    BoxShadow(
+                        color: const Color(0xFFC9A227).withValues(alpha: 0.7),
+                        blurRadius: 8,
+                        spreadRadius: 1),
+                  ]
+                : null,
           ),
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Image.asset(asset, fit: BoxFit.cover),
+              Image.asset(widget.asset, fit: BoxFit.cover),
               Positioned(
                 right: 2,
                 bottom: 2,
-                child: _CountBadge(count: count),
+                child: _CountBadge(count: widget.count),
               ),
             ],
           ),
         ),
       ),
     );
-    final dimmedPile = dimmed ? Opacity(opacity: 0.4, child: pile) : pile;
+    final dimmedPile = widget.dimmed ? Opacity(opacity: 0.4, child: pile) : pile;
 
-    final content = onTap != null
-        ? GestureDetector(onTap: onTap, child: dimmedPile)
-        : card != null && count > 0 && canBuild
+    final content = widget.onTap != null
+        ? GestureDetector(onTap: widget.onTap, child: dimmedPile)
+        : widget.card != null && widget.count > 0 && widget.canBuild
             ? LongPressDraggable<GameCard>(
-                data: card,
+                data: widget.card,
                 delay: const Duration(milliseconds: 180),
                 feedback: Material(
                   color: Colors.transparent,
                   child: SizedBox(
-                      width: width,
+                      width: widget.width,
                       child: Transform.scale(scale: 1.3, child: pile)),
                 ),
                 childWhenDragging: Opacity(opacity: 0.35, child: pile),
-                onDragStarted: () => onDragStarted?.call(card!),
-                onDragEnd: (_) => onDragEnd?.call(),
+                onDragStarted: () => widget.onDragStarted?.call(widget.card!),
+                onDragEnd: (_) => widget.onDragEnd?.call(),
                 // Ett riktigt fingertryck varar ofta längre än 180ms,
                 // så LongPressDraggable hinner vinna gest-arenan innan
                 // ett vanligt tryck hade fått chansen – utan det här
@@ -353,20 +445,59 @@ class _StackPile extends StatelessWidget {
                 // Släpps kortet utan att träffa ett giltigt mål tolkar
                 // vi det som ett tryck och visar kortet förstorat.
                 onDraggableCanceled: (_, __) {
-                  onDragEnd?.call();
-                  showCardDetail(context, card!);
+                  widget.onDragEnd?.call();
+                  showCardDetail(context, widget.card!);
                 },
                 child: pile,
               )
             // Tom hög (t.ex. slut på städer) – fortfarande tryckbar
             // för att kunna se kostnaden, bara inte dragbar.
-            : card != null
+            : widget.card != null
                 ? GestureDetector(
-                    onTap: () => showCardDetail(context, card!),
+                    onTap: () => showCardDetail(context, widget.card!),
                     child: dimmedPile)
                 : dimmedPile;
 
-    return SizedBox(width: width, child: content);
+    return SizedBox(
+      width: widget.width,
+      child: Stack(
+        children: [
+          content,
+          AnimatedBuilder(
+            animation: _flashOpacity,
+            builder: (context, _) {
+              final kind = _flashKind;
+              if (kind == null || _flashOpacity.value <= 0) {
+                return const SizedBox.shrink();
+              }
+              final color = kind == _StackFlashKind.discard
+                  ? Colors.redAccent
+                  : const Color(0xFF7CBF6A);
+              return IgnorePointer(
+                child: Opacity(
+                  opacity: _flashOpacity.value,
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: color, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                              color: color.withValues(alpha: 0.75),
+                              blurRadius: 9,
+                              spreadRadius: 1),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -415,6 +546,32 @@ class _EndTurnButton extends StatelessWidget {
           style: TextStyle(
               color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
         ),
+      ),
+    );
+  }
+}
+
+/// Visas för motståndaren när den aktiva spelaren kikar i en draghög
+/// (regelhäftet s. 9) – bara VILKEN hög, aldrig vilka kort som ligger
+/// där (se [CenterStacksStrip.peekingStackIndex]). Guldfärgad, samma
+/// accent som den gyllene glöden på själva högen (se [_StackPile]).
+class _PeekingLabel extends StatelessWidget {
+  final int stackIndex;
+
+  const _PeekingLabel({required this.stackIndex});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFC9A227),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        'Kikar i hög ${stackIndex + 1}',
+        style: const TextStyle(
+            color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }

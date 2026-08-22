@@ -684,6 +684,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                         state.drawnEventCard == null,
                 onDrawEventCard: () =>
                     _handleResult(context, notifier.drawEventCard()),
+                // Bara motståndarens kikande visas här (den som själv
+                // kikar ser redan hela högen i PeekStackOverlay nedan).
+                peekingStackIndex:
+                    state.isMyTurn ? null : state.peekingStackIndex,
               ),
               if (state.pendingRegions.isNotEmpty)
                 PendingRegionsBar(

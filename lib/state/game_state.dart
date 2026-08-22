@@ -105,6 +105,16 @@ class GameState {
   final int? peekStackIndex;
   final List<GameCard>? peekedCards;
 
+  /// Vilken draghög (0–3) som just nu kikas i, synkat (se
+  /// [TurnState.peekingStackIndex]/[GameNotifier.choosePeekStack]) så
+  /// att MOTSTÅNDAREN till den som kikar kan se vilken hög det gäller
+  /// – bara index, aldrig vilka kort som faktiskt ligger där (det
+  /// avslöjas aldrig, till skillnad från [peekedCards] som bara den
+  /// kikande spelaren själv ser). Motsvarar att man vid ett fysiskt
+  /// bord ser motståndaren plocka upp och läsa en specifik hög utan
+  /// att se innehållet. `null` när ingen kikar.
+  final int? peekingStackIndex;
+
   /// Händelsekortet som just nu ligger uppslaget för alla att läsa,
   /// draget när händelsetärningen visade "?" (se [EventDieFace.eventCard]
   /// och [GameNotifier.drawEventCard]) – synkas till båda spelarna,
@@ -173,6 +183,7 @@ class GameState {
     this.tradePhase = TradePhase.none,
     this.peekStackIndex,
     this.peekedCards,
+    this.peekingStackIndex,
     this.drawnEventCard,
     this.awaitingScoutDecision = false,
     this.scoutChoices,
@@ -298,6 +309,8 @@ class GameState {
     bool clearPeekStackIndex = false,
     List<GameCard>? peekedCards,
     bool clearPeekedCards = false,
+    int? peekingStackIndex,
+    bool clearPeekingStackIndex = false,
     GameCard? drawnEventCard,
     bool clearDrawnEventCard = false,
     bool? awaitingScoutDecision,
@@ -346,6 +359,9 @@ class GameState {
       peekStackIndex:
           clearPeekStackIndex ? null : (peekStackIndex ?? this.peekStackIndex),
       peekedCards: clearPeekedCards ? null : (peekedCards ?? this.peekedCards),
+      peekingStackIndex: clearPeekingStackIndex
+          ? null
+          : (peekingStackIndex ?? this.peekingStackIndex),
       drawnEventCard: clearDrawnEventCard
           ? null
           : (drawnEventCard ?? this.drawnEventCard),

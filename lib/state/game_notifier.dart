@@ -259,6 +259,8 @@ class GameNotifier extends Notifier<GameState> {
           clearEventDieFace: turnState.eventDieFace == null,
           drawnEventCard: turnState.drawnEventCard,
           clearDrawnEventCard: turnState.drawnEventCard == null,
+          peekingStackIndex: turnState.peekingStackIndex,
+          clearPeekingStackIndex: turnState.peekingStackIndex == null,
         );
       },
       onError: (Object e) {
@@ -290,6 +292,7 @@ class GameNotifier extends Notifier<GameState> {
         productionRoll: state.productionRoll,
         eventDieFace: state.eventDieFace,
         drawnEventCard: state.drawnEventCard,
+        peekingStackIndex: state.peekingStackIndex,
       ),
     ));
   }
@@ -614,6 +617,7 @@ class GameNotifier extends Notifier<GameState> {
       tradePhase: TradePhase.none,
       clearPeekStackIndex: true,
       clearPeekedCards: true,
+      clearPeekingStackIndex: true,
       awaitingScoutDecision: false,
       clearScoutChoices: true,
       relocationActive: false,
@@ -796,13 +800,18 @@ class GameNotifier extends Notifier<GameState> {
   /// Slår upp alla kort i draghög [stackIndex], i den ordning de
   /// faktiskt ligger (första kortet i listan är överst), så att UI kan
   /// visa dem och spelaren väljer ett att behålla (se [peekTakeCard]).
+  /// [GameState.peekingStackIndex] synkas samtidigt – bara vilken hög,
+  /// aldrig vilka kort – så att motståndaren ser att (och var) man
+  /// kikar, precis som vid ett fysiskt bord.
   String? choosePeekStack(int stackIndex) {
     if (state.tradePhase != TradePhase.peekChoosingStack) return null;
     state = state.copyWith(
       tradePhase: TradePhase.peekViewing,
       peekStackIndex: stackIndex,
       peekedCards: List.of(_drawStacks[stackIndex]),
+      peekingStackIndex: stackIndex,
     );
+    _syncTurnState();
     return null;
   }
 

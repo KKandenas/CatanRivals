@@ -16,12 +16,21 @@ class TurnState {
   /// se [GameNotifier.drawEventCard].
   final GameCard? drawnEventCard;
 
+  /// Vilken draghög (0–3) den aktiva spelaren just nu kikar i under
+  /// kortbytesfasens kika-alternativ (regelhäftet s. 9) – se
+  /// [GameNotifier.choosePeekStack]. Bara index, aldrig vilka kort som
+  /// faktiskt ligger där (det förblir hemligt) – precis som att man vid
+  /// ett fysiskt bord ser motståndaren plocka upp och läsa en specifik
+  /// hög, utan att se innehållet själv. `null` när ingen kikar just nu.
+  final int? peekingStackIndex;
+
   const TurnState({
     required this.activePlayerId,
     this.diceRolled = false,
     this.productionRoll,
     this.eventDieFace,
     this.drawnEventCard,
+    this.peekingStackIndex,
   });
 
   Map<String, dynamic> toJson() => {
@@ -30,6 +39,7 @@ class TurnState {
         if (productionRoll != null) 'productionRoll': productionRoll,
         if (eventDieFace != null) 'eventDieFace': eventDieFace!.name,
         if (drawnEventCard != null) 'drawnEventCard': drawnEventCard!.toJson(),
+        if (peekingStackIndex != null) 'peekingStackIndex': peekingStackIndex,
       };
 
   factory TurnState.fromJson(Map<String, dynamic> json) => TurnState(
@@ -43,5 +53,6 @@ class TurnState {
             ? null
             : GameCard.fromJson(
                 Map<String, dynamic>.from(json['drawnEventCard'] as Map)),
+        peekingStackIndex: json['peekingStackIndex'] as int?,
       );
 }

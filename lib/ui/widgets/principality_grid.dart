@@ -4,6 +4,7 @@ import '../../models/models.dart';
 import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
 import 'expansion_card_view.dart';
+import 'pop_in.dart';
 import 'region_card_view.dart';
 import 'settlement_card_view.dart';
 
@@ -305,7 +306,10 @@ class PrincipalityGrid extends StatelessWidget {
   }
 
   Widget _settlementSlot(int column, SettlementNode node) {
-    final view = SettlementCardView(card: node.center.card);
+    // Se kommentaren i _roadSlot – samma PopIn-utan-Key-resonemang gäller
+    // här (både för en helt ny by och för en stadsuppgradering: bytet
+    // by→stad byter kort-widget, alltså ny montering och ny intoning).
+    final view = PopIn(child: SettlementCardView(card: node.center.card));
     if (!interactive || node.isCity) return view;
 
     return DragTarget<GameCard>(
@@ -357,7 +361,12 @@ class PrincipalityGrid extends StatelessWidget {
   }
 
   Widget _roadSlot(int col, PlacedCard? road, bool isFrontier) {
-    if (road != null) return const RoadCardView();
+    // PopIn utan Key: en tom→byggd övergång byter widget-typ på den här
+    // trädpositionen (från DragTarget/SizedBox till PopIn), så Flutter
+    // monterar den fräscht och spelar upp intoningen – ett Omlokaliserings-
+    // byte som bara flyttar en redan synlig väg behåller samma typ här
+    // och blinkar därför inte om (se motståndaren-ser-actions-designen).
+    if (road != null) return const PopIn(child: RoadCardView());
     if (!interactive || !isFrontier) return const SizedBox();
 
     return DragTarget<GameCard>(
@@ -427,19 +436,23 @@ class PrincipalityGrid extends StatelessWidget {
   Widget _region(PlacedCard placed, int column, BuildingRow row) {
     final canSelect =
         relocationActive && interactive && onSelectRelocationTarget != null;
-    final view = RegionCardView(
-      card: placed.card,
-      stored: placed.storedResources,
-      // +/- knapparna stängs av under Omlokalisering: annars skulle ett
-      // tryck på kortets bakgrund (för att välja det till bytet) och
-      // ett tryck på en +/- knapp konkurrera om samma yta.
-      onAdjust: interactive && onAdjustRegion != null && !relocationActive
-          ? (delta) => onAdjustRegion!(column, row, delta)
-          : null,
-      onTap: canSelect
-          ? () => onSelectRelocationTarget!(
-              RelocationTargetKind.region, column, row, 0)
-          : null,
+    // Se kommentaren i _roadSlot – en ny region på en tidigare tom
+    // knutpunkt byter widget-typ här och toppas därför korrekt in.
+    final view = PopIn(
+      child: RegionCardView(
+        card: placed.card,
+        stored: placed.storedResources,
+        // +/- knapparna stängs av under Omlokalisering: annars skulle ett
+        // tryck på kortets bakgrund (för att välja det till bytet) och
+        // ett tryck på en +/- knapp konkurrera om samma yta.
+        onAdjust: interactive && onAdjustRegion != null && !relocationActive
+            ? (delta) => onAdjustRegion!(column, row, delta)
+            : null,
+        onTap: canSelect
+            ? () => onSelectRelocationTarget!(
+                RelocationTargetKind.region, column, row, 0)
+            : null,
+      ),
     );
     final selected = relocationActive &&
         relocationFirst?.kind == RelocationTargetKind.region &&
@@ -456,15 +469,19 @@ class PrincipalityGrid extends StatelessWidget {
         interactive &&
         onSelectFeudBuilding != null &&
         placed.card.expansionKind == ExpansionKind.building;
-    final view = ExpansionCardView(
-      card: placed.card,
-      showCost: false,
-      onTap: canSelect
-          ? () => onSelectRelocationTarget!(
-              RelocationTargetKind.expansion, column, row, slotIndex)
-          : canPickForFeud
-              ? () => onSelectFeudBuilding!(column, row, slotIndex)
-              : null,
+    // Se kommentaren i _roadSlot – en ny utbyggnad på en tidigare tom
+    // byggplats byter widget-typ här och toppas därför korrekt in.
+    final view = PopIn(
+      child: ExpansionCardView(
+        card: placed.card,
+        showCost: false,
+        onTap: canSelect
+            ? () => onSelectRelocationTarget!(
+                RelocationTargetKind.expansion, column, row, slotIndex)
+            : canPickForFeud
+                ? () => onSelectFeudBuilding!(column, row, slotIndex)
+                : null,
+      ),
     );
     final selected = (relocationActive &&
             relocationFirst?.kind == RelocationTargetKind.expansion &&
