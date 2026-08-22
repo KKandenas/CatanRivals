@@ -396,7 +396,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                         // därmed alla kort) kan vara så stora som möjligt.
                         Container(
                           width: 76,
-                          color: CatanColors.woodFrameDark,
+                          // Samma genomskinlighet som TopStatusBar/
+                          // CenterStacksStrip/HandDock, så den delade
+                          // träbakgrunden syns igenom här också.
+                          color: CatanColors.woodFrameDark.withValues(alpha: 0.75),
                           alignment: Alignment.center,
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
