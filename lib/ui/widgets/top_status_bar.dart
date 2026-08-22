@@ -4,16 +4,25 @@ import '../../models/models.dart';
 import '../theme/catan_colors.dart';
 import 'score_summary.dart';
 
-/// Smal remsa längst upp: motståndarens namn, VP och handkortsantal.
-/// Motståndarens rike ritas separat under den här remsan (se
-/// [GameBoardScreen]) – tärning/turindikator sitter i mittremsan mellan
-/// riken, precis som i det fysiska spelets uppställning.
+/// Smal remsa längst upp: motståndarens namn, VP och handkortsantal,
+/// samt (längst till höger, se [trailing]) den övergripande
+/// totalställningen för båda spelarna. Motståndarens rike ritas separat
+/// under den här remsan (se [GameBoardScreen]) – tärning/turindikator
+/// sitter i mittremsan mellan riken, precis som i det fysiska spelets
+/// uppställning.
 class TopStatusBar extends StatelessWidget {
   final Player opponent;
   final bool opponentIsRed;
   final int totalVictoryPoints;
   final bool hasHeroToken;
   final bool hasTradeToken;
+
+  /// Totalställningen (se [TotalScoreBoard]) – ligger längst till höger
+  /// i remsan i stället för att flyta ovanpå brädet, så den syns direkt
+  /// utan att riskera att skymma något. Motståndarens egen detaljerade
+  /// poängsummering ([ScoreSummary]) och handkortsantal flyttas därför
+  /// närmare mitten (direkt efter namnet) för att lämna plats.
+  final Widget trailing;
 
   const TopStatusBar({
     super.key,
@@ -22,6 +31,7 @@ class TopStatusBar extends StatelessWidget {
     required this.totalVictoryPoints,
     this.hasHeroToken = false,
     this.hasTradeToken = false,
+    required this.trailing,
   });
 
   @override
@@ -53,7 +63,7 @@ class TopStatusBar extends StatelessWidget {
               const SizedBox(width: 6),
               Text(opponentIsRed ? '(röd)' : '(blå)',
                   style: const TextStyle(color: Colors.white54, fontSize: 11)),
-              const Spacer(),
+              const SizedBox(width: 10),
               ScoreSummary(
                 player: opponent,
                 totalVictoryPoints: totalVictoryPoints,
@@ -63,6 +73,8 @@ class TopStatusBar extends StatelessWidget {
               const SizedBox(width: 6),
               _StatChip(
                   icon: Icons.style, label: '${opponent.hand.length} kort'),
+              const Spacer(),
+              trailing,
             ],
           ),
         ),

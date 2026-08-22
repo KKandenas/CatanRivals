@@ -7,8 +7,9 @@ import '../theme/catan_colors.dart';
 /// Hero Token/Trade Token) för båda spelarna på samma gång – till
 /// skillnad från de mer detaljerade ScoreSummary-rutorna (en per
 /// spelare, med alla poängtyper) ger den här bara en snabb blick på
-/// vem som leder just nu. Läggs längst ner till höger som en flytande
-/// bricka ovanpå resten av brädet (se game_board_screen.dart).
+/// vem som leder just nu. Visas längst till höger i [TopStatusBar]
+/// (se game_board_screen.dart), inte som en flytande bricka ovanpå
+/// brädet – då riskerade den att skymma egna/motståndarens kort.
 class TotalScoreBoard extends StatelessWidget {
   final String youName;
   final int youPoints;
@@ -105,7 +106,7 @@ class _Row extends StatelessWidget {
         ),
         const SizedBox(width: 6),
         ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 72),
+          constraints: const BoxConstraints(maxWidth: 92),
           child: Text(
             name,
             maxLines: 1,
@@ -117,16 +118,19 @@ class _Row extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 6),
+        // VP-ikonen är medvetet större än de andra ikonerna på raden
+        // (segerpoäng är det enda som faktiskt avgör vem som vinner) –
+        // se önskemål om att göra totalställningen "tydligare".
         ClipRRect(
-          borderRadius: BorderRadius.circular(3),
+          borderRadius: BorderRadius.circular(4),
           child: Image.asset(CatanAssets.pointVictory,
-              width: 14, height: 14, fit: BoxFit.cover),
+              width: 20, height: 20, fit: BoxFit.cover),
         ),
-        const SizedBox(width: 3),
+        const SizedBox(width: 4),
         Text('$points',
             style: const TextStyle(
                 color: Colors.white,
-                fontSize: 13,
+                fontSize: 17,
                 fontWeight: FontWeight.w800)),
         if (hasHeroToken) ...[
           const SizedBox(width: 4),

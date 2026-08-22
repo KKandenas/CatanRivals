@@ -166,6 +166,26 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
         _handleResult(context, notifier.rollProductionDie());
     final diceRollKey =
         '${state.productionRoll}-${state.eventDieFace}-${state.activePlayerId}';
+    // Vilken fas den aktiva spelaren är i just nu, till "DIN TUR"-
+    // bannern nedan – "fyll på resurser" särskiljs från "utför actions"
+    // med samma nyckel som styr tärningskastets popup
+    // (DiceRollSummaryBanner/_dismissedDiceRollKey): innan den är
+    // stängd väntar man fortfarande på att trycka + på sina regioner,
+    // annars är man fri att bygga/spela kort. Handjustering och
+    // kortbytesfasen har egna, redan spårade lägen.
+    String turnPhaseLabel() {
+      if (!state.diceRolled) return 'slå tärningarna';
+      if (state.handAdjustmentPhase == HandAdjustmentPhase.drawing) {
+        return 'fyll på kort';
+      }
+      if (state.handAdjustmentPhase == HandAdjustmentPhase.discarding) {
+        return 'släng kort';
+      }
+      if (state.tradePhase != TradePhase.none) return 'byt kort';
+      if (_dismissedDiceRollKey != diceRollKey) return 'fyll på resurser';
+      return 'utför actions';
+    }
+
     // HandDocks kortval (se nedan) återanvänds för handjusteringens
     // släng-läge, kortbytesfasens gratisbyte och kika-alternativets
     // slängsteg – de är aldrig aktiva samtidigt (kortbytesfasen börjar
@@ -275,7 +295,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   child: Text(
                     state.activePlayerIsMe
-                        ? 'DIN TUR'
+                        ? 'DIN TUR – ${turnPhaseLabel()}'
                         : '${state.opponent.name}s TUR',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
@@ -292,6 +312,17 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 totalVictoryPoints: opponentTotalVictoryPoints,
                 hasHeroToken: opponentHasHeroToken,
                 hasTradeToken: opponentHasTradeToken,
+                trailing: TotalScoreBoard(
+                  youName: state.you.name,
+                  youPoints: youTotalVictoryPoints,
+                  youHaveHeroToken: youHaveHeroToken,
+                  youHaveTradeToken: youHaveTradeToken,
+                  amIRed: state.amIRed,
+                  opponentName: state.opponent.name,
+                  opponentPoints: opponentTotalVictoryPoints,
+                  opponentHasHeroToken: opponentHasHeroToken,
+                  opponentHasTradeToken: opponentHasTradeToken,
+                ),
               ),
               // Kortbytesfasen (regelhäftet s. 9), sist i omgången efter
               // handjusteringen – en vanlig rad högst upp (inte en
@@ -719,26 +750,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 ),
               ),
             ],
-          ),
-          // Totalställningen (segerpoäng för båda spelarna på en
-          // gång, se TotalScoreBoard) längst ner till höger, ovanpå
-          // resten av brädet – ScoreSummary-rutorna ovan visar redan
-          // detaljerna per spelare var för sig, den här ger bara en
-          // snabb jämförelse av vem som leder just nu.
-          Positioned(
-            right: 8,
-            bottom: HandDock.dockHeight + 6,
-            child: TotalScoreBoard(
-              youName: state.you.name,
-              youPoints: youTotalVictoryPoints,
-              youHaveHeroToken: youHaveHeroToken,
-              youHaveTradeToken: youHaveTradeToken,
-              amIRed: state.amIRed,
-              opponentName: state.opponent.name,
-              opponentPoints: opponentTotalVictoryPoints,
-              opponentHasHeroToken: opponentHasHeroToken,
-              opponentHasTradeToken: opponentHasTradeToken,
-            ),
           ),
         ],
       ),
