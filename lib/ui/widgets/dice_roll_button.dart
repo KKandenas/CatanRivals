@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/catan_colors.dart';
 import 'dice_face.dart';
+import 'spin_on_change.dart';
 
 /// Produktionstärningen (regelhäftet s. 7). Visar det senaste kastet
 /// som prickar (som en riktig tärning), eller ett tärningsikon att
@@ -19,32 +20,35 @@ class DiceRollButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final badge = Container(
-      width: 56,
-      height: 56,
-      decoration: BoxDecoration(
-        color: rollable ? const Color(0xFF7CBF6A) : CatanColors.parchment,
-        borderRadius: BorderRadius.circular(10),
-        border: rollable ? Border.all(color: Colors.white, width: 2) : null,
-        boxShadow: [
-          BoxShadow(
-              color: rollable
-                  ? const Color(0xFF7CBF6A).withValues(alpha: 0.6)
-                  : Colors.black45,
-              blurRadius: rollable ? 10 : 3,
-              spreadRadius: rollable ? 1 : 0,
-              offset: const Offset(0, 1)),
-        ],
+    final badge = SpinOnChange<int?>(
+      value: value,
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: rollable ? const Color(0xFF7CBF6A) : CatanColors.parchment,
+          borderRadius: BorderRadius.circular(10),
+          border: rollable ? Border.all(color: Colors.white, width: 2) : null,
+          boxShadow: [
+            BoxShadow(
+                color: rollable
+                    ? const Color(0xFF7CBF6A).withValues(alpha: 0.6)
+                    : Colors.black45,
+                blurRadius: rollable ? 10 : 3,
+                spreadRadius: rollable ? 1 : 0,
+                offset: const Offset(0, 1)),
+          ],
+        ),
+        alignment: Alignment.center,
+        child: value == null
+            ? Icon(Icons.casino,
+                size: 32, color: rollable ? Colors.white : CatanColors.inkSoft)
+            : DiceFace(
+                value: value!,
+                size: 40,
+                dotColor: CatanColors.ink,
+              ),
       ),
-      alignment: Alignment.center,
-      child: value == null
-          ? Icon(Icons.casino,
-              size: 32, color: rollable ? Colors.white : CatanColors.inkSoft)
-          : DiceFace(
-              value: value!,
-              size: 40,
-              dotColor: CatanColors.ink,
-            ),
     );
 
     final withLabel = Column(

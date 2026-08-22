@@ -44,6 +44,12 @@ void main() {
         ),
       ),
     ));
+    // Handkorten tonar in/glider upp när de först läggs till (se
+    // PopIn i hand_dock.dart) – precis som en riktig tärningsanimation
+    // skulle en riktig fingertryck aldrig hinna landa mitt i den första
+    // (osynliga, opacitet 0) bildrutan, men testernas tap() gör exakt
+    // det om vi inte väntar in animationen först.
+    await tester.pumpAndSettle();
   }
 
   group('Brigitta – tärningsfasens gräns', () {
@@ -77,7 +83,8 @@ void main() {
   });
 
   group('canBuild styr dragbarhet', () {
-    testWidgets('canBuild=false gör byggkort otryckbara att dra – ingen drag startar',
+    testWidgets(
+        'canBuild=false gör byggkort otryckbara att dra – ingen drag startar',
         (tester) async {
       var dragStarted = false;
       await pumpDock(
@@ -86,8 +93,8 @@ void main() {
         canBuild: false,
       );
 
-      final gesture = await tester.startGesture(
-          tester.getCenter(find.text('Lagerhus')));
+      final gesture =
+          await tester.startGesture(tester.getCenter(find.text('Lagerhus')));
       await tester.pump(const Duration(milliseconds: 300));
       await gesture.moveBy(const Offset(0, -80));
       await tester.pump();
@@ -98,7 +105,8 @@ void main() {
       expect(dragStarted, isFalse);
     });
 
-    testWidgets('canBuild=true gör byggkort dragbara (LongPressDraggable finns)',
+    testWidgets(
+        'canBuild=true gör byggkort dragbara (LongPressDraggable finns)',
         (tester) async {
       await pumpDock(tester, hand: [BasicSetCards.storehouse], canBuild: true);
 
@@ -107,7 +115,8 @@ void main() {
   });
 
   group('Handjusteringens slängval fungerar för alla kortkategorier', () {
-    testWidgets('byggnads-/hjältekort (expansion) går att välja, inte bara handlingskort',
+    testWidgets(
+        'byggnads-/hjältekort (expansion) går att välja, inte bara handlingskort',
         (tester) async {
       GameCard? selected;
       await pumpDock(

@@ -5,6 +5,7 @@ import '../../models/models.dart';
 import '../theme/catan_colors.dart';
 import 'card_detail_dialog.dart';
 import 'expansion_card_view.dart';
+import 'pop_in.dart';
 import 'score_summary.dart';
 
 /// Bottenfältet (~10%): halvtransparent docka med handkort samt
@@ -98,17 +99,26 @@ class HandDock extends StatelessWidget {
                         scrollDirection: Axis.horizontal,
                         itemCount: player.hand.length,
                         separatorBuilder: (_, __) => const SizedBox(width: 8),
-                        itemBuilder: (context, i) => _HandCard(
-                          card: player.hand[i],
-                          onDragStarted: onDragStarted,
-                          onDragEnd: onDragEnd,
-                          onUseActionCard: onUseActionCard,
-                          diceRolled: diceRolled,
-                          canBuild: canBuild,
-                          selected: player.hand[i] == selectedDiscardCard,
-                          onSelectForDiscard: onSelectForDiscard == null
-                              ? null
-                              : () => onSelectForDiscard!(player.hand[i]),
+                        // PopIn nyckelas på kortets id (inte bara
+                        // index) så att den bara tonar in/glider upp
+                        // ett kort som faktiskt är nytt i handen – ett
+                        // kort som redan låg där behåller sitt State
+                        // (och spelar alltså inte om animationen) även
+                        // om det byter position i listan.
+                        itemBuilder: (context, i) => PopIn(
+                          key: ValueKey(player.hand[i].id),
+                          child: _HandCard(
+                            card: player.hand[i],
+                            onDragStarted: onDragStarted,
+                            onDragEnd: onDragEnd,
+                            onUseActionCard: onUseActionCard,
+                            diceRolled: diceRolled,
+                            canBuild: canBuild,
+                            selected: player.hand[i] == selectedDiscardCard,
+                            onSelectForDiscard: onSelectForDiscard == null
+                                ? null
+                                : () => onSelectForDiscard!(player.hand[i]),
+                          ),
                         ),
                       ),
               ),
@@ -177,8 +187,7 @@ class _HandCard extends StatelessWidget {
             onUseCard: () => onUseActionCard!(card))
         : null;
 
-    final face =
-        _CardFace(card: card, playable: playable, onTap: useActionTap);
+    final face = _CardFace(card: card, playable: playable, onTap: useActionTap);
 
     // Bygg-/enhetskort är bara dragbara när det faktiskt går att bygga
     // just nu (se [GameState.canBuildRightNow]) – annars bara den
@@ -259,7 +268,8 @@ class _CardFace extends StatelessWidget {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0xFF7CBF6A), width: 1.6),
+                  border:
+                      Border.all(color: const Color(0xFF7CBF6A), width: 1.6),
                 ),
               ),
             ),

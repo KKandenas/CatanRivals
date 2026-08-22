@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/models.dart';
 import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
+import 'spin_on_change.dart';
 
 /// Symbolen för en av händelsetärningens sex sidor (se [EventDieFace]),
 /// med bilderna från regelhäftets referenskort. `face: null` (innan
@@ -39,30 +40,33 @@ class EventDieIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final image = face == null ? CatanAssets.eventDieEventCard : _images[face]!;
-    final die = Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: rollable ? const Color(0xFF7CBF6A) : CatanColors.parchment,
-        borderRadius: BorderRadius.circular(10),
-        border: rollable ? Border.all(color: Colors.white, width: 2) : null,
-        boxShadow: [
-          BoxShadow(
-              color: rollable
-                  ? const Color(0xFF7CBF6A).withValues(alpha: 0.6)
-                  : Colors.black45,
-              blurRadius: rollable ? 10 : 3,
-              spreadRadius: rollable ? 1 : 0),
-        ],
-      ),
-      alignment: Alignment.center,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(9),
-        child: Image.asset(
-          image,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) =>
-              Icon(Icons.help, size: size * 0.57, color: CatanColors.ink),
+    final die = SpinOnChange<EventDieFace?>(
+      value: face,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: rollable ? const Color(0xFF7CBF6A) : CatanColors.parchment,
+          borderRadius: BorderRadius.circular(10),
+          border: rollable ? Border.all(color: Colors.white, width: 2) : null,
+          boxShadow: [
+            BoxShadow(
+                color: rollable
+                    ? const Color(0xFF7CBF6A).withValues(alpha: 0.6)
+                    : Colors.black45,
+                blurRadius: rollable ? 10 : 3,
+                spreadRadius: rollable ? 1 : 0),
+          ],
+        ),
+        alignment: Alignment.center,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(9),
+          child: Image.asset(
+            image,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) =>
+                Icon(Icons.help, size: size * 0.57, color: CatanColors.ink),
+          ),
         ),
       ),
     );

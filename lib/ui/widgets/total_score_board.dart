@@ -156,32 +156,79 @@ class _Row extends StatelessWidget {
 /// kant, samma teknik som hörnnitarna i [CarvedFrame]) i stället för
 /// den platta VP-ikonen – "gyllene" är bokstavligt vad som avgör vem
 /// som vinner, så det förtjänar den tydligaste behandlingen på raden.
-class _GoldCoin extends StatelessWidget {
+///
+/// Pulserar kort (skala upp och tillbaka, med en tillfälligt starkare
+/// gyllene glöd) varje gång [points] ökar – en liten mikroanimation
+/// som gör poängökningar synliga i ögonvrån, i stället för att bara
+/// tyst byta siffra.
+class _GoldCoin extends StatefulWidget {
   final int points;
 
   const _GoldCoin({required this.points});
 
   @override
+  State<_GoldCoin> createState() => _GoldCoinState();
+}
+
+class _GoldCoinState extends State<_GoldCoin>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 450));
+    _scale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.4), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 1.4, end: 1.0), weight: 60),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+  }
+
+  @override
+  void didUpdateWidget(covariant _GoldCoin oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.points > oldWidget.points) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 26,
-      height: 26,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: const RadialGradient(
-          center: Alignment(-0.3, -0.3),
-          colors: [Color(0xFFF4DFA0), Color(0xFFC9932A)],
+    return AnimatedBuilder(
+      animation: _scale,
+      builder: (context, child) =>
+          Transform.scale(scale: _scale.value, child: child),
+      child: Container(
+        width: 26,
+        height: 26,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: const RadialGradient(
+            center: Alignment(-0.3, -0.3),
+            colors: [Color(0xFFF4DFA0), Color(0xFFC9932A)],
+          ),
+          border: Border.all(color: const Color(0xFF8A6A2A), width: 1),
+          boxShadow: const [
+            BoxShadow(
+                color: Colors.black45, blurRadius: 2, offset: Offset(0, 1)),
+          ],
         ),
-        border: Border.all(color: const Color(0xFF8A6A2A), width: 1),
-        boxShadow: const [
-          BoxShadow(color: Colors.black45, blurRadius: 2, offset: Offset(0, 1)),
-        ],
-      ),
-      child: Text(
-        '$points',
-        style: const TextStyle(
-            color: CatanColors.ink, fontSize: 13, fontWeight: FontWeight.w800),
+        child: Text(
+          '${widget.points}',
+          style: const TextStyle(
+              color: CatanColors.ink,
+              fontSize: 13,
+              fontWeight: FontWeight.w800),
+        ),
       ),
     );
   }
