@@ -59,90 +59,91 @@ class FeudResolutionCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           clipBehavior: Clip.antiAlias,
           elevation: 10,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AspectRatio(
-                aspectRatio: 1,
-                child: Stack(
-                  fit: StackFit.expand,
+          // Motståndarens rike (där kortet visas, se game_board_screen.dart)
+          // kan vara ganska lågt på vissa skärmar – till skillnad från
+          // EventCardRevealCard behöver den här rutan plats för både
+          // styrkeövertags-raden och en knapp, så en stor kvadratisk bild
+          // ovanpå texten (som gjorde att knappen kunde hamna utanför
+          // synligt område, särskilt för Brödrafejds längre instruktion)
+          // skulle lätt bli för hög. Bilden ligger i stället som en liten
+          // miniatyr bredvid texten, precis som BuildConfirmCard löser
+          // samma problem. SingleChildScrollView är kvar som en extra
+          // säkerhet så att knappen aldrig blir otillgänglig, bara kräver
+          // en skroll i värsta fall.
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Image.asset(
-                      CatanAssets.resolveCardImage(card),
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const ColoredBox(color: CatanColors.woodFrame),
-                    ),
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black.withValues(alpha: 0),
-                              Colors.black.withValues(alpha: 0.8),
-                            ],
-                          ),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: SizedBox(
+                        width: 64,
+                        height: 64,
+                        child: Image.asset(
+                          CatanAssets.resolveCardImage(card),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const ColoredBox(color: CatanColors.woodFrame),
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(14, 36, 14, 12),
-                          child: Text(
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
                             card.name,
                             style: const TextStyle(
-                                fontSize: 18,
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white),
+                                color: CatanColors.ink),
                           ),
-                        ),
+                          if (card.effectText != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              card.effectText!,
+                              style: const TextStyle(
+                                  fontSize: 12.5,
+                                  color: CatanColors.ink,
+                                  height: 1.3),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (card.effectText != null) ...[
-                      Text(
-                        card.effectText!,
-                        style: const TextStyle(
-                            fontSize: 13, color: CatanColors.ink, height: 1.3),
-                      ),
-                      const SizedBox(height: 10),
-                    ],
-                    Text(
-                      _advantageLine,
-                      style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: CatanColors.ink),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      _instructionText,
-                      style: const TextStyle(
-                          fontSize: 12.5,
-                          fontStyle: FontStyle.italic,
-                          color: CatanColors.ink),
-                    ),
-                    const SizedBox(height: 12),
-                    FilledButton(
-                      style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF4F6F45)),
-                      onPressed: _primaryAction,
-                      child: Text(_primaryButtonLabel),
-                    ),
-                  ],
+                const SizedBox(height: 10),
+                Text(
+                  _advantageLine,
+                  style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: CatanColors.ink),
                 ),
-              ),
-            ],
+                const SizedBox(height: 6),
+                Text(
+                  _instructionText,
+                  style: const TextStyle(
+                      fontSize: 12.5,
+                      fontStyle: FontStyle.italic,
+                      color: CatanColors.ink),
+                ),
+                const SizedBox(height: 12),
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF4F6F45)),
+                  onPressed: _primaryAction,
+                  child: Text(_primaryButtonLabel),
+                ),
+              ],
+            ),
           ),
         ),
       ),
