@@ -121,7 +121,7 @@ class CenterStacksStrip extends StatelessWidget {
       // Lätt genomskinlig (samma mönster som HandDock/TopStatusBar) så
       // den delade träbakgrunden bakom hela brädet syns igenom en
       // aning (se game_board_screen.dart).
-      color: CatanColors.woodFrameDark.withValues(alpha: 0.92),
+      color: CatanColors.woodFrameDark.withValues(alpha: 0.75),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       child: Row(
         children: [

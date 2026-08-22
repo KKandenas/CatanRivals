@@ -82,7 +82,7 @@ class HandDock extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: dockHeight,
-      color: CatanColors.woodFrameDark.withValues(alpha: 0.92),
+      color: CatanColors.woodFrameDark.withValues(alpha: 0.75),
       child: SafeArea(
         top: false,
         child: Padding(

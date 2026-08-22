@@ -37,7 +37,7 @@ class TopStatusBar extends StatelessWidget {
       // träbakgrunden bakom hela brädet (se game_board_screen.dart)
       // syns igenom en aning i stället för att helt dölja den.
       decoration: BoxDecoration(
-        color: CatanColors.woodFrameDark.withValues(alpha: 0.92),
+        color: CatanColors.woodFrameDark.withValues(alpha: 0.75),
         border:
             const Border(bottom: BorderSide(color: Colors.black26, width: 1)),
       ),
