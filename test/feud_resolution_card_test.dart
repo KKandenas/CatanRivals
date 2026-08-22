@@ -29,6 +29,7 @@ void main() {
       youHaveAdvantage: true,
       isOnline: false,
       opponentName: 'Björn',
+      hasBuildingToRemove: true,
       onDismiss: () {},
       onStartFeudPick: () {},
       onStartFraternalFeudsPick: () => pressed = true,
@@ -55,6 +56,7 @@ void main() {
       youHaveAdvantage: false,
       isOnline: false,
       opponentName: 'Björn',
+      hasBuildingToRemove: true,
       onDismiss: () {},
       onStartFeudPick: () => pressed = true,
       onStartFraternalFeudsPick: () {},
@@ -81,6 +83,7 @@ void main() {
       youHaveAdvantage: false,
       isOnline: false,
       opponentName: 'Björn',
+      hasBuildingToRemove: true,
       onDismiss: () => dismissed = true,
       onStartFeudPick: () {},
       onStartFraternalFeudsPick: () {},
@@ -97,5 +100,57 @@ void main() {
     await tester.pump();
 
     expect(dismissed, isTrue);
+  });
+
+  testWidgets(
+      'Fejd utan byggnad hos den som ska välja bort: "inget händer" med en OK-knapp som stänger direkt, aldrig "Välj byggnad"',
+      (tester) async {
+    var dismissed = false;
+    await tester.pumpWidget(wrap(FeudResolutionCard(
+      card: BasicSetCards.feud,
+      isTie: false,
+      youHaveAdvantage: false,
+      isOnline: false,
+      opponentName: 'Björn',
+      hasBuildingToRemove: false,
+      onDismiss: () => dismissed = true,
+      onStartFeudPick: () =>
+          fail('ska inte kunna starta bygg-väljaren utan byggnader'),
+      onStartFraternalFeudsPick: () {},
+    )));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Du har inga byggnader att ta bort. Inget händer.'),
+        findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Välj byggnad'), findsNothing);
+    final button = find.widgetWithText(FilledButton, 'OK');
+    expect(button, findsOneWidget);
+
+    await tester.ensureVisible(button);
+    await tester.tap(button, warnIfMissed: false);
+    await tester.pump();
+
+    expect(dismissed, isTrue);
+  });
+
+  testWidgets(
+      'Fejd utan byggnad hos motståndaren: visar motståndarens namn i "inget händer"-texten',
+      (tester) async {
+    await tester.pumpWidget(wrap(FeudResolutionCard(
+      card: BasicSetCards.feud,
+      isTie: false,
+      youHaveAdvantage: true,
+      isOnline: false,
+      opponentName: 'Björn',
+      hasBuildingToRemove: false,
+      onDismiss: () {},
+      onStartFeudPick: () {},
+      onStartFraternalFeudsPick: () {},
+    )));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Björn har inga byggnader att ta bort. Inget händer.'),
+        findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'OK'), findsOneWidget);
   });
 }

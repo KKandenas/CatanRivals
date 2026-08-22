@@ -26,6 +26,14 @@ void main() {
     );
   }
 
+  /// Ger [player]s rike en byggnad (Kloster) på en tom byggplats
+  /// (kolumn 2, nedanför) – krävs för att [GameNotifier.startFeudBuildingPick]
+  /// ska aktiveras alls (se [RealmBoard.hasAnyBuilding]).
+  void giveBuilding(Player player) {
+    player.principality.placeExpansion(
+        2, BuildingRow.below, 0, const PlacedCard(card: BasicSetCards.abbey));
+  }
+
   void forceFeudCard(ProviderContainer container, GameCard card) {
     final notifier = container.read(gameProvider.notifier);
     notifier.state =
@@ -85,6 +93,38 @@ void main() {
     });
   });
 
+  group('RealmBoard.hasAnyBuilding', () {
+    test('false för ett rike utan några utbyggnadskort alls', () {
+      final board = RealmBoard(ownerId: 'test');
+      board.placeSettlement(
+          0, const PlacedCard(card: BasicSetCards.settlement));
+
+      expect(board.hasAnyBuilding, isFalse);
+    });
+
+    test('false när riket bara har skepp/hjältar, inga byggnader', () {
+      final board = RealmBoard(ownerId: 'test');
+      board.placeSettlement(
+          0, const PlacedCard(card: BasicSetCards.settlement));
+      board.placeExpansion(0, BuildingRow.above, 0,
+          const PlacedCard(card: BasicSetCards.austin));
+
+      expect(board.hasAnyBuilding, isFalse);
+    });
+
+    test('true så fort minst en byggnad är utplacerad', () {
+      final board = RealmBoard(ownerId: 'test');
+      board.placeSettlement(
+          0, const PlacedCard(card: BasicSetCards.settlement));
+      board.placeExpansion(0, BuildingRow.above, 0,
+          const PlacedCard(card: BasicSetCards.austin));
+      board.placeExpansion(0, BuildingRow.below, 0,
+          const PlacedCard(card: BasicSetCards.abbey));
+
+      expect(board.hasAnyBuilding, isTrue);
+    });
+  });
+
   group('Fejd', () {
     test('startFeudBuildingPick är no-op utan uppslaget händelsekort', () {
       final container = readyContainer();
@@ -125,6 +165,7 @@ void main() {
       final container = readyContainer();
       addTearDown(container.dispose);
       giveStrength(container.read(gameProvider).opponent, 2);
+      giveBuilding(container.read(gameProvider).you);
       forceFeudCard(container, BasicSetCards.feud);
       final notifier = container.read(gameProvider.notifier);
 
@@ -134,10 +175,27 @@ void main() {
       expect(container.read(gameProvider).feudBuildingPickActive, isTrue);
     });
 
+    test(
+        'startFeudBuildingPick är no-op om du inte har någon byggnad att ta bort (bara skepp/hjältar eller inget alls)',
+        () {
+      final container = readyContainer();
+      addTearDown(container.dispose);
+      giveStrength(container.read(gameProvider).opponent, 2);
+      // Ingen byggnad placerad hos "you" – bara starthänder/regioner.
+      forceFeudCard(container, BasicSetCards.feud);
+      final notifier = container.read(gameProvider.notifier);
+
+      final error = notifier.startFeudBuildingPick();
+
+      expect(error, isNull);
+      expect(container.read(gameProvider).feudBuildingPickActive, isFalse);
+    });
+
     test('selectFeudBuilding avvisar hjältar/skepp', () {
       final container = readyContainer();
       addTearDown(container.dispose);
       giveStrength(container.read(gameProvider).opponent, 2);
+      giveBuilding(container.read(gameProvider).you);
       container.read(gameProvider).you.principality.placeExpansion(
           0, BuildingRow.above, 0, const PlacedCard(card: BasicSetCards.austin));
       forceFeudCard(container, BasicSetCards.feud);
@@ -187,9 +245,11 @@ void main() {
       final container = readyContainer();
       addTearDown(container.dispose);
       giveStrength(container.read(gameProvider).opponent, 2);
+      giveBuilding(container.read(gameProvider).you);
       forceFeudCard(container, BasicSetCards.feud);
       final notifier = container.read(gameProvider.notifier);
       notifier.startFeudBuildingPick();
+      expect(container.read(gameProvider).feudBuildingPickActive, isTrue);
 
       final error = notifier.dropRoad(3, BasicSetCards.road);
 
@@ -200,9 +260,11 @@ void main() {
       final container = readyContainer();
       addTearDown(container.dispose);
       giveStrength(container.read(gameProvider).opponent, 2);
+      giveBuilding(container.read(gameProvider).you);
       forceFeudCard(container, BasicSetCards.feud);
       final notifier = container.read(gameProvider.notifier);
       notifier.startFeudBuildingPick();
+      expect(container.read(gameProvider).feudBuildingPickActive, isTrue);
 
       notifier.cancelFeudBuildingPick();
 

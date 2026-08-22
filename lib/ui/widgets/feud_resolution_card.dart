@@ -24,6 +24,14 @@ class FeudResolutionCard extends StatelessWidget {
   final bool youHaveAdvantage;
   final bool isOnline;
   final String opponentName;
+
+  /// Om den utan styrkeövertaget faktiskt har en byggnad (inte
+  /// skepp/hjältar) att ta bort – bara relevant för Fejd (se
+  /// [RealmBoard.hasAnyBuilding]). Utan kontrollen skulle Fejd be om
+  /// ett val som inte går att göra när det riket bara har skepp/
+  /// hjältar/ingenting utplacerat.
+  final bool hasBuildingToRemove;
+
   final VoidCallback onDismiss;
   final VoidCallback onStartFeudPick;
   final VoidCallback onStartFraternalFeudsPick;
@@ -35,6 +43,7 @@ class FeudResolutionCard extends StatelessWidget {
     required this.youHaveAdvantage,
     required this.isOnline,
     required this.opponentName,
+    required this.hasBuildingToRemove,
     required this.onDismiss,
     required this.onStartFeudPick,
     required this.onStartFraternalFeudsPick,
@@ -154,6 +163,11 @@ class FeudResolutionCard extends StatelessWidget {
     if (isTie) return 'Inget händer.';
     if (!_isFraternalFeuds) {
       // Fejd: gäller den utan övertaget.
+      if (!hasBuildingToRemove) {
+        return youHaveAdvantage
+            ? '$opponentName har inga byggnader att ta bort. Inget händer.'
+            : 'Du har inga byggnader att ta bort. Inget händer.';
+      }
       return youHaveAdvantage
           ? 'Berätta för $opponentName vilka 3 byggnader hen får välja '
               'mellan – hen väljer sedan vilken som ska bort på sin skärm.'
@@ -174,7 +188,9 @@ class FeudResolutionCard extends StatelessWidget {
 
   String get _primaryButtonLabel {
     if (isTie) return 'OK';
-    if (!_isFraternalFeuds && !youHaveAdvantage) return 'Välj byggnad';
+    if (!_isFraternalFeuds && !youHaveAdvantage && hasBuildingToRemove) {
+      return 'Välj byggnad';
+    }
     if (_isFraternalFeuds && !isOnline && youHaveAdvantage) {
       return 'Välj kort';
     }
@@ -183,7 +199,9 @@ class FeudResolutionCard extends StatelessWidget {
 
   VoidCallback get _primaryAction {
     if (isTie) return onDismiss;
-    if (!_isFraternalFeuds && !youHaveAdvantage) return onStartFeudPick;
+    if (!_isFraternalFeuds && !youHaveAdvantage && hasBuildingToRemove) {
+      return onStartFeudPick;
+    }
     if (_isFraternalFeuds && !isOnline && youHaveAdvantage) {
       return onStartFraternalFeudsPick;
     }

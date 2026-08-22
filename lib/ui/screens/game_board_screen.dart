@@ -448,6 +448,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                                     state.myPlayerId,
                             isOnline: state.isOnline,
                             opponentName: state.opponent.name,
+                            hasBuildingToRemove:
+                                state.strengthAdvantagePlayerId ==
+                                        state.myPlayerId
+                                    ? state.opponent.principality
+                                        .hasAnyBuilding
+                                    : state.you.principality.hasAnyBuilding,
                             onDismiss: () => _handleResult(
                                 context, notifier.dismissEventCard()),
                             onStartFeudPick: () => _handleResult(context,

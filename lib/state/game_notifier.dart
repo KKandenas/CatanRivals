@@ -416,13 +416,18 @@ class GameNotifier extends Notifier<GameState> {
 
   /// Startar bygg-väljaren när du är den utan styrkeövertaget (se
   /// [GameState.strengthAdvantagePlayerId]). No-op om det inte finns
-  /// något uppslaget Fejd-kort, om det är oavgjort, eller om det är du
-  /// som har övertaget (då är det motståndaren som ska välja bort en
-  /// byggnad, inte du).
+  /// något uppslaget Fejd-kort, om det är oavgjort, om det är du som
+  /// har övertaget (då är det motståndaren som ska välja bort en
+  /// byggnad, inte du), eller om du inte har någon byggnad över huvud
+  /// taget att välja mellan (se [RealmBoard.hasAnyBuilding]) – annars
+  /// skulle spelet be dig välja en byggnad som inte finns, utan något
+  /// sätt att komma vidare (game_board_screen.dart visar i stället
+  /// "inget händer" direkt i det fallet, se [FeudResolutionCard]).
   String? startFeudBuildingPick() {
     if (state.drawnEventCard == null) return null;
     final advantage = state.strengthAdvantagePlayerId;
     if (advantage == null || advantage == state.myPlayerId) return null;
+    if (!state.you.principality.hasAnyBuilding) return null;
     state = state.copyWith(
         feudBuildingPickActive: true, clearFeudPickedBuilding: true);
     return null;

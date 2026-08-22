@@ -317,6 +317,21 @@ class RealmBoard {
     return removed;
   }
 
+  /// Om riket har minst en byggnad (inte skepp/hjältar/andra enheter)
+  /// utplacerad – Fejd (regelhäftet: "the opponent must remove one of
+  /// them") kan bara göra något om det faktiskt finns en byggnad att
+  /// välja mellan, se [GameNotifier.startFeudBuildingPick]. Utan den
+  /// här kontrollen skulle spelet be spelaren välja en byggnad som
+  /// inte finns, utan något sätt att komma vidare.
+  bool get hasAnyBuilding {
+    for (final node in _settlements.values) {
+      for (final site in [...node.aboveSites, ...node.belowSites]) {
+        if (site?.card.expansionKind == ExpansionKind.building) return true;
+      }
+    }
+    return false;
+  }
+
   /// Om ett kort med [cardId] redan ligger på en byggplats någonstans i
   /// riket (byar/städers ovanför-/nedanför-platser) – används för att
   /// kontrollera unika kort (regelhäftet: "(1x)" i kortnamnet, t.ex.
