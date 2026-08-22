@@ -23,10 +23,10 @@ class EraOfGoldCards {
     category: CardCategory.action,
     actionKind: ActionKind.attack,
     expansionSet: ExpansionSet.eraOfGold,
-    requirement: 'Strength advantage',
+    requirement: 'Styrkeövertag',
     effectText:
-        'You may take as many resources of the same type from your opponent as 1 of your '
-        'regions can accommodate.',
+        'Du får ta lika många resurser av samma sort från motståndaren '
+        'som en av dina regioner har plats för.',
     imageAsset: 'assets/images/cards/action_brigands.png',
   );
 
@@ -36,7 +36,7 @@ class EraOfGoldCards {
     category: CardCategory.action,
     actionKind: ActionKind.attack,
     expansionSet: ExpansionSet.eraOfGold,
-    effectText: 'For each of your Pirate Ships, your opponent must give you up to 2 gold.',
+    effectText: 'För varje eget piratskepp måste motståndaren ge dig upp till 2 guld.',
     imageAsset: 'assets/images/cards/action_gudrun.png',
   );
 
@@ -46,10 +46,10 @@ class EraOfGoldCards {
     category: CardCategory.action,
     actionKind: ActionKind.attack,
     expansionSet: ExpansionSet.eraOfGold,
-    requirement: '3 commerce points or city',
+    requirement: '3 handelspoäng eller stad',
     effectText:
-        'Take up to 2 resources of your choice from your opponent and give him 1 resource of '
-        'your choice in return.',
+        'Ta upp till 2 valfria resurser från motståndaren och ge tillbaka '
+        '1 valfri resurs.',
     imageAsset: 'assets/images/cards/action_merchant.png',
   );
 
@@ -60,8 +60,8 @@ class EraOfGoldCards {
     actionKind: ActionKind.neutral,
     expansionSet: ExpansionSet.eraOfGold,
     effectText:
-        'Play this card before rolling the dice and determine the event Celebration. You '
-        'receive 1 additional resource for the Celebration.',
+        'Spela detta kort innan du slår tärningen och bestäm att '
+        'händelsen blir Fest. Du får 1 extra resurs för Festen.',
     imageAsset: 'assets/images/cards/actions/action_elder_with_bird.png',
   );
 
@@ -71,8 +71,8 @@ class EraOfGoldCards {
     category: CardCategory.action,
     actionKind: ActionKind.attack,
     expansionSet: ExpansionSet.eraOfGold,
-    requirement: 'Merchant Guild',
-    effectText: 'You immediately receive 2 resources of your choice from your opponent.',
+    requirement: 'Köpmansgille',
+    effectText: 'Du får omedelbart 2 valfria resurser från motståndaren.',
     imageAsset: 'assets/images/cards/action_trade_master.png',
   );
 
@@ -85,10 +85,11 @@ class EraOfGoldCards {
     name: 'Guldgömma',
     category: CardCategory.regionExpansion,
     expansionSet: ExpansionSet.eraOfGold,
-    requirement: 'Hero with at least 1 strength point',
+    requirement: 'Hjälte med minst 1 styrkepoäng',
     effectText:
-        'The Gold Cache may also be used to store the gold you received. When the event '
-        'Brigand Attack is rolled, the gold in the cache is neither counted nor stolen.',
+        'Guldgömman kan även användas för att lagra guld du fått. När '
+        'händelsen Brigadanfall slås räknas inte guldet i gömman, och '
+        'det kan inte stjälas.',
     imageAsset: 'assets/images/cards/region_expansion_gold_cache.png',
   );
 
@@ -104,8 +105,9 @@ class EraOfGoldCards {
     expansionSet: ExpansionSet.eraOfGold,
     buildingCost: {ResourceType.lumber: 1, ResourceType.wool: 1},
     effectText:
-        'Your opponent must remove 1 trade ship of his choice from his principality and place '
-        'it on the discard pile. Event Plentiful Harvest: You receive 1 gold.',
+        'Motståndaren måste ta bort 1 valfritt handelsskepp från sitt '
+        'rike och lägga det bland kasserade kort. Riklig skörd: Du får '
+        '1 guld.',
     imageAsset: 'assets/images/cards/dioramas/diorama_two_ships.png',
   );
 
@@ -123,8 +125,8 @@ class EraOfGoldCards {
     victoryPoints: 1,
     commercePoints: 2,
     effectText:
-        "Money can't buy you happiness. But taking it away from others can. Is a prerequisite "
-        'for other expansion and action cards.',
+        'Pengar köper ingen lycka. Men att ta dem från andra gör det. '
+        'Krävs för vissa andra bygg- och handlingskort.',
     imageAsset: 'assets/images/cards/city_expansion_merchant_guild.png',
   );
 
@@ -137,8 +139,9 @@ class EraOfGoldCards {
     buildingCost: {ResourceType.lumber: 2, ResourceType.ore: 2, ResourceType.brick: 1},
     victoryPoints: 1,
     effectText:
-        'If you have the trade advantage and the event Trade is rolled on the event die, you '
-        'may take 2 resources of your choice from your opponent.',
+        'Om du har handelsövertaget och händelsen Handel slås på '
+        'händelsetärningen får du ta 2 valfria resurser från '
+        'motståndaren.',
     imageAsset: 'assets/images/cards/city_expansion_moneylender.png',
   );
 
@@ -150,8 +153,8 @@ class EraOfGoldCards {
     buildingCost: {ResourceType.brick: 1, ResourceType.wool: 1, ResourceType.ore: 1},
     commercePoints: 1,
     effectText:
-        'As long as at least 3 trade ships are placed in your principality, the Harbor is '
-        'worth 1 victory point.',
+        'Så länge du har minst 3 handelsskepp i ditt rike är Hamnen '
+        'värd 1 segerpoäng.',
     imageAsset: 'assets/images/cards/city_expansion_harbor.png',
   );
 
@@ -163,7 +166,7 @@ class EraOfGoldCards {
     buildingCost: {ResourceType.grain: 2, ResourceType.wool: 2, ResourceType.brick: 1},
     commercePoints: 1,
     victoryPoints: 1,
-    effectText: 'The Marketplace and the Harbor receive a second commerce point.',
+    effectText: 'Marknadsplatsen och Hamnen får ytterligare 1 handelspoäng.',
     imageAsset: 'assets/images/cards/dioramas/diorama_small_shop.png',
   );
 
@@ -173,7 +176,7 @@ class EraOfGoldCards {
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfGold,
     buildingCost: {ResourceType.lumber: 1, ResourceType.ore: 1, ResourceType.brick: 1},
-    effectText: 'Once per each of your turns, you may use this Mint to trade 1 gold for 1 other resource of your choice.',
+    effectText: 'En gång per egen tur får du använda Myntverket för att byta 1 guld mot 1 valfri annan resurs.',
     imageAsset: 'assets/images/cards/city_expansion_mint.png',
   );
 
@@ -184,8 +187,8 @@ class EraOfGoldCards {
     expansionSet: ExpansionSet.eraOfGold,
     buildingCost: {ResourceType.brick: 2, ResourceType.ore: 2, ResourceType.wool: 1},
     victoryPoints: 1,
-    requirement: 'Merchant Guild',
-    effectText: 'If you build the Staple House, you immediately receive 2 resources of your choice.',
+    requirement: 'Köpmansgille',
+    effectText: 'Bygger du Stapelhuset får du omedelbart 2 valfria resurser.',
     imageAsset: 'assets/images/cards/city_expansion_staple_house.png',
   );
 
@@ -196,7 +199,7 @@ class EraOfGoldCards {
     expansionSet: ExpansionSet.eraOfGold,
     buildingCost: {ResourceType.wool: 2, ResourceType.gold: 2, ResourceType.brick: 1},
     victoryPoints: 1,
-    effectText: 'Each of your trade ships is worth 1 more commerce point.',
+    effectText: 'Vart och ett av dina handelsskepp är värt 1 handelspoäng till.',
     imageAsset: 'assets/images/cards/city_expansion_salt_silo.png',
   );
 
@@ -209,7 +212,7 @@ class EraOfGoldCards {
     name: 'Gåva till fursten',
     category: CardCategory.event,
     expansionSet: ExpansionSet.eraOfGold,
-    effectText: 'Each player receives 1 gold for each unit with at least 1 strength point.',
+    effectText: 'Varje spelare får 1 guld för varje enhet med minst 1 styrkepoäng.',
     imageAsset: 'assets/images/cards/event_gift_for_the_prince.png',
   );
 
