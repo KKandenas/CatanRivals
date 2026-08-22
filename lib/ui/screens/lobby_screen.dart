@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../services/session_storage.dart';
 import '../../state/game_notifier.dart';
 import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
+import '../widgets/rules_button.dart';
 import 'game_board_screen.dart';
+import 'rules_screen.dart';
 
 /// Startskärmen: skapa ett rum, gå med i ett rum via kod, eller spela
 /// lokalt på samma iPad (ingen synk). Visas innan [GameBoardScreen].
@@ -20,6 +23,69 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   final _codeController = TextEditingController();
   bool _busy = false;
   String? _error;
+
+  /// Om appen just nu kollar efter en sparad, pågående match att
+  /// återuppta (se [SessionStorage]) – sant tills kollen är klar, så att
+  /// lobbyformuläret inte hinner blinka till innan en lyckad
+  /// återanslutning navigerar vidare.
+  bool _resuming = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Väntar in att widgetträdet är helt klarbyggt innan providern rörs
+    // vid – Riverpod tillåter inte att ett providertillstånd ändras
+    // medan trädet fortfarande byggs (skulle annars kasta "Tried to
+    // modify a provider while the widget tree was building" så fort en
+    // sparad match finns, eftersom [resumeLocalSnapshot] muterar
+    // `state` helt synkront utan ett await innan, till skillnad från
+    // [resumeRoom] som redan är säker tack vare sina egna
+    // nätverksanrop). En vanlig `Future.delayed(Duration.zero)` visade
+    // sig INTE räcka (fortfarande inom samma "bygger fortfarande"-
+    // fönster) – `addPostFrameCallback` är det Flutter-idiomatiska,
+    // garanterat säkra sättet att vänta tills det första bygget (layout
+    // + paint) faktiskt är klart.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _tryResumeSession());
+  }
+
+  /// Körs en gång vid start: om en tidigare match finns sparad (senast
+  /// en sidladdning avbröt den, se main.dart:s lyssnare) återupptas den
+  /// direkt i stället för att visa lobbyformuläret – annars fortsätter
+  /// [_resuming] till `false` och den vanliga lobbyn visas som vanligt.
+  Future<void> _tryResumeSession() async {
+    final session = SessionStorage.read();
+    if (session == null) {
+      if (mounted) setState(() => _resuming = false);
+      return;
+    }
+
+    final notifier = ref.read(gameProvider.notifier);
+    if (session['kind'] == 'local') {
+      final snapshot = session['snapshot'];
+      if (snapshot is Map) {
+        notifier.resumeLocalSnapshot(Map<String, dynamic>.from(snapshot));
+        if (mounted) _goToBoard();
+        return;
+      }
+    } else if (session['kind'] == 'online') {
+      final error = await notifier.resumeRoom(
+        session['roomCode'] as String,
+        session['mode'] as String,
+        session['myName'] as String,
+      );
+      if (error == null) {
+        if (mounted) _goToBoard();
+        return;
+      }
+      SessionStorage.clear();
+      if (mounted) {
+        setState(() {
+          _error = 'Kunde inte återansluta till din förra match: $error';
+        });
+      }
+    }
+    if (mounted) setState(() => _resuming = false);
+  }
 
   @override
   void dispose() {
@@ -80,6 +146,13 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_resuming) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+      );
+    }
+
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
@@ -88,6 +161,16 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           // Mörk slöja över bakgrunden så vit text/knappar syns tydligt
           // ovanpå bilden, oavsett hur ljus den är där de hamnar.
           Container(color: Colors.black.withValues(alpha: 0.35)),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: RulesButton(onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const RulesScreen()))),
+              ),
+            ),
+          ),
           SafeArea(
             child: Center(
               child: ConstrainedBox(

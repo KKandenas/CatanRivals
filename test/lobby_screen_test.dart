@@ -1,0 +1,72 @@
+import 'package:catan_rivals/services/session_storage.dart';
+import 'package:catan_rivals/state/game_notifier.dart';
+import 'package:catan_rivals/ui/screens/game_board_screen.dart';
+import 'package:catan_rivals/ui/screens/lobby_screen.dart';
+import 'package:catan_rivals/ui/screens/rules_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+/// Testar startskärmens nya regel-knapp ("?" uppe till vänster, se
+/// rules_button.dart) och sidladdnings-återupptagningen (se
+/// lobby_screen.dart:s [SessionStorage]-koll i initState, som körs via
+/// [WidgetsBinding.addPostFrameCallback] – se kommentaren där för en
+/// speltestad bugg: en bar `Future.delayed(Duration.zero)` räckte INTE
+/// för att undvika Riverpods "Tried to modify a provider while the
+/// widget tree was building", bara `addPostFrameCallback` gjorde det).
+void main() {
+  tearDown(SessionStorage.clear);
+
+  Future<void> pumpLobby(WidgetTester tester) async {
+    await tester.pumpWidget(const ProviderScope(
+      child: MaterialApp(home: LobbyScreen()),
+    ));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('visar lobbyformuläret direkt när ingen sparad match finns',
+      (tester) async {
+    await pumpLobby(tester);
+
+    expect(find.text('Skapa nytt rum'), findsOneWidget);
+    expect(find.text('Spela lokalt (utan synk)'), findsOneWidget);
+  });
+
+  testWidgets('"?"-knappen öppnar regelsidan', (tester) async {
+    await pumpLobby(tester);
+
+    expect(find.byType(RulesScreen), findsNothing);
+    await tester.tap(find.text('?'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RulesScreen), findsOneWidget);
+  });
+
+  testWidgets(
+      'en sparad lokal match återupptas direkt (utan att krascha mot Riverpods bygg-spärr)',
+      (tester) async {
+    // Samma yta som GameBoardScreens övriga tester (t.ex.
+    // build_confirm_test.dart) – standardytan (800x600) är för liten
+    // för hela brädet och ger ett ovidkommande overflow-fel.
+    tester.view.physicalSize = const Size(1200, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    // Bygg ett giltigt ögonblick precis som main.dart:s lyssnare skulle
+    // ha sparat det, via en helt fristående GameNotifier.
+    final scratch = ProviderContainer();
+    scratch.read(gameProvider.notifier).playLocally();
+    final snapshot = scratch.read(gameProvider.notifier).buildLocalSnapshotJson();
+    scratch.dispose();
+    SessionStorage.saveLocalSnapshot(snapshot);
+
+    await pumpLobby(tester);
+
+    // Lobbyformuläret ska aldrig hinna synas – man landar direkt på
+    // brädet, precis som efter en sidladdning mitt i en match.
+    expect(find.text('Skapa nytt rum'), findsNothing);
+    expect(find.byType(GameBoardScreen), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+}

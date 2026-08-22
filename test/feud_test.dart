@@ -93,6 +93,30 @@ void main() {
     });
   });
 
+  group('RealmBoard.placedExpansionCards', () {
+    test('tom för ett rike utan några utbyggnadskort alls', () {
+      final board = RealmBoard(ownerId: 'test');
+      board.placeSettlement(
+          0, const PlacedCard(card: BasicSetCards.settlement));
+
+      expect(board.placedExpansionCards, isEmpty);
+    });
+
+    test('listar alla bygg-/enhetskort, oavsett kolumn/rad', () {
+      final board = RealmBoard(ownerId: 'test');
+      board.placeSettlement(
+          0, const PlacedCard(card: BasicSetCards.settlement));
+      board.placeExpansion(0, BuildingRow.above, 0,
+          const PlacedCard(card: BasicSetCards.abbey));
+      board.placeExpansion(0, BuildingRow.below, 0,
+          const PlacedCard(card: BasicSetCards.austin));
+
+      expect(
+          board.placedExpansionCards.map((c) => c.id).toSet(),
+          {BasicSetCards.abbey.id, BasicSetCards.austin.id});
+    });
+  });
+
   group('RealmBoard.hasAnyBuilding', () {
     test('false för ett rike utan några utbyggnadskort alls', () {
       final board = RealmBoard(ownerId: 'test');

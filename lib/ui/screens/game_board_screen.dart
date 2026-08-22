@@ -25,6 +25,7 @@ import '../widgets/pending_regions_bar.dart';
 import '../widgets/pill_banner.dart';
 import '../widgets/principality_grid.dart';
 import '../widgets/relocation_instruction_bar.dart';
+import '../widgets/rules_button.dart';
 import '../widgets/scout_prompt_card.dart';
 import '../widgets/scout_region_picker.dart';
 import '../widgets/stack_choice_overlay.dart';
@@ -32,6 +33,7 @@ import '../widgets/top_status_bar.dart';
 import '../widgets/total_score_board.dart';
 import '../widgets/trade_phase_card.dart';
 import 'lobby_screen.dart';
+import 'rules_screen.dart';
 
 /// Huvudskärmen, stående layout: motståndarens namn/status (smal remsa),
 /// motståndarens rike (kompakt), dragstaplar + "Avsluta action-fas" i
@@ -145,6 +147,42 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     confirm?.call();
   }
 
+  /// Lämnar matchen helt (se [GameNotifier.leaveGame]) och går tillbaka
+  /// till startskärmen. Frågar först om man verkligen vill (annars
+  /// alldeles för lätt att av misstag lämna en pågående match via en
+  /// liten hörnknapp) – utom när anropet redan KOMMER från en egen,
+  /// avsiktlig knapp (t.ex. "Till huvudmenyn" på [GameOverOverlay], där
+  /// matchen redan är slut och en extra fråga bara vore i vägen).
+  Future<void> _confirmLeaveGame(BuildContext context, GameNotifier notifier,
+      {bool showConfirmation = true}) async {
+    if (showConfirmation) {
+      final leave = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Lämna spelet?'),
+          content: const Text(
+              'Du lämnar matchen och kommer tillbaka till startskärmen.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Avbryt'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Lämna'),
+            ),
+          ],
+        ),
+      );
+      if (leave != true) return;
+    }
+    notifier.leaveGame();
+    if (context.mounted) {
+      Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const LobbyScreen()));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(gameProvider);
@@ -241,10 +279,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 IconButton(
                   icon: const Icon(Icons.logout),
                   tooltip: 'Lämna rummet',
-                  onPressed: () {
-                    notifier.playLocally();
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                  },
+                  onPressed: () => _confirmLeaveGame(context, notifier,
+                      showConfirmation: false),
                 ),
               ],
             ),
@@ -808,10 +844,53 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
               opponentHasTradeToken: opponentHasTradeToken,
               onNewLocalMatch:
                   state.isOnline ? null : () => notifier.playLocally(),
-              onToMainMenu: () => Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const LobbyScreen())),
+              onToMainMenu: () => _confirmLeaveGame(context, notifier,
+                  showConfirmation: false),
+            )
+          else
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Row(
+                  children: [
+                    RulesButton(onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const RulesScreen()))),
+                    const SizedBox(width: 8),
+                    _ExitButton(
+                        onTap: () => _confirmLeaveGame(context, notifier)),
+                  ],
+                ),
+              ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Liten rund knapp för att lämna matchen helt (se
+/// [_GameBoardScreenState._confirmLeaveGame]) – samma stil som
+/// [RulesButton] bredvid, bara med ett annat ikon.
+class _ExitButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _ExitButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: Colors.black54,
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFFC9A227), width: 1.4),
+        ),
+        alignment: Alignment.center,
+        child: const Icon(Icons.logout, size: 18, color: Colors.white),
       ),
     );
   }

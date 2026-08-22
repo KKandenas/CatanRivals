@@ -21,6 +21,11 @@ dependencies:
 
   cupertino_icons: ^1.0.8
 
+  # localStorage-åtkomst för SessionStorage (återuppta ett spel efter en
+  # sidladdning) – redan en transitiv Firebase-beroende, men listad
+  # explicit här eftersom vi använder den direkt (session_storage_web.dart).
+  web: ^1.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

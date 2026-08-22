@@ -346,6 +346,17 @@ class RealmBoard {
     return false;
   }
 
+  /// Alla bygg-/enhetskort som just nu ligger på en byggplats någonstans
+  /// i riket (byar/städers ovanför-/nedanför-platser) – används för att
+  /// räkna ut vilka kort som redan är "kända" (utdelade) när
+  /// [GameNotifier.resumeRoom] bygger om de lokala draghögarna efter en
+  /// sidladdning.
+  List<GameCard> get placedExpansionCards => [
+        for (final node in _settlements.values)
+          for (final site in [...node.aboveSites, ...node.belowSites])
+            if (site != null) site.card,
+      ];
+
   /// Summan av lagrade resurser av given typ över alla regioner i riket
   /// (regelhäftet s. 3: varje region lagrar 0–3 av sin egen resurstyp).
   int resourceTotal(ResourceType type) {

@@ -11,6 +11,7 @@ import '../data/region_deck.dart';
 import '../models/models.dart';
 import '../services/game_sync_providers.dart';
 import '../services/game_sync_service.dart';
+import '../services/session_storage.dart';
 import 'game_state.dart';
 
 /// Spelets state-provider. Läs med `ref.watch(gameProvider)` och mutera
@@ -211,6 +212,217 @@ class GameNotifier extends Notifier<GameState> {
     );
     _subscribeToRoom(roomCode);
     return null;
+  }
+
+  /// Återansluter till ett rum du redan var med i (regelhäftet ger
+  /// förstås ingen ledning här – det här är bara en teknisk lösning på
+  /// att en sidladdning annars kastar ut spelaren till startskärmen, se
+  /// [SessionStorage]). Till skillnad från [joinRoom] skapar den här
+  /// INGEN ny gäst-plats – den hämtar bara ditt eget, redan existerande
+  /// spelar-id:s data på nytt (både [hostRoom] och [joinRoom] sparar
+  /// spelaren under id:t "host" respektive "guest", så [role] räcker för
+  /// att veta vilken av de två du är).
+  ///
+  /// [you]s handkort/rike hämtas alltså från Firebase precis som
+  /// [opponent]s – till skillnad från normalt (där bara [_syncMyPlayer]
+  /// SKRIVER dit, aldrig läser tillbaka) eftersom den här klienten just
+  /// tappat sin egen lokala kopia. De fyra draghögarnas EXAKTA innehåll
+  /// synkas dock aldrig (bara antalet, se [_drawStacks]) – de byggs om
+  /// lokalt från grunden, se [_reconstructDrawStacksFromKnownCards].
+  /// Regionstapeln och händelsekortsstapeln byggs om från grunden
+  /// (nyblandade) – det finns ingen synkad information om exakt vilka
+  /// kort som redan dragits därifrån, bara en känd brist.
+  ///
+  /// Returnerar `null` vid lyckad återanslutning, annars ett
+  /// användarvänligt felmeddelande (rummet finns t.ex. inte kvar).
+  Future<String?> resumeRoom(
+      String roomCode, String role, String myName) async {
+    if (role != 'host' && role != 'guest') return 'Okänd spelarroll.';
+    final opponentRole = role == 'host' ? 'guest' : 'host';
+    try {
+      final players = await _sync
+          .watchPlayers(roomCode)
+          .first
+          .timeout(const Duration(seconds: 10));
+      final you = players[role];
+      if (you == null) {
+        return 'Rummet finns inte längre. Kontrollera koden.';
+      }
+      final opponent = players[opponentRole] ??
+          MockGame.buildStartingPlayer(opponentRole, '…',
+              isRed: opponentRole == 'host');
+      final centerStacks = await _sync
+          .watchCenterStacks(roomCode)
+          .first
+          .timeout(const Duration(seconds: 10));
+      final turnState = await _sync
+          .watchTurnState(roomCode)
+          .first
+          .timeout(const Duration(seconds: 10));
+
+      _regionDeck = RegionDeck.shuffledRemainingDeck();
+      _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom();
+      _reconstructDrawStacksFromKnownCards(you, opponent, centerStacks);
+
+      state = GameState(
+        you: you,
+        opponent: opponent,
+        centerStacks: centerStacks,
+        mode: role == 'host' ? SessionMode.host : SessionMode.guest,
+        roomCode: roomCode,
+        myPlayerId: role,
+        opponentPlayerId: opponentRole,
+        opponentConnected: players.containsKey(opponentRole),
+        activePlayerId: turnState.activePlayerId,
+        diceRolled: turnState.diceRolled,
+        productionRoll: turnState.productionRoll,
+        eventDieFace: turnState.eventDieFace,
+        drawnEventCard: turnState.drawnEventCard,
+        peekingStackIndex: turnState.peekingStackIndex,
+        winnerId: turnState.winnerId,
+      );
+      _subscribeToRoom(roomCode);
+      return null;
+    } on TimeoutException {
+      return 'Fick ingen kontakt med servern. Kontrollera internetanslutningen och försök igen.';
+    } catch (e) {
+      return 'Kunde inte återansluta till rummet: $e';
+    }
+  }
+
+  /// Bygger om de fyra draghögarna lokalt efter [resumeRoom] – den här
+  /// klienten känner bara till det synkade ANTALET kvar i varje hög
+  /// ([centerStacks]), inte vilka specifika kort. Utgår från grund-
+  /// spelets fulla 36-korspool ([BasicSetDrawDeck]) och drar bort de
+  /// korttyper som redan syns i någon av spelarnas händer eller
+  /// utplacerade på deras riken – annars skulle samma unika byggnad
+  /// (t.ex. Klostret) kunna "dyka upp" igen i en dragstapel trots att
+  /// den redan ligger på brädet. Resten blandas och delas upp exakt
+  /// enligt de synkade antalen, så att högarnas STORLEK alltid stämmer
+  /// (helt avgörande – annars kan senare drag krascha mot en för kort
+  /// lista); den exakta sammansättningen kan skilja sig något från vad
+  /// som "egentligen" låg kvar, vilket är en accepterad brist (samma
+  /// typ av brist som region-/händelsekortsstapeln redan hade).
+  void _reconstructDrawStacksFromKnownCards(
+      Player you, Player opponent, Map<String, int> centerStacks) {
+    final accountedFor = <String, int>{};
+    void markKnown(GameCard card) {
+      accountedFor.update(card.baseId, (v) => v + 1, ifAbsent: () => 1);
+    }
+
+    for (final card in [...you.hand, ...opponent.hand]) {
+      markKnown(card);
+    }
+    for (final board in [you.principality, opponent.principality]) {
+      for (final card in board.placedExpansionCards) {
+        markKnown(card);
+      }
+    }
+
+    final byId = {for (final c in BasicSetCards.all) c.id: c};
+    final pool = <GameCard>[];
+    BasicSetCards.supplyCounts.forEach((id, totalCount) {
+      if (id == 'settlement' || id == 'city' || id == 'road') return;
+      if (id.startsWith('event-')) return;
+      final template = byId[id];
+      if (template == null) return;
+      final remaining = totalCount - (accountedFor[id] ?? 0);
+      // Offset (+1000) så id:na aldrig krockar med de "riktiga"
+      // draghögs-id:na (0..totalCount-1) som redan kan ligga i en hand
+      // eller på ett rike – kortsuffixet måste ändå matcha "-draw-N"
+      // för att [GameCard.baseId] ska fortsätta strippa det korrekt.
+      for (var i = 0; i < remaining; i++) {
+        pool.add(template.copyWith(id: '$id-draw-${1000 + i}'));
+      }
+    });
+    pool.shuffle();
+
+    final counts = [
+      centerStacks['draw1'] ?? 0,
+      centerStacks['draw2'] ?? 0,
+      centerStacks['draw3'] ?? 0,
+      centerStacks['draw4'] ?? 0,
+    ];
+    final stacks = <List<GameCard>>[];
+    var offset = 0;
+    for (final count in counts) {
+      final end = (offset + count).clamp(0, pool.length);
+      stacks.add(pool.sublist(offset.clamp(0, pool.length), end));
+      offset += count;
+    }
+    _drawStacks = stacks;
+  }
+
+  /// Ett JSON-ögonblick av allt som krävs för att återuppta ett HELT
+  /// lokalt spel (inget rum, se [SessionMode.local]) efter en
+  /// sidladdning – till skillnad från [resumeRoom] finns ingen Firebase
+  /// att hämta det synkade innehållet från, så här sparas/återställs
+  /// ALLT rakt av (inklusive de tre lokala dragstaplarna) i stället för
+  /// att byggas om. Sparas av lyssnaren i main.dart, läses av
+  /// [resumeLocalSnapshot].
+  Map<String, dynamic> buildLocalSnapshotJson() => {
+        'you': state.you.toJson(),
+        'opponent': state.opponent.toJson(),
+        'centerStacks': state.centerStacks,
+        'activePlayerId': state.activePlayerId,
+        'diceRolled': state.diceRolled,
+        if (state.productionRoll != null)
+          'productionRoll': state.productionRoll,
+        if (state.eventDieFace != null)
+          'eventDieFace': state.eventDieFace!.name,
+        if (state.drawnEventCard != null)
+          'drawnEventCard': state.drawnEventCard!.toJson(),
+        if (state.winnerId != null) 'winnerId': state.winnerId,
+        'drawStacks': _drawStacks
+            .map((stack) => stack.map((c) => c.toJson()).toList())
+            .toList(),
+        'eventDeck': _eventDeck.map((c) => c.toJson()).toList(),
+        'regionDeck': _regionDeck.map((c) => c.toJson()).toList(),
+      };
+
+  /// Motsatsen till [buildLocalSnapshotJson] – återställer ett helt
+  /// lokalt spel exakt som det var, inklusive de tre lokala
+  /// dragstaplarna (ingen ombyggnad behövs, se [_reconstructDrawStacksFromKnownCards]
+  /// som bara är nödvändig för rum där kortinnehållet inte är synkat).
+  void resumeLocalSnapshot(Map<String, dynamic> json) {
+    List<GameCard> parseCards(Object? raw) => (raw as List)
+        .map((c) => GameCard.fromJson(Map<String, dynamic>.from(c as Map)))
+        .toList();
+
+    _drawStacks = (json['drawStacks'] as List)
+        .map((stack) => parseCards(stack))
+        .toList();
+    _eventDeck = parseCards(json['eventDeck']);
+    _regionDeck = parseCards(json['regionDeck']);
+
+    state = GameState(
+      you: Player.fromJson(Map<String, dynamic>.from(json['you'] as Map)),
+      opponent:
+          Player.fromJson(Map<String, dynamic>.from(json['opponent'] as Map)),
+      centerStacks: Map<String, int>.from(json['centerStacks'] as Map),
+      activePlayerId: json['activePlayerId'] as String,
+      diceRolled: json['diceRolled'] as bool? ?? false,
+      productionRoll: json['productionRoll'] as int?,
+      eventDieFace: json['eventDieFace'] == null
+          ? null
+          : EventDieFace.values.byName(json['eventDieFace'] as String),
+      drawnEventCard: json['drawnEventCard'] == null
+          ? null
+          : GameCard.fromJson(
+              Map<String, dynamic>.from(json['drawnEventCard'] as Map)),
+      winnerId: json['winnerId'] as String?,
+    );
+  }
+
+  /// Lämnar spelet helt (till skillnad från [playLocally], som också
+  /// används INOM ett spel för att t.ex. lämna ett rum och börja om
+  /// lokalt): återställer till lokalt läge OCH glömmer den sparade
+  /// sessionen (se [SessionStorage]) så att en efterföljande sidladdning
+  /// hamnar på startskärmen i stället för att återuppta matchen man just
+  /// lämnade.
+  void leaveGame() {
+    playLocally();
+    SessionStorage.clear();
   }
 
   void _subscribeToRoom(String roomCode) {
