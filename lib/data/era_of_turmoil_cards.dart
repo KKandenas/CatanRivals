@@ -23,10 +23,10 @@ class EraOfTurmoilCards {
     category: CardCategory.action,
     actionKind: ActionKind.attack,
     expansionSet: ExpansionSet.eraOfTurmoil,
-    requirement: 'Hedge Tavern',
+    requirement: 'Värdshus',
     effectText:
-        'Your opponent must place 1 of his own units with at least 1 strength point under a '
-        'matching draw stack.',
+        'Motståndaren måste lägga en av sina egna enheter med minst '
+        '1 styrkepoäng underst i motsvarande draghög.',
     imageAsset: 'assets/images/cards/action_archer.png',
   );
 
@@ -36,10 +36,10 @@ class EraOfTurmoilCards {
     category: CardCategory.action,
     actionKind: ActionKind.attack,
     expansionSet: ExpansionSet.eraOfTurmoil,
-    requirement: 'Hedge Tavern',
+    requirement: 'Värdshus',
     effectText:
-        "Choose 1 of your opponent's buildings adjacent to a settlement/city. He must place it "
-        'under a draw stack of his choice.',
+        'Välj 1 av motståndarens byggnader intill en by/stad. '
+        'Motståndaren måste lägga den underst i valfri draghög.',
     imageAsset: 'assets/images/cards/action_arsonist.png',
   );
 
@@ -50,8 +50,8 @@ class EraOfTurmoilCards {
     actionKind: ActionKind.neutral,
     expansionSet: ExpansionSet.eraOfTurmoil,
     effectText:
-        'If you play this card when the events Riots, Feud, or Fraternal Feud occur, these '
-        'events do not apply to you.',
+        'Spelar du detta kort när händelserna Upplopp, Fejd eller '
+        'Brödrafejd inträffar gäller inte dessa händelser dig.',
     imageAsset: 'assets/images/cards/action_sebastian.png',
   );
 
@@ -61,10 +61,11 @@ class EraOfTurmoilCards {
     category: CardCategory.action,
     actionKind: ActionKind.attack,
     expansionSet: ExpansionSet.eraOfTurmoil,
-    requirement: 'Hedge Tavern',
+    requirement: 'Värdshus',
     effectText:
-        'Your opponent must show you all the cards in his hand. You may add 1 of them to your '
-        'hand (in the Tournament Game, only units and action cards).',
+        'Motståndaren måste visa dig alla korten på sin hand. Du får '
+        'lägga 1 av dem till din egen hand (i turneringsspelet bara '
+        'enhets- och handlingskort).',
     imageAsset: 'assets/images/cards/action_traitor.png',
   );
 
@@ -74,10 +75,10 @@ class EraOfTurmoilCards {
     category: CardCategory.action,
     actionKind: ActionKind.attack,
     expansionSet: ExpansionSet.eraOfTurmoil,
-    requirement: 'Strength advantage',
+    requirement: 'Styrkeövertag',
     effectText:
-        'If your opponent has more victory points, he must give you 2 resources of your '
-        "choice. If he isn't in the lead, you only receive one resource.",
+        'Har motståndaren fler segerpoäng måste hen ge dig 2 valfria '
+        'resurser. Ligger hen inte i ledningen får du bara 1 resurs.',
     imageAsset: 'assets/images/cards/action_voyage_of_plunder.png',
   );
 
@@ -93,7 +94,7 @@ class EraOfTurmoilCards {
     expansionSet: ExpansionSet.eraOfTurmoil,
     isUnique: true,
     buildingCost: {ResourceType.brick: 1, ResourceType.grain: 1},
-    effectText: 'Each hero you build in your principality costs you 1 resource of your choice less.',
+    effectText: 'Varje hjälte du bygger i ditt rike kostar 1 valfri resurs mindre.',
     imageAsset: 'assets/images/cards/building_drill_ground.png',
   );
 
@@ -105,8 +106,8 @@ class EraOfTurmoilCards {
     expansionSet: ExpansionSet.eraOfTurmoil,
     buildingCost: {ResourceType.lumber: 1, ResourceType.grain: 1},
     effectText:
-        'When your opponent plays an Archer, Arsonist, or Traitor, roll the die. If you roll a '
-        '1 or 2, the card has no effect.',
+        'När motståndaren spelar Bågskytt, Pyroman eller Förrädare, slå '
+        'tärningen. Slår du 1 eller 2 har kortet ingen effekt.',
     imageAsset: 'assets/images/cards/building_lookout_tower.png',
   );
 
@@ -122,7 +123,7 @@ class EraOfTurmoilCards {
     expansionSet: ExpansionSet.eraOfTurmoil,
     buildingCost: {ResourceType.wool: 2, ResourceType.grain: 1, ResourceType.ore: 1},
     strengthPoints: 5,
-    effectText: 'What a beautiful island! I take it.',
+    effectText: 'Vilken vacker ö! Den tar jag.',
     imageAsset: 'assets/images/cards/hero_carl_forkbeard.png',
   );
 
@@ -135,10 +136,10 @@ class EraOfTurmoilCards {
     buildingCost: {ResourceType.grain: 1, ResourceType.wool: 1, ResourceType.ore: 1},
     strengthPoints: 2,
     effectText:
-        'Heinrich is a hero who, in addition to his strength points, has a special effect. If '
-        'you also have a Lookout Tower in your principality, you are protected when a 1, 2, 3, '
-        '4, or 5 is rolled. If Heinrich is combined with the Lookout Tower, the die is still '
-        'rolled only once.',
+        'Heinrich är en hjälte som, utöver sina styrkepoäng, har en '
+        'särskild effekt. Har du även ett Vakttorn i ditt rike är du '
+        'skyddad när 1, 2, 3, 4 eller 5 slås. Kombineras Heinrich med '
+        'Vakttornet slås tärningen ändå bara en gång.',
     imageAsset: 'assets/images/cards/hero_heinrich_the_sentinel.png',
   );
 
@@ -151,8 +152,8 @@ class EraOfTurmoilCards {
     buildingCost: {ResourceType.grain: 1, ResourceType.gold: 1},
     skillPoints: 2,
     effectText:
-        'If you lose a card of your principality due to an event or an action, you receive '
-        'any 1 resource of your choice.',
+        'Förlorar du ett kort ur ditt rike på grund av en händelse '
+        'eller ett handlingskort får du 1 valfri resurs.',
     imageAsset: 'assets/images/cards/hero_irmgard.png',
   );
 
@@ -167,7 +168,7 @@ class EraOfTurmoilCards {
     expansionSet: ExpansionSet.eraOfTurmoil,
     buildingCost: {ResourceType.ore: 2, ResourceType.brick: 1, ResourceType.grain: 1},
     victoryPoints: 1,
-    effectText: 'If a 1, 2, or 3 is rolled with the production die, the event Riots does not apply to you.',
+    effectText: 'Slås 1, 2 eller 3 på produktionstärningen gäller inte händelsen Upplopp dig.',
     imageAsset: 'assets/images/cards/city_expansion_chapel_low.png',
   );
 
@@ -178,7 +179,7 @@ class EraOfTurmoilCards {
     expansionSet: ExpansionSet.eraOfTurmoil,
     buildingCost: {ResourceType.ore: 2, ResourceType.brick: 1, ResourceType.grain: 1},
     victoryPoints: 1,
-    effectText: 'If a 4, 5, or 6 is rolled with the production die, the event Riots does not apply to you.',
+    effectText: 'Slås 4, 5 eller 6 på produktionstärningen gäller inte händelsen Upplopp dig.',
     imageAsset: 'assets/images/cards/city_expansion_chapel_high.png',
   );
 
@@ -190,8 +191,8 @@ class EraOfTurmoilCards {
     buildingCost: {ResourceType.lumber: 2, ResourceType.grain: 1, ResourceType.wool: 1},
     victoryPoints: 1,
     effectText:
-        'If you have more skill points than your opponent you immediately receive 2 resources '
-        'of your choice after building the Fairground.',
+        'Har du fler kunskapspoäng än motståndaren får du omedelbart '
+        '2 valfria resurser efter att ha byggt Marknadsfältet.',
     imageAsset: 'assets/images/cards/city_expansion_fairgrounds.png',
   );
 
@@ -203,9 +204,10 @@ class EraOfTurmoilCards {
     buildingCost: {ResourceType.wool: 2, ResourceType.brick: 1, ResourceType.ore: 1},
     victoryPoints: 1,
     effectText:
-        'The Fire Brigade protects all buildings (settlement/city expansions and city '
-        'expansions) in the city where the Fire Brigade is placed, including the Fire Brigade '
-        "itself. This city's buildings are safe from the Arsonist.",
+        'Brandkåren skyddar alla byggnader (by-/stadsutbyggnader och '
+        'stadsutbyggnader) i den stad där Brandkåren är placerad, '
+        'inklusive Brandkåren själv. Den stadens byggnader är skyddade '
+        'mot Pyromanen.',
     imageAsset: 'assets/images/cards/city_expansion_fire_brigade.png',
   );
 
@@ -217,8 +219,8 @@ class EraOfTurmoilCards {
     isUnique: true,
     buildingCost: {ResourceType.ore: 1, ResourceType.grain: 1, ResourceType.wool: 1},
     effectText:
-        'In the neighborhood, word has it that more people were seen going inside than coming '
-        'out. Is a prerequisite for many action-attack cards.',
+        'Grannarna viskar om att fler har setts gå in än komma ut. '
+        'Krävs för många attack-handlingskort.',
     imageAsset: 'assets/images/cards/city_expansion_hedge_tavern.png',
   );
 
@@ -229,8 +231,9 @@ class EraOfTurmoilCards {
     expansionSet: ExpansionSet.eraOfTurmoil,
     buildingCost: {ResourceType.lumber: 1, ResourceType.grain: 1},
     effectText:
-        'When you build the Tithe Barn, choose a resource type – either wool or grain. For '
-        'each of your heroes, you receive 1 resource of the chosen type.',
+        'När du bygger Tiondeladan väljer du en resurstyp – antingen '
+        'ull eller säd. För varje egen hjälte får du 1 resurs av den '
+        'valda typen.',
     imageAsset: 'assets/images/cards/city_expansion_tithe_barn.png',
   );
 
@@ -241,7 +244,7 @@ class EraOfTurmoilCards {
     expansionSet: ExpansionSet.eraOfTurmoil,
     buildingCost: {ResourceType.grain: 1, ResourceType.ore: 1, ResourceType.wool: 1},
     victoryPoints: 2,
-    effectText: 'This card is worth 2 victory points.',
+    effectText: 'Detta kort är värt 2 segerpoäng.',
     imageAsset: 'assets/images/cards/city_expansion_large_festival_hall.png',
   );
 
@@ -255,9 +258,11 @@ class EraOfTurmoilCards {
     category: CardCategory.event,
     expansionSet: ExpansionSet.eraOfTurmoil,
     effectText:
-        'A player who has 1 or 2 units with strength points or commerce points pays 1 gold. A '
-        'player who has more than 2 of these units pays 2 gold. If a player doesn\'t pay, he '
-        'must remove one of these units and return it to the bottom of a matching draw stack.',
+        'En spelare som har 1 eller 2 enheter med styrke- eller '
+        'handelspoäng betalar 1 guld. Har spelaren fler än 2 sådana '
+        'enheter betalar hen 2 guld. Betalar spelaren inte måste hen '
+        'ta bort en av dessa enheter och lägga den underst i '
+        'motsvarande draghög.',
     imageAsset: 'assets/images/cards/event_riots.png',
   );
 
