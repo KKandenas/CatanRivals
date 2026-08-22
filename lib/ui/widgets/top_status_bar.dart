@@ -39,9 +39,13 @@ class TopStatusBar extends StatelessWidget {
     final color =
         opponentIsRed ? const Color(0xFFB33A3A) : const Color(0xFF3A6FB3);
     return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: CatanColors.woodFrameDark,
-        border: Border(bottom: BorderSide(color: Colors.black26, width: 1)),
+      // Lätt genomskinlig (samma mönster som HandDock) så den delade
+      // träbakgrunden bakom hela brädet (se game_board_screen.dart)
+      // syns igenom en aning i stället för att helt dölja den.
+      decoration: BoxDecoration(
+        color: CatanColors.woodFrameDark.withValues(alpha: 0.92),
+        border:
+            const Border(bottom: BorderSide(color: Colors.black26, width: 1)),
       ),
       child: SafeArea(
         bottom: false,

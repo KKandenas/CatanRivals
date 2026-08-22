@@ -5,9 +5,11 @@ import '../../data/basic_set_cards.dart';
 import '../../models/models.dart';
 import '../../state/game_notifier.dart';
 import '../../state/game_state.dart';
+import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
 import '../widgets/brigitta_number_picker.dart';
 import '../widgets/build_confirm_card.dart';
+import '../widgets/carved_frame.dart';
 import '../widgets/center_stacks_strip.dart';
 import '../widgets/dice_roll_button.dart';
 import '../widgets/dice_roll_summary_banner.dart';
@@ -162,8 +164,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     final diceRollable = state.isMyTurn &&
         !state.diceRolled &&
         !(state.isOnline && !state.handsReady);
-    void rollDice() =>
-        _handleResult(context, notifier.rollProductionDie());
+    void rollDice() => _handleResult(context, notifier.rollProductionDie());
     final diceRollKey =
         '${state.productionRoll}-${state.eventDieFace}-${state.activePlayerId}';
     // Vilken fas den aktiva spelaren är i just nu, till "DIN TUR"-
@@ -246,6 +247,20 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
             ),
       body: Stack(
         children: [
+          // Gemensam träbakgrund bakom hela brädet (samma bild som
+          // riksrutnäten redan tapetserar med sin egen pergament-slöja,
+          // se PrincipalityGrid) – ett första steg mot mer "bordskänsla"
+          // (se användarens Gemini-referens). Statusfälten ovanför
+          // riket ([TopStatusBar]/[CenterStacksStrip]/[HandDock]) är
+          // medvetet lätt genomskinliga (samma mönster som HandDock
+          // redan använde för sig själv) så att den syns igenom även
+          // där, i stället för att bara synas i marginalerna.
+          const Positioned.fill(
+            child: Image(
+              image: AssetImage(CatanAssets.boardBackground),
+              fit: BoxFit.cover,
+            ),
+          ),
           Column(
             children: [
               if (state.sessionError != null)
@@ -348,10 +363,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: PrincipalityGrid(
-                            board: state.opponent.principality,
-                            unit: 58,
-                            gap: 4,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(4, 4, 2, 4),
+                            child: CarvedFrame(
+                              child: PrincipalityGrid(
+                                board: state.opponent.principality,
+                                unit: 58,
+                                gap: 4,
+                              ),
+                            ),
                           ),
                         ),
                         // Tärningen står till höger om motståndarens rike i
@@ -474,21 +494,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           child: FeudResolutionCard(
                             card: state.drawnEventCard!,
                             isTie: state.strengthAdvantagePlayerId == null,
-                            youHaveAdvantage:
-                                state.strengthAdvantagePlayerId ==
-                                    state.myPlayerId,
+                            youHaveAdvantage: state.strengthAdvantagePlayerId ==
+                                state.myPlayerId,
                             isOnline: state.isOnline,
                             opponentName: state.opponent.name,
                             hasBuildingToRemove:
                                 state.strengthAdvantagePlayerId ==
                                         state.myPlayerId
-                                    ? state.opponent.principality
-                                        .hasAnyBuilding
+                                    ? state.opponent.principality.hasAnyBuilding
                                     : state.you.principality.hasAnyBuilding,
                             onDismiss: () => _handleResult(
                                 context, notifier.dismissEventCard()),
-                            onStartFeudPick: () => _handleResult(context,
-                                notifier.startFeudBuildingPick()),
+                            onStartFeudPick: () => _handleResult(
+                                context, notifier.startFeudBuildingPick()),
                             onStartFraternalFeudsPick: () => _handleResult(
                                 context, notifier.startFraternalFeudsPick()),
                           ),
@@ -507,8 +525,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           child: StackChoiceOverlay(
                             title:
                                 'Vilken draghög ska byggnaden läggas underst i?',
-                            onChooseStack: (index) => _handleResult(
-                                context,
+                            onChooseStack: (index) => _handleResult(context,
                                 notifier.resolveFeudBuildingRemoval(index)),
                             onCancel: () => _handleResult(
                                 context, notifier.cancelFeudBuildingPick()),
@@ -544,8 +561,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                                 'Vilken draghög ska kortet läggas underst i?',
                             onChooseStack: (index) {
                               final card = _pendingFraternalFeudsCard!;
-                              setState(
-                                  () => _pendingFraternalFeudsCard = null);
+                              setState(() => _pendingFraternalFeudsCard = null);
                               _handleResult(context,
                                   notifier.pickFraternalFeudsCard(card, index));
                             },
@@ -568,8 +584,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           child: ScoutPromptCard(
                             onUseScout: () =>
                                 _handleResult(context, notifier.useScout()),
-                            onDecline: () => _handleResult(
-                                context, notifier.declineScout()),
+                            onDecline: () =>
+                                _handleResult(context, notifier.declineScout()),
                           ),
                         ),
                       ),
@@ -607,9 +623,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 handLimit: state.handLimit,
                 onDrawStack: (index) =>
                     _handleResult(context, notifier.drawHandCard(index)),
-                hasSelectedDiscardCard:
-                    state.handAdjustmentPhase == HandAdjustmentPhase.discarding &&
-                        _selectedDiscardCard != null,
+                hasSelectedDiscardCard: state.handAdjustmentPhase ==
+                        HandAdjustmentPhase.discarding &&
+                    _selectedDiscardCard != null,
                 onDiscardToStack: (index) {
                   final card = _selectedDiscardCard;
                   if (card == null) return;
@@ -621,10 +637,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   }
                 },
                 tradePhase: state.tradePhase,
-                hasSelectedExchangeCard: (state.tradePhase ==
-                            TradePhase.exchangeDiscard ||
-                        state.tradePhase == TradePhase.peekDiscard) &&
-                    _selectedDiscardCard != null,
+                hasSelectedExchangeCard:
+                    (state.tradePhase == TradePhase.exchangeDiscard ||
+                            state.tradePhase == TradePhase.peekDiscard) &&
+                        _selectedDiscardCard != null,
                 onExchangeDiscardToStack: (index) {
                   final card = _selectedDiscardCard;
                   if (card == null) return;
@@ -663,8 +679,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 ),
               if (state.feudBuildingPickActive)
                 FeudBuildingInstructionBar(
-                  onCancel: () => _handleResult(
-                      context, notifier.cancelFeudBuildingPick()),
+                  onCancel: () =>
+                      _handleResult(context, notifier.cancelFeudBuildingPick()),
                 ),
               Expanded(
                 flex: 5,
@@ -692,38 +708,40 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   // trycka på för att förstora, bara se "inaktiva" ut.
                   child: Opacity(
                     opacity: showTurnEmphasis && !canBuildNow ? 0.6 : 1,
-                    child: PrincipalityGrid(
-                      board: state.you.principality,
-                      interactive: true,
-                      draggingCard: state.draggingCard,
-                      onDropExpansion: (column, row, slotIndex, card) =>
-                          _handleResult(
-                              context,
-                              notifier.dropExpansion(
-                                  column, row, slotIndex, card)),
-                      onDropRoad: (column, card) => _handleResult(
-                          context, notifier.dropRoad(column, card)),
-                      onDropSettlement: (column, card) => _handleResult(
-                          context, notifier.dropSettlement(column, card)),
-                      onDropCityUpgrade: (column, card) => _handleResult(
-                          context, notifier.dropCityUpgrade(column, card)),
-                      onAdjustRegion: notifier.adjustRegionResource,
-                      onRequestBuildConfirm: _requestBuildConfirm,
-                      pendingRegionJunction: state.pendingRegionJunction,
-                      onDropPendingRegion: (row, card) => _handleResult(
-                          context, notifier.placePendingRegion(row, card)),
-                      relocationActive: state.relocationActive,
-                      relocationFirst: state.relocationFirst,
-                      onSelectRelocationTarget: (kind, column, row, slot) =>
-                          _handleResult(
-                              context,
-                              notifier.selectRelocationTarget(
-                                  kind, column, row, slot)),
-                      feudBuildingPickActive: state.feudBuildingPickActive,
-                      feudPickedBuilding: state.feudPickedBuilding,
-                      onSelectFeudBuilding: (column, row, slot) =>
-                          _handleResult(context,
-                              notifier.selectFeudBuilding(column, row, slot)),
+                    child: CarvedFrame(
+                      child: PrincipalityGrid(
+                        board: state.you.principality,
+                        interactive: true,
+                        draggingCard: state.draggingCard,
+                        onDropExpansion: (column, row, slotIndex, card) =>
+                            _handleResult(
+                                context,
+                                notifier.dropExpansion(
+                                    column, row, slotIndex, card)),
+                        onDropRoad: (column, card) => _handleResult(
+                            context, notifier.dropRoad(column, card)),
+                        onDropSettlement: (column, card) => _handleResult(
+                            context, notifier.dropSettlement(column, card)),
+                        onDropCityUpgrade: (column, card) => _handleResult(
+                            context, notifier.dropCityUpgrade(column, card)),
+                        onAdjustRegion: notifier.adjustRegionResource,
+                        onRequestBuildConfirm: _requestBuildConfirm,
+                        pendingRegionJunction: state.pendingRegionJunction,
+                        onDropPendingRegion: (row, card) => _handleResult(
+                            context, notifier.placePendingRegion(row, card)),
+                        relocationActive: state.relocationActive,
+                        relocationFirst: state.relocationFirst,
+                        onSelectRelocationTarget: (kind, column, row, slot) =>
+                            _handleResult(
+                                context,
+                                notifier.selectRelocationTarget(
+                                    kind, column, row, slot)),
+                        feudBuildingPickActive: state.feudBuildingPickActive,
+                        feudPickedBuilding: state.feudPickedBuilding,
+                        onSelectFeudBuilding: (column, row, slot) =>
+                            _handleResult(context,
+                                notifier.selectFeudBuilding(column, row, slot)),
+                      ),
                     ),
                   ),
                 ),

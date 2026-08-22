@@ -118,7 +118,10 @@ class CenterStacksStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: CatanColors.woodFrameDark,
+      // Lätt genomskinlig (samma mönster som HandDock/TopStatusBar) så
+      // den delade träbakgrunden bakom hela brädet syns igenom en
+      // aning (se game_board_screen.dart).
+      color: CatanColors.woodFrameDark.withValues(alpha: 0.92),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       child: Row(
         children: [
@@ -175,7 +178,9 @@ class CenterStacksStrip extends StatelessWidget {
               _EndTurnButton(onTap: onEndTurn)
             else if (handAdjustmentPhase != HandAdjustmentPhase.none)
               _HandAdjustmentLabel(
-                  phase: handAdjustmentPhase, count: handCount, limit: handLimit),
+                  phase: handAdjustmentPhase,
+                  count: handCount,
+                  limit: handLimit),
             // Under kortbytesfasen visas instruktionerna i stället i
             // TradePhaseCard (se game_board_screen.dart) – ingen egen
             // etikett här, bara högarna som tänds till.
@@ -206,7 +211,8 @@ class CenterStacksStrip extends StatelessWidget {
         count: count,
         width: 48,
         highlighted: hasSelectedDiscardCard,
-        onTap: hasSelectedDiscardCard ? () => onDiscardToStack?.call(index) : null,
+        onTap:
+            hasSelectedDiscardCard ? () => onDiscardToStack?.call(index) : null,
       );
     }
     if (tradePhase == TradePhase.exchangeDiscard ||
@@ -406,7 +412,8 @@ class _EndTurnButton extends StatelessWidget {
         ),
         child: const Text(
           'Avsluta action-fas',
-          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+          style: TextStyle(
+              color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
         ),
       ),
     );
