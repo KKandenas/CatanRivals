@@ -99,6 +99,12 @@ void main() {
       final regionsBefore = container.read(gameProvider).centerStacks['regions']!;
 
       final error = notifier.dropSettlement(-2, BasicSetCards.settlement);
+      // Mock-handen innehåller Spejare (se MockGame.buildYou) – den
+      // väcker nu frågan "Vill du använda Spejare?" i stället för att
+      // dra regionkorten direkt (se scout_test.dart). Den här testet
+      // testar bara pendingRegions-flödet, så vi tackar nej precis som
+      // om spelaren inte haft kortet.
+      notifier.declineScout();
 
       expect(error, isNull);
       final after = container.read(gameProvider);

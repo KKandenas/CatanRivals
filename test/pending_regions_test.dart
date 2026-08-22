@@ -26,6 +26,12 @@ void main() {
       before.you.principality.addResourceToRegion(-1, BuildingRow.above, 1);
       notifier.dropRoad(-1, BasicSetCards.road);
       notifier.dropSettlement(-2, BasicSetCards.settlement);
+      // Mock-handen innehåller Spejare (se MockGame.buildYou) – den
+      // väcker nu frågan "Vill du använda Spejare?" i stället för att
+      // dra regionkorten direkt (se scout_test.dart för den frågan).
+      // Den här testfilen testar bara pendingRegions-flödet, så vi
+      // tackar nej precis som om spelaren inte haft kortet.
+      notifier.declineScout();
     }
 
     test('placePendingRegion placerar ett kort och lämnar det andra kvar', () {

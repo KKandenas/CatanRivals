@@ -111,6 +111,27 @@ class GameState {
   /// `null` när inget är uppslaget.
   final GameCard? drawnEventCard;
 
+  /// Om en nybyggd by (bortom rikets yttergräns, se [pendingRegions])
+  /// just väckt frågan "Vill du använda Spejare?" – bara sant om
+  /// spelaren har kortet på hand (regelhäftet: "Play this card when
+  /// building a settlement"). Rent lokalt UI-state (bara den aktiva
+  /// spelaren, alltså du själv, kan se/svara på frågan).
+  final bool awaitingScoutDecision;
+
+  /// Hela den kvarvarande regionstapeln, öppen för fritt val, medan
+  /// Spejare används (se [GameNotifier.useScout]/[pickScoutRegion]) –
+  /// `null` när frågan bara väntar på ja/nej ([awaitingScoutDecision])
+  /// eller inte alls är aktuell.
+  final List<GameCard>? scoutChoices;
+
+  /// Om Omlokalisering just nu är aktiv (se
+  /// [GameNotifier.startRelocation]) – riket blir då tryckbart: tryck
+  /// på 2 av dina egna regioner (eller 2 av dina egna bygg-/enhetskort,
+  /// aldrig blandat) för att byta plats på dem. [relocationFirst] är
+  /// det första valet, `null` tills något tryckts.
+  final bool relocationActive;
+  final RelocationSelection? relocationFirst;
+
   const GameState({
     required this.you,
     required this.opponent,
@@ -135,6 +156,10 @@ class GameState {
     this.peekStackIndex,
     this.peekedCards,
     this.drawnEventCard,
+    this.awaitingScoutDecision = false,
+    this.scoutChoices,
+    this.relocationActive = false,
+    this.relocationFirst,
   });
 
   bool get isOnline => mode != SessionMode.local;
@@ -227,6 +252,12 @@ class GameState {
     bool clearPeekedCards = false,
     GameCard? drawnEventCard,
     bool clearDrawnEventCard = false,
+    bool? awaitingScoutDecision,
+    List<GameCard>? scoutChoices,
+    bool clearScoutChoices = false,
+    bool? relocationActive,
+    RelocationSelection? relocationFirst,
+    bool clearRelocationFirst = false,
   }) {
     return GameState(
       you: you ?? this.you,
@@ -265,6 +296,14 @@ class GameState {
       drawnEventCard: clearDrawnEventCard
           ? null
           : (drawnEventCard ?? this.drawnEventCard),
+      awaitingScoutDecision:
+          awaitingScoutDecision ?? this.awaitingScoutDecision,
+      scoutChoices:
+          clearScoutChoices ? null : (scoutChoices ?? this.scoutChoices),
+      relocationActive: relocationActive ?? this.relocationActive,
+      relocationFirst: clearRelocationFirst
+          ? null
+          : (relocationFirst ?? this.relocationFirst),
     );
   }
 }

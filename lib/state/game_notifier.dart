@@ -320,6 +320,40 @@ class GameNotifier extends Notifier<GameState> {
     return null;
   }
 
+  /// Spelar Brigitta, den visa kvinnan (regelhäftet: "Play this card
+  /// before rolling the dice. Choose the result of the production die
+  /// roll.") – väljer alltså produktionstärningens resultat direkt i
+  /// stället för att slå den. Händelsetärningen slås ändå som vanligt
+  /// (kortet gäller bara produktionstärningen, se [EventDieFace]).
+  /// Kortet tas bort från handen. Bara giltigt innan tärningen slagits
+  /// den här omgången.
+  String? useBrigitta(int chosenNumber) {
+    if (!state.isMyTurn) return 'Inte din tur.';
+    if (state.diceRolled) {
+      return 'Brigitta måste spelas innan tärningen slås.';
+    }
+    if (chosenNumber < 1 || chosenNumber > 6) return null;
+    GameCard? card;
+    for (final c in state.you.hand) {
+      if (c.id == BasicSetCards.brigittaTheWiseWoman.id) {
+        card = c;
+        break;
+      }
+    }
+    if (card == null) return null;
+
+    final eventFace = EventDieFace.fromRoll(Random().nextInt(6));
+    state = state.copyWith(
+      you: state.you.copyWith(hand: List.of(state.you.hand)..remove(card)),
+      productionRoll: chosenNumber,
+      eventDieFace: eventFace,
+      diceRolled: true,
+    );
+    _syncMyPlayer();
+    _syncTurnState();
+    return null;
+  }
+
   /// Drar det översta händelsekortet när händelsetärningen visade "?"
   /// (regelhäftets referenskort: "The player who rolled the dice draws
   /// the topmost event card and reads the event aloud") – bara den som
@@ -370,6 +404,22 @@ class GameNotifier extends Notifier<GameState> {
     if (state.drawnEventCard == null) return null;
     state = state.copyWith(clearDrawnEventCard: true);
     _syncTurnState();
+    return null;
+  }
+
+  /// Spelar ett självbevakat handlingskort (Handelskaravan/Guldsmed):
+  /// tar bara bort kortet från handen – spelaren justerar sedan själv
+  /// resurserna manuellt med +/- på sina regioner utifrån kortets
+  /// `effectText`, precis som byggkostnader och tärningsutdelning. Bara
+  /// giltigt på din egen tur.
+  String? discardActionCard(GameCard card) {
+    if (!state.isMyTurn) return 'Inte din tur.';
+    if (!state.you.hand.contains(card)) return null;
+
+    state = state.copyWith(
+      you: state.you.copyWith(hand: List.of(state.you.hand)..remove(card)),
+    );
+    _syncMyPlayer();
     return null;
   }
 
@@ -431,6 +481,10 @@ class GameNotifier extends Notifier<GameState> {
       tradePhase: TradePhase.none,
       clearPeekStackIndex: true,
       clearPeekedCards: true,
+      awaitingScoutDecision: false,
+      clearScoutChoices: true,
+      relocationActive: false,
+      clearRelocationFirst: true,
     );
     _syncTurnState();
   }
@@ -689,6 +743,12 @@ class GameNotifier extends Notifier<GameState> {
   }
 
   String? _checkCanBuild() {
+    if (state.awaitingScoutDecision) {
+      return 'Svara på frågan om Spejare innan du bygger vidare.';
+    }
+    if (state.relocationActive) {
+      return 'Avsluta Omlokaliseringen innan du bygger vidare.';
+    }
     if (state.pendingRegions.isNotEmpty) {
       return 'Välj plats för de nya regionkorten innan du bygger vidare.';
     }
@@ -742,6 +802,12 @@ class GameNotifier extends Notifier<GameState> {
   /// – men i stället för att de placeras automatiskt hamnar de i
   /// [GameState.pendingRegions], och spelaren drar själv vartdera
   /// kortet till platsen ovanför/nedanför (se [placePendingRegion]).
+  ///
+  /// Har spelaren Spejare på hand väcks i stället frågan "Vill du
+  /// använda Spejare?" (regelhäftet: "Play this card when building a
+  /// settlement") – se [GameState.awaitingScoutDecision],
+  /// [useScout]/[declineScout] – i stället för att de 2 korten dras
+  /// slumpmässigt direkt.
   String? dropSettlement(int column, GameCard card) {
     final error = _checkStack('settlements', card);
     if (error != null) return error;
@@ -753,18 +819,86 @@ class GameNotifier extends Notifier<GameState> {
 
     final newJunction = column < oldLeft ? column - 1 : column + 1;
     final wasNewSettlementFurtherOut = column < oldLeft || column > oldRight;
+    final hasScout = wasNewSettlementFurtherOut &&
+        state.you.hand.any((c) => c.id == BasicSetCards.scout.id);
 
     state = state.copyWith(
       centerStacks: Map.of(state.centerStacks)
         ..update('settlements', (v) => v - 1)
         ..update('regions', (v) => wasNewSettlementFurtherOut ? v - 2 : v),
       clearDraggingCard: true,
-      pendingRegions:
-          wasNewSettlementFurtherOut ? [_drawRegion(), _drawRegion()] : null,
+      pendingRegions: (wasNewSettlementFurtherOut && !hasScout)
+          ? [_drawRegion(), _drawRegion()]
+          : null,
       pendingRegionJunction: wasNewSettlementFurtherOut ? newJunction : null,
+      awaitingScoutDecision: hasScout,
     );
     _syncMyPlayer();
     _syncCenterStacks();
+    return null;
+  }
+
+  /// Tackar nej till att använda Spejare på den by som just byggdes
+  /// (se [dropSettlement]) – de 2 nya regionkorten dras slumpmässigt
+  /// som vanligt.
+  String? declineScout() {
+    if (!state.awaitingScoutDecision) return null;
+    state = state.copyWith(
+      pendingRegions: [_drawRegion(), _drawRegion()],
+      awaitingScoutDecision: false,
+    );
+    return null;
+  }
+
+  /// Använder Spejare (regelhäftet: "Play this card when building a
+  /// settlement. Take 2 cards of your choice from the region card
+  /// stack. Reshuffle the region card stack.") – öppnar hela den
+  /// kvarvarande regionstapeln (se [GameState.scoutChoices]) så
+  /// spelaren kan välja 2 valfria kort i stället för att dra
+  /// slumpmässigt (se [pickScoutRegion]).
+  String? useScout() {
+    if (!state.awaitingScoutDecision) return null;
+    state = state.copyWith(scoutChoices: List.of(_regionDeck));
+    return null;
+  }
+
+  /// Väljer [card] ur den öppna regionstapeln (se [useScout]) till ett
+  /// av de två väntande platserna. När det andra (och sista) kortet är
+  /// valt blandas resten av stapeln om (regelhäftet: "Reshuffle the
+  /// region card stack") och Spejare tas bort från handen.
+  String? pickScoutRegion(GameCard card) {
+    if (state.scoutChoices == null) return null;
+    if (!_regionDeck.contains(card)) return null;
+
+    _regionDeck = List.of(_regionDeck)..remove(card);
+    final picked = [...state.pendingRegions, card];
+
+    if (picked.length < 2) {
+      state = state.copyWith(
+        pendingRegions: picked,
+        scoutChoices: List.of(_regionDeck),
+      );
+      return null;
+    }
+
+    _regionDeck = List.of(_regionDeck)..shuffle();
+    GameCard? scoutCard;
+    for (final c in state.you.hand) {
+      if (c.id == BasicSetCards.scout.id) {
+        scoutCard = c;
+        break;
+      }
+    }
+    state = state.copyWith(
+      you: scoutCard == null
+          ? state.you
+          : state.you
+              .copyWith(hand: List.of(state.you.hand)..remove(scoutCard)),
+      pendingRegions: picked,
+      clearScoutChoices: true,
+      awaitingScoutDecision: false,
+    );
+    _syncMyPlayer();
     return null;
   }
 
@@ -800,6 +934,99 @@ class GameNotifier extends Notifier<GameState> {
     state = state.copyWith(
       pendingRegions: remaining,
       clearPendingRegionJunction: remaining.isEmpty,
+    );
+    _syncMyPlayer();
+    return null;
+  }
+
+  // ---------------------------------------------------------------------
+  // Omlokalisering: byt plats på 2 egna regioner eller 2 egna byggkort
+  // ---------------------------------------------------------------------
+
+  /// Startar Omlokalisering (regelhäftet: "You may exchange 2 of your
+  /// own regions or 2 of your own expansion cards ...") – riket blir
+  /// tryckbart för att välja de 2 platserna som ska byta plats (se
+  /// [selectRelocationTarget]). Kortet tas bort från handen först när
+  /// bytet faktiskt genomförs (efter det andra valet), inte redan här
+  /// – spelaren ska kunna ångra sig med [cancelRelocation] utan att
+  /// förlora kortet.
+  String? startRelocation() {
+    if (!state.isMyTurn) return 'Inte din tur.';
+    if (!state.you.hand.any((c) => c.id == BasicSetCards.relocation.id)) {
+      return null;
+    }
+    state =
+        state.copyWith(relocationActive: true, clearRelocationFirst: true);
+    return null;
+  }
+
+  /// Avbryter Omlokalisering utan att göra något – kortet stannar kvar
+  /// på handen.
+  String? cancelRelocation() {
+    state =
+        state.copyWith(relocationActive: false, clearRelocationFirst: true);
+    return null;
+  }
+
+  /// Väljer en plats i ditt eget rike under Omlokalisering (se
+  /// [startRelocation]). Första giltiga trycket (en plats som faktiskt
+  /// har ett kort) lagras som väntande ([GameState.relocationFirst]);
+  /// trycker man på samma plats igen avmarkeras den. Ett andra tryck av
+  /// samma sort ([RelocationTargetKind]) på en annan plats genomför
+  /// bytet direkt och tar bort kortet från handen; en annan sort
+  /// avvisas (regelhäftet tillåter inte att blanda regioner och
+  /// byggkort i samma byte).
+  String? selectRelocationTarget(
+      RelocationTargetKind kind, int column, BuildingRow row, int slotIndex) {
+    if (!state.relocationActive) return null;
+
+    final selection = RelocationSelection(
+        kind: kind, column: column, row: row, slotIndex: slotIndex);
+    final first = state.relocationFirst;
+
+    if (first == null) {
+      final occupied = kind == RelocationTargetKind.region
+          ? state.you.principality.regionAt(column, row) != null
+          : _expansionAt(state.you.principality, column, row, slotIndex) !=
+              null;
+      if (!occupied) return null;
+      state = state.copyWith(relocationFirst: selection);
+      return null;
+    }
+    if (first == selection) {
+      state = state.copyWith(clearRelocationFirst: true);
+      return null;
+    }
+    if (first.kind != kind) {
+      return 'Välj två regioner eller två byggkort, inte blandat.';
+    }
+
+    try {
+      if (kind == RelocationTargetKind.region) {
+        state.you.principality
+            .swapRegions(first.column, first.row, column, row);
+      } else {
+        state.you.principality.swapExpansions(first.column, first.row,
+            first.slotIndex, column, row, slotIndex);
+      }
+    } on StateError catch (e) {
+      return e.message;
+    }
+
+    GameCard? relocationCard;
+    for (final c in state.you.hand) {
+      if (c.id == BasicSetCards.relocation.id) {
+        relocationCard = c;
+        break;
+      }
+    }
+    state = state.copyWith(
+      you: relocationCard == null
+          ? state.you
+          : state.you.copyWith(
+              hand: List.of(state.you.hand)..remove(relocationCard)),
+      relocationActive: false,
+      clearRelocationFirst: true,
     );
     _syncMyPlayer();
     return null;
@@ -863,4 +1090,17 @@ class GameNotifier extends Notifier<GameState> {
     if (opponentPoints >= 3 && opponentPoints > yourPoints) return oppId;
     return null;
   }
+}
+
+/// Kortet på en byggplats, om någon – hjälper
+/// [GameNotifier.selectRelocationTarget] avgöra om Omlokaliseringens
+/// första tryck landade på en tom platshållare (ignoreras) eller ett
+/// riktigt bygg-/enhetskort.
+PlacedCard? _expansionAt(
+    RealmBoard board, int column, BuildingRow row, int slotIndex) {
+  final node = board.settlementAt(column);
+  if (node == null) return null;
+  final sites = row == BuildingRow.above ? node.aboveSites : node.belowSites;
+  if (slotIndex >= sites.length) return null;
+  return sites[slotIndex];
 }

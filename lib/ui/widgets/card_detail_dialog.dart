@@ -14,15 +14,22 @@ import 'dice_face.dart';
 /// ska kunna förstora ett kort innan man bestämmer sig) visas en extra
 /// fråga längst ner – "Vill du ta detta kort?" med Ta kortet/Avbryt –
 /// i stället för dialogrutans vanliga, rena "bara stäng"-beteende.
+///
+/// [onUseCard] är samma sak för handlingskort (regelhäftets
+/// "tvåstegsraket": tryck för att förstora, sedan "Vill du använda
+/// kortet?" med Använd kortet/Avbryt) – se [HandDock] där handlings-
+/// kort med den här kroken skickas in. De två är ömsesidigt uteslutande
+/// (ett kort frågar aldrig både "ta" och "använd").
 Future<void> showCardDetail(BuildContext context, GameCard card,
-    {VoidCallback? onTakeCard}) {
+    {VoidCallback? onTakeCard, VoidCallback? onUseCard}) {
   return showDialog<void>(
     context: context,
     barrierColor: Colors.black54,
     builder: (context) => Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(24),
-      child: _CardDetailContent(card: card, onTakeCard: onTakeCard),
+      child: _CardDetailContent(
+          card: card, onTakeCard: onTakeCard, onUseCard: onUseCard),
     ),
   );
 }
@@ -41,8 +48,9 @@ String _neighborRibbonLabel(GameCard card) {
 class _CardDetailContent extends StatelessWidget {
   final GameCard card;
   final VoidCallback? onTakeCard;
+  final VoidCallback? onUseCard;
 
-  const _CardDetailContent({required this.card, this.onTakeCard});
+  const _CardDetailContent({required this.card, this.onTakeCard, this.onUseCard});
 
   @override
   Widget build(BuildContext context) {
@@ -233,6 +241,43 @@ class _CardDetailContent extends StatelessWidget {
                                 onTakeCard!();
                               },
                               child: const Text('Ta kortet'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (onUseCard != null) ...[
+                      const SizedBox(height: 14),
+                      const Text(
+                        'Vill du använda kortet?',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: CatanColors.ink),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                  foregroundColor: CatanColors.ink,
+                                  side: const BorderSide(
+                                      color: CatanColors.woodFrame)),
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: const Text('Avbryt'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFF4F6F45)),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                onUseCard!();
+                              },
+                              child: const Text('Använd kortet'),
                             ),
                           ),
                         ],

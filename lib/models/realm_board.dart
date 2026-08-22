@@ -3,6 +3,43 @@ import 'game_card.dart';
 /// Var (ovanför eller nedanför en by/stad) ett bygg-/enhetskort sitter.
 enum BuildingRow { above, below }
 
+/// Vilken sorts plats en [RelocationSelection] pekar på – Omlokalisering
+/// (regelhäftet: "exchange 2 of your own regions or 2 of your own
+/// expansion cards") tillåter bara byte inom samma sort, aldrig
+/// blandat.
+enum RelocationTargetKind { region, expansion }
+
+/// En vald plats under Omlokalisering (se [RelocationTargetKind]) –
+/// det första trycket lagras som "väntande" tills spelaren trycker på
+/// en andra, giltig plats av samma sort (se
+/// [GameNotifier.selectRelocationTarget]). `slotIndex` är bara
+/// meningsfullt för [RelocationTargetKind.expansion] (0/1, se
+/// [RealmBoard.placeExpansion]) – alltid 0 för regioner.
+class RelocationSelection {
+  final RelocationTargetKind kind;
+  final int column;
+  final BuildingRow row;
+  final int slotIndex;
+
+  const RelocationSelection({
+    required this.kind,
+    required this.column,
+    required this.row,
+    this.slotIndex = 0,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      other is RelocationSelection &&
+      other.kind == kind &&
+      other.column == column &&
+      other.row == row &&
+      other.slotIndex == slotIndex;
+
+  @override
+  int get hashCode => Object.hash(kind, column, row, slotIndex);
+}
+
 /// Ett kortexemplar som är utplacerat på ett rike.
 ///
 /// `storedResources` är bara meningsfullt för regionkort (0–3 resurser
@@ -219,6 +256,49 @@ class RealmBoard {
       throw StateError('Byggplatsen är redan upptagen.');
     }
     sites[slotIndex] = expansionCard;
+  }
+
+  /// Byter plats på två av dina egna, redan utplacerade regionkort
+  /// (Omlokalisering, regelhäftet: "You may exchange 2 of your own
+  /// regions ... Resources stored on regions may not be changed"). Hela
+  /// [PlacedCard] (kort och lagrade resurser tillsammans) byter plats
+  /// som en enhet – precis som att fysiskt lyfta upp regionkortet med
+  /// resurserna som ligger på det och lägga det på den andra platsen –
+  /// så ingen enskild regions lagrade mängd ändras av bytet i sig.
+  /// Kastar [StateError] om någon av platserna är tom.
+  void swapRegions(
+      int columnA, BuildingRow rowA, int columnB, BuildingRow rowB) {
+    final a = regionAt(columnA, rowA);
+    final b = regionAt(columnB, rowB);
+    if (a == null || b == null) {
+      throw StateError('Båda platserna måste ha en region för att bytas.');
+    }
+    final targetA = rowA == BuildingRow.above ? _regionsAbove : _regionsBelow;
+    final targetB = rowB == BuildingRow.above ? _regionsAbove : _regionsBelow;
+    targetA[columnA] = b;
+    targetB[columnB] = a;
+  }
+
+  /// Byter plats på två av dina egna, redan utplacerade bygg-/
+  /// enhetskort (Omlokalisering, regelhäftet: "... or 2 of your own
+  /// expansion cards"). Kastar [StateError] om någon av platserna
+  /// saknar by/stad eller är tom.
+  void swapExpansions(int columnA, BuildingRow rowA, int slotA, int columnB,
+      BuildingRow rowB, int slotB) {
+    final nodeA = _settlements[columnA];
+    final nodeB = _settlements[columnB];
+    if (nodeA == null || nodeB == null) {
+      throw StateError('Ingen by/stad i kolumn $columnA eller $columnB.');
+    }
+    final sitesA = rowA == BuildingRow.above ? nodeA.aboveSites : nodeA.belowSites;
+    final sitesB = rowB == BuildingRow.above ? nodeB.aboveSites : nodeB.belowSites;
+    final cardA = sitesA[slotA];
+    final cardB = sitesB[slotB];
+    if (cardA == null || cardB == null) {
+      throw StateError('Båda platserna måste ha ett kort för att bytas.');
+    }
+    sitesA[slotA] = cardB;
+    sitesB[slotB] = cardA;
   }
 
   /// Om ett kort med [cardId] redan ligger på en byggplats någonstans i

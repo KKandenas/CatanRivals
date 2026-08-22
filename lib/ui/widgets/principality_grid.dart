@@ -34,6 +34,12 @@ typedef PendingRegionDropCallback = void Function(BuildingRow row, GameCard card
 /// spelaren bekräftar (se `BuildConfirmCard` i game_board_screen.dart).
 typedef BuildConfirmRequest = void Function(GameCard card, VoidCallback onConfirm);
 
+/// Anropas när en plats trycks på under Omlokalisering (se
+/// [RelocationTargetKind]/[GameNotifier.selectRelocationTarget]) –
+/// `slotIndex` är alltid 0 för regioner.
+typedef RelocationSelectCallback = void Function(
+    RelocationTargetKind kind, int column, BuildingRow row, int slotIndex);
+
 /// Ritar ut ett [RealmBoard] enligt kolumnmodellen: byar/städer i en rad,
 /// vägar mellan dem, och regioner delade diagonalt i hörnen ovanför och
 /// nedanför (se "Rikets koordinatsystem"-skissen). Alla kort är
@@ -75,6 +81,14 @@ class PrincipalityGrid extends StatelessWidget {
   final int? pendingRegionJunction;
   final PendingRegionDropCallback? onDropPendingRegion;
 
+  /// Omlokalisering (se [RelocationSelectCallback]): om aktiv blir
+  /// varje egen, ockuperad region/byggplats tryckbar i stället för
+  /// draghjälpen – [relocationFirst] är det första valet (om något),
+  /// markerat med en gul ram tills det andra trycket genomför bytet.
+  final bool relocationActive;
+  final RelocationSelection? relocationFirst;
+  final RelocationSelectCallback? onSelectRelocationTarget;
+
   const PrincipalityGrid({
     super.key,
     required this.board,
@@ -90,6 +104,9 @@ class PrincipalityGrid extends StatelessWidget {
     this.onRequestBuildConfirm,
     this.pendingRegionJunction,
     this.onDropPendingRegion,
+    this.relocationActive = false,
+    this.relocationFirst,
+    this.onSelectRelocationTarget,
   });
 
   bool get _draggingRoad => draggingCard?.category == CardCategory.road;
@@ -375,7 +392,7 @@ class PrincipalityGrid extends StatelessWidget {
 
   Widget _buildingSite(
       int column, BuildingRow row, int slotIndex, PlacedCard? placed) {
-    if (placed != null) return _expansionCard(placed);
+    if (placed != null) return _expansionCard(placed, column, row, slotIndex);
     if (!interactive) return const BuildingSiteView();
 
     return DragTarget<GameCard>(
@@ -395,16 +412,66 @@ class PrincipalityGrid extends StatelessWidget {
   }
 
   Widget _region(PlacedCard placed, int column, BuildingRow row) {
-    return RegionCardView(
+    final canSelect =
+        relocationActive && interactive && onSelectRelocationTarget != null;
+    final view = RegionCardView(
       card: placed.card,
       stored: placed.storedResources,
-      onAdjust: interactive && onAdjustRegion != null
+      // +/- knapparna stängs av under Omlokalisering: annars skulle ett
+      // tryck på kortets bakgrund (för att välja det till bytet) och
+      // ett tryck på en +/- knapp konkurrera om samma yta.
+      onAdjust: interactive && onAdjustRegion != null && !relocationActive
           ? (delta) => onAdjustRegion!(column, row, delta)
           : null,
+      onTap: canSelect
+          ? () => onSelectRelocationTarget!(
+              RelocationTargetKind.region, column, row, 0)
+          : null,
     );
+    final selected = relocationActive &&
+        relocationFirst?.kind == RelocationTargetKind.region &&
+        relocationFirst?.column == column &&
+        relocationFirst?.row == row;
+    return selected ? _withSelectionRing(view) : view;
   }
 
-  Widget _expansionCard(PlacedCard placed) {
-    return ExpansionCardView(card: placed.card, showCost: false);
+  Widget _expansionCard(
+      PlacedCard placed, int column, BuildingRow row, int slotIndex) {
+    final canSelect =
+        relocationActive && interactive && onSelectRelocationTarget != null;
+    final view = ExpansionCardView(
+      card: placed.card,
+      showCost: false,
+      onTap: canSelect
+          ? () => onSelectRelocationTarget!(
+              RelocationTargetKind.expansion, column, row, slotIndex)
+          : null,
+    );
+    final selected = relocationActive &&
+        relocationFirst?.kind == RelocationTargetKind.expansion &&
+        relocationFirst?.column == column &&
+        relocationFirst?.row == row &&
+        relocationFirst?.slotIndex == slotIndex;
+    return selected ? _withSelectionRing(view) : view;
+  }
+
+  /// Gul ram runt det först valda kortet under Omlokalisering (se
+  /// [GameState.relocationFirst]) tills det andra trycket genomför
+  /// bytet.
+  Widget _withSelectionRing(Widget child) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        child,
+        IgnorePointer(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: Colors.amber, width: 3),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

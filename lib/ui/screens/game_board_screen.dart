@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/basic_set_cards.dart';
 import '../../models/models.dart';
 import '../../state/game_notifier.dart';
 import '../../state/game_state.dart';
 import '../theme/catan_colors.dart';
+import '../widgets/brigitta_number_picker.dart';
 import '../widgets/build_confirm_card.dart';
 import '../widgets/center_stacks_strip.dart';
 import '../widgets/dice_roll_button.dart';
@@ -15,6 +17,9 @@ import '../widgets/hand_dock.dart';
 import '../widgets/peek_stack_overlay.dart';
 import '../widgets/pending_regions_bar.dart';
 import '../widgets/principality_grid.dart';
+import '../widgets/relocation_instruction_bar.dart';
+import '../widgets/scout_prompt_card.dart';
+import '../widgets/scout_region_picker.dart';
 import '../widgets/top_status_bar.dart';
 import '../widgets/total_score_board.dart';
 import '../widgets/trade_phase_card.dart';
@@ -53,6 +58,31 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(error), duration: const Duration(seconds: 2)),
     );
+  }
+
+  /// Andra halvan av handlingskortens "tvåstegsraket" (se
+  /// [HandDock.onUseActionCard]/card_detail_dialog.dart) – "Vill du
+  /// använda kortet?" har redan bekräftats, nu avgörs vad just det
+  /// korttypen faktiskt gör. Brigitta behöver ytterligare ett val
+  /// (vilket tärningstal, se [showBrigittaNumberPicker]) och
+  /// Omlokalisering startar en egen väljarläge (se
+  /// [RelocationInstructionBar]) – övriga (Handelskaravan/Guldsmed) är
+  /// självbevakade och behöver inget mer än att tas bort från handen.
+  void _handleUseActionCard(
+      BuildContext context, GameCard card, GameNotifier notifier) {
+    if (card.id == BasicSetCards.brigittaTheWiseWoman.id) {
+      showBrigittaNumberPicker(
+        context,
+        onPick: (number) =>
+            _handleResult(context, notifier.useBrigitta(number)),
+      );
+      return;
+    }
+    if (card.id == BasicSetCards.relocation.id) {
+      _handleResult(context, notifier.startRelocation());
+      return;
+    }
+    _handleResult(context, notifier.discardActionCard(card));
   }
 
   /// Om ett kort redan väntar på bekräftelse (se [_pendingBuildCard])
@@ -343,6 +373,38 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           ),
                         ),
                       ),
+                    // Spejare (se dropSettlement/useScout/declineScout):
+                    // "Vill du använda kortet?"-frågan väcks automatiskt
+                    // av by-bygget i stället för ett handkortstryck (se
+                    // HandDock), sedan den öppna regionstapeln att välja
+                    // 2 kort ur.
+                    if (state.awaitingScoutDecision &&
+                        state.scoutChoices == null)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          padding: const EdgeInsets.all(12),
+                          child: ScoutPromptCard(
+                            onUseScout: () =>
+                                _handleResult(context, notifier.useScout()),
+                            onDecline: () => _handleResult(
+                                context, notifier.declineScout()),
+                          ),
+                        ),
+                      ),
+                    if (state.scoutChoices != null)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          padding: const EdgeInsets.all(12),
+                          child: ScoutRegionPicker(
+                            cards: state.scoutChoices!,
+                            pickedCount: state.pendingRegions.length,
+                            onPick: (card) => _handleResult(
+                                context, notifier.pickScoutRegion(card)),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -411,6 +473,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   onDragStarted: notifier.startDrag,
                   onDragEnd: notifier.endDrag,
                 ),
+              if (state.relocationActive)
+                RelocationInstructionBar(
+                  hasFirstSelection: state.relocationFirst != null,
+                  onCancel: () =>
+                      _handleResult(context, notifier.cancelRelocation()),
+                ),
               Expanded(
                 flex: 5,
                 child: AnimatedContainer(
@@ -457,6 +525,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                       pendingRegionJunction: state.pendingRegionJunction,
                       onDropPendingRegion: (row, card) => _handleResult(
                           context, notifier.placePendingRegion(row, card)),
+                      relocationActive: state.relocationActive,
+                      relocationFirst: state.relocationFirst,
+                      onSelectRelocationTarget: (kind, column, row, slot) =>
+                          _handleResult(
+                              context,
+                              notifier.selectRelocationTarget(
+                                  kind, column, row, slot)),
                     ),
                   ),
                 ),
@@ -467,6 +542,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   player: state.you,
                   onDragStarted: notifier.startDrag,
                   onDragEnd: notifier.endDrag,
+                  onUseActionCard: (card) =>
+                      _handleUseActionCard(context, card, notifier),
                   selectedDiscardCard:
                       isDiscarding ? _selectedDiscardCard : null,
                   onSelectForDiscard: isDiscarding

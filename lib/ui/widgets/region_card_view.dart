@@ -20,12 +20,23 @@ class RegionCardView extends StatelessWidget {
   final int stored;
   final void Function(int delta)? onAdjust;
 
-  const RegionCardView({super.key, required this.card, this.stored = 0, this.onAdjust});
+  /// Om satt, körs den här i stället för att bara förstora kortet vid
+  /// tryck – används av [ScoutRegionPicker] för att i stället förstora
+  /// kortet med en "Vill du ta detta kort?"-fråga (samma mönster som
+  /// [ExpansionCardView.onTap]).
+  final VoidCallback? onTap;
+
+  const RegionCardView(
+      {super.key,
+      required this.card,
+      this.stored = 0,
+      this.onAdjust,
+      this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => showCardDetail(context, card),
+      onTap: onTap ?? () => showCardDetail(context, card),
       child: AspectRatio(
         aspectRatio: 1,
         child: ClipRRect(

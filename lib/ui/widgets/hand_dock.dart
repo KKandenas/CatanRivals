@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/basic_set_cards.dart';
 import '../../models/models.dart';
 import '../theme/catan_colors.dart';
 import 'card_detail_dialog.dart';
@@ -11,12 +12,23 @@ import 'score_summary.dart';
 ///
 /// Bygg-/enhetskort (kategori [CardCategory.expansion]) går att
 /// långtrycka-och-dra upp på det egna riket för att spela dem – se
-/// [PrincipalityGrid]. Handlingskort är inte dragbara än (att spela dem
-/// är en egen, icke-rumslig interaktion som kommer i ett senare steg).
+/// [PrincipalityGrid]. Handlingskort (kategori [CardCategory.action])
+/// är inte dragbara – de spelas med regelhäftets "tvåstegsraket": ett
+/// tryck förstorar kortet ([showCardDetail]), som då frågar "Vill du
+/// använda kortet?" (se [onUseActionCard]). Undantaget är Spejare
+/// (regelhäftets "action-scout"), som bara går att använda i samma
+/// stund som en ny by byggs – den frågan visas i stället automatiskt
+/// då (se GameNotifier.dropSettlement), så ett tryck på Spejare i
+/// handen visar bara det vanliga, rena kortförstoringsläget.
 class HandDock extends StatelessWidget {
   final Player player;
   final void Function(GameCard card)? onDragStarted;
   final VoidCallback? onDragEnd;
+
+  /// Anropas när spelaren bekräftar "Vill du använda kortet?" för ett
+  /// handlingskort (utom Spejare, se klassdoc). Notifiern avgör själv
+  /// vad "använda" innebär för respektive kort.
+  final void Function(GameCard card)? onUseActionCard;
 
   /// Handjustering i slutet av action-fasen (se [HandAdjustmentPhase.
   /// discarding]): om satt går varje handkort (oavsett kategori) att
@@ -36,6 +48,7 @@ class HandDock extends StatelessWidget {
     required this.player,
     this.onDragStarted,
     this.onDragEnd,
+    this.onUseActionCard,
     this.selectedDiscardCard,
     this.onSelectForDiscard,
     required this.totalVictoryPoints,
@@ -73,6 +86,7 @@ class HandDock extends StatelessWidget {
                           card: player.hand[i],
                           onDragStarted: onDragStarted,
                           onDragEnd: onDragEnd,
+                          onUseActionCard: onUseActionCard,
                           selected: player.hand[i] == selectedDiscardCard,
                           onSelectForDiscard: onSelectForDiscard == null
                               ? null
@@ -99,6 +113,7 @@ class _HandCard extends StatelessWidget {
   final GameCard card;
   final void Function(GameCard card)? onDragStarted;
   final VoidCallback? onDragEnd;
+  final void Function(GameCard card)? onUseActionCard;
   final bool selected;
   final VoidCallback? onSelectForDiscard;
 
@@ -106,6 +121,7 @@ class _HandCard extends StatelessWidget {
     required this.card,
     this.onDragStarted,
     this.onDragEnd,
+    this.onUseActionCard,
     this.selected = false,
     this.onSelectForDiscard,
   });
@@ -113,6 +129,10 @@ class _HandCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final playable = card.category == CardCategory.expansion;
+    // Spejare undantas: den frågas automatiskt vid by-bygge i stället
+    // (se klassdocen på [HandDock]), inte via ett tryck i handen.
+    final isUsableAction = card.category == CardCategory.action &&
+        card.id != BasicSetCards.scout.id;
 
     // Under handjusteringen (slänga kort) går varje kort – oavsett
     // kategori – bara att trycka på för att välja det, ingen dra-för-
@@ -125,7 +145,13 @@ class _HandCard extends StatelessWidget {
           onTap: onSelectForDiscard);
     }
 
-    final face = _CardFace(card: card, playable: playable);
+    final useActionTap = isUsableAction && onUseActionCard != null
+        ? () => showCardDetail(context, card,
+            onUseCard: () => onUseActionCard!(card))
+        : null;
+
+    final face =
+        _CardFace(card: card, playable: playable, onTap: useActionTap);
 
     if (!playable) return face;
 
