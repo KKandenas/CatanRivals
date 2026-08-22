@@ -21,6 +21,7 @@ import '../widgets/fraternal_feuds_hand_picker.dart';
 import '../widgets/hand_dock.dart';
 import '../widgets/peek_stack_overlay.dart';
 import '../widgets/pending_regions_bar.dart';
+import '../widgets/pill_banner.dart';
 import '../widgets/principality_grid.dart';
 import '../widgets/relocation_instruction_bar.dart';
 import '../widgets/scout_prompt_card.dart';
@@ -263,81 +264,97 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
           ),
           Column(
             children: [
-              if (state.sessionError != null)
-                Container(
-                  width: double.infinity,
-                  color: Theme.of(context).colorScheme.errorContainer,
-                  padding: const EdgeInsets.all(8),
-                  child: Text(
-                    state.sessionError!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.onErrorContainer),
+              Stack(
+                children: [
+                  Column(
+                    children: [
+                      if (state.sessionError != null)
+                        PillBanner(
+                          color: Theme.of(context).colorScheme.errorContainer,
+                          child: Text(
+                            state.sessionError!,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onErrorContainer),
+                          ),
+                        )
+                      else if (state.mode == SessionMode.host &&
+                          !state.opponentConnected)
+                        PillBanner(
+                          color:
+                              Theme.of(context).colorScheme.secondaryContainer,
+                          child: Text(
+                            'Väntar på att motståndaren ska gå med rummet ${state.roomCode} …',
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                      else if (state.isOnline && !state.handsReady)
+                        PillBanner(
+                          color:
+                              Theme.of(context).colorScheme.secondaryContainer,
+                          child: Text(
+                            state.isMyTurnToChooseHand
+                                ? 'Din tur: tryck på en draghög för att ta dina 3 starthandkort'
+                                : 'Väntar på att ${state.opponent.name} väljer en draghög …',
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                      else if (showTurnEmphasis)
+                        // Rundad pill i stället för en helbred remsa – lika
+                        // omöjligt att missa vems tur det är, kompletterar den
+                        // gröna ramen runt egna riket och den lätta
+                        // nedtoningen när det inte är din tur.
+                        PillBanner(
+                          color: state.activePlayerIsMe
+                              ? const Color(0xFF4F6F45)
+                              : CatanColors.woodFrameDark,
+                          child: Text(
+                            state.activePlayerIsMe
+                                ? 'DIN TUR – ${turnPhaseLabel()}'
+                                : '${state.opponent.name}s TUR',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                        ),
+                      TopStatusBar(
+                        opponent: state.opponent,
+                        opponentIsRed: !state.amIRed,
+                        totalVictoryPoints: opponentTotalVictoryPoints,
+                        hasHeroToken: opponentHasHeroToken,
+                        hasTradeToken: opponentHasTradeToken,
+                      ),
+                    ],
                   ),
-                )
-              else if (state.mode == SessionMode.host &&
-                  !state.opponentConnected)
-                Container(
-                  width: double.infinity,
-                  color: Theme.of(context).colorScheme.secondaryContainer,
-                  padding: const EdgeInsets.all(8),
-                  child: Text(
-                    'Väntar på att motståndaren ska gå med rummet ${state.roomCode} …',
-                    textAlign: TextAlign.center,
-                  ),
-                )
-              else if (state.isOnline && !state.handsReady)
-                Container(
-                  width: double.infinity,
-                  color: Theme.of(context).colorScheme.secondaryContainer,
-                  padding: const EdgeInsets.all(8),
-                  child: Text(
-                    state.isMyTurnToChooseHand
-                        ? 'Din tur: tryck på en draghög för att ta dina 3 starthandkort'
-                        : 'Väntar på att ${state.opponent.name} väljer en draghög …',
-                    textAlign: TextAlign.center,
-                  ),
-                )
-              else if (showTurnEmphasis)
-                // Bred, permanent banner så det aldrig är oklart vems tur
-                // det är – kompletterar den gröna ramen runt egna riket och
-                // den lätta nedtoningen när det inte är din tur.
-                Container(
-                  width: double.infinity,
-                  color: state.activePlayerIsMe
-                      ? const Color(0xFF4F6F45)
-                      : CatanColors.woodFrameDark,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Text(
-                    state.activePlayerIsMe
-                        ? 'DIN TUR – ${turnPhaseLabel()}'
-                        : '${state.opponent.name}s TUR',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      letterSpacing: 1.5,
+                  // Totalställningen (segerpoäng för båda spelarna, se
+                  // TotalScoreBoard) svävar i övre högra hörnet och
+                  // sträcker sig över både DIN TUR-pillen och raden med
+                  // motståndarens namn i stället för att pressas in i den
+                  // senare – då slapp den raden växa på höjden bara för att
+                  // få plats med två rader poäng.
+                  if (showTurnEmphasis)
+                    Positioned(
+                      top: 4,
+                      right: 10,
+                      child: TotalScoreBoard(
+                        youName: state.you.name,
+                        youPoints: youTotalVictoryPoints,
+                        youHaveHeroToken: youHaveHeroToken,
+                        youHaveTradeToken: youHaveTradeToken,
+                        amIRed: state.amIRed,
+                        opponentName: state.opponent.name,
+                        opponentPoints: opponentTotalVictoryPoints,
+                        opponentHasHeroToken: opponentHasHeroToken,
+                        opponentHasTradeToken: opponentHasTradeToken,
+                      ),
                     ),
-                  ),
-                ),
-              TopStatusBar(
-                opponent: state.opponent,
-                opponentIsRed: !state.amIRed,
-                totalVictoryPoints: opponentTotalVictoryPoints,
-                hasHeroToken: opponentHasHeroToken,
-                hasTradeToken: opponentHasTradeToken,
-                trailing: TotalScoreBoard(
-                  youName: state.you.name,
-                  youPoints: youTotalVictoryPoints,
-                  youHaveHeroToken: youHaveHeroToken,
-                  youHaveTradeToken: youHaveTradeToken,
-                  amIRed: state.amIRed,
-                  opponentName: state.opponent.name,
-                  opponentPoints: opponentTotalVictoryPoints,
-                  opponentHasHeroToken: opponentHasHeroToken,
-                  opponentHasTradeToken: opponentHasTradeToken,
-                ),
+                ],
               ),
               // Kortbytesfasen (regelhäftet s. 9), sist i omgången efter
               // handjusteringen – en vanlig rad högst upp (inte en

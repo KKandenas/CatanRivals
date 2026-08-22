@@ -7,9 +7,11 @@ import '../theme/catan_colors.dart';
 /// Hero Token/Trade Token) för båda spelarna på samma gång – till
 /// skillnad från de mer detaljerade ScoreSummary-rutorna (en per
 /// spelare, med alla poängtyper) ger den här bara en snabb blick på
-/// vem som leder just nu. Visas längst till höger i [TopStatusBar]
-/// (se game_board_screen.dart), inte som en flytande bricka ovanpå
-/// brädet – då riskerade den att skymma egna/motståndarens kort.
+/// vem som leder just nu. Svävar i övre högra hörnet, ovanpå både
+/// DIN TUR-pillen och [TopStatusBar] (se game_board_screen.dart) i
+/// stället för att pressas in i endera raden – annars skulle den
+/// tvinga upp höjden på en av dem bara för att få plats med två rader
+/// poäng.
 class TotalScoreBoard extends StatelessWidget {
   final String youName;
   final int youPoints;
@@ -38,13 +40,20 @@ class TotalScoreBoard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
+      // Rundare "pill"-form och gyllene kant (i stället för den tunna
+      // träfärgade linjen) för att matcha CarvedFrame/PillBanner-stilen
+      // som ramar in resten av brädet.
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: CatanColors.woodFrame, width: 1),
+        color: Colors.black.withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(18),
+        border: const Border.fromBorderSide(
+            BorderSide(color: Color(0xFFC9A227), width: 1.4)),
+        boxShadow: const [
+          BoxShadow(color: Colors.black45, blurRadius: 5, offset: Offset(0, 2)),
+        ],
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         // OBS: inget `CrossAxisAlignment.stretch` här – Positioned med
         // bara left/top (ingen right/width) ger den här Column ett
         // obegränsat breddutrymme, och `.stretch` kräver en begränsad
@@ -118,20 +127,10 @@ class _Row extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 6),
-        // VP-ikonen är medvetet större än de andra ikonerna på raden
-        // (segerpoäng är det enda som faktiskt avgör vem som vinner) –
-        // se önskemål om att göra totalställningen "tydligare".
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: Image.asset(CatanAssets.pointVictory,
-              width: 20, height: 20, fit: BoxFit.cover),
-        ),
-        const SizedBox(width: 4),
-        Text('$points',
-            style: const TextStyle(
-                color: Colors.white,
-                fontSize: 17,
-                fontWeight: FontWeight.w800)),
+        // Segerpoängen som ett guldmynt i stället för den platta
+        // VP-ikonen – det enda som faktiskt avgör vem som vinner
+        // (regelhäftet), så det ska synas tydligast av allt på raden.
+        _GoldCoin(points: points),
         if (hasHeroToken) ...[
           const SizedBox(width: 4),
           ClipRRect(
@@ -149,6 +148,41 @@ class _Row extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Segerpoängen som ett litet guldmynt (radiell gradient + mörkare
+/// kant, samma teknik som hörnnitarna i [CarvedFrame]) i stället för
+/// den platta VP-ikonen – "gyllene" är bokstavligt vad som avgör vem
+/// som vinner, så det förtjänar den tydligaste behandlingen på raden.
+class _GoldCoin extends StatelessWidget {
+  final int points;
+
+  const _GoldCoin({required this.points});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 26,
+      height: 26,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const RadialGradient(
+          center: Alignment(-0.3, -0.3),
+          colors: [Color(0xFFF4DFA0), Color(0xFFC9932A)],
+        ),
+        border: Border.all(color: const Color(0xFF8A6A2A), width: 1),
+        boxShadow: const [
+          BoxShadow(color: Colors.black45, blurRadius: 2, offset: Offset(0, 1)),
+        ],
+      ),
+      child: Text(
+        '$points',
+        style: const TextStyle(
+            color: CatanColors.ink, fontSize: 13, fontWeight: FontWeight.w800),
+      ),
     );
   }
 }
