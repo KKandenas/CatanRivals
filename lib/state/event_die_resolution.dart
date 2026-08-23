@@ -72,15 +72,25 @@ String _resolveBrigandAttack(GameState state) {
   return lines.join('\n');
 }
 
+/// Jämför spelarnas handelspoäng direkt (precis som [_resolveCelebration]
+/// gör för kunskapspoäng) – INTE samma sak som [GameState.tradeTokenHolder]
+/// (Handelsbrickan, som kräver minst 3 poäng OCH mer än motståndaren för
+/// att vara "sticky" och även ge en extra segerpoäng). Handel-sidan på
+/// tärningen gäller bara den här enskilda omgången: den med flest
+/// handelspoäng just nu vinner, även under 3 poäng – bekräftat mot det
+/// fysiska spelet (spelartest: den gamla, brick-baserade varianten
+/// missade att ge utslag så fort ingen hunnit nå tröskeln på 3).
 String _resolveTrade(GameState state) {
-  final holder = state.tradeTokenHolder;
-  if (holder == null) {
-    return 'Ingen spelare har handelsövertaget just nu. Inget händer.';
+  final youCommerce = state.you.principality.totalCommercePoints;
+  final oppCommerce = state.opponent.principality.totalCommercePoints;
+  if (youCommerce == oppCommerce) {
+    return 'Ingen spelare har flest handelspoäng just nu. Inget händer.';
   }
-  final youHaveIt = holder == state.you.id;
-  final holderName = youHaveIt ? state.you.name : state.opponent.name;
-  final otherName = youHaveIt ? state.opponent.name : state.you.name;
-  return '$holderName har handelsövertaget och får 1 valfri resurs från $otherName.';
+  final winnerName =
+      youCommerce > oppCommerce ? state.you.name : state.opponent.name;
+  final otherName =
+      youCommerce > oppCommerce ? state.opponent.name : state.you.name;
+  return '$winnerName har flest handelspoäng och får 1 valfri resurs från $otherName.';
 }
 
 String _resolveCelebration(GameState state) {

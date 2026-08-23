@@ -128,27 +128,60 @@ void main() {
   });
 
   group('resolveEventDieFace: Handel', () {
-    test('ingen har handelsövertaget: inget händer', () {
-      final state = GameState(
-        you: buildPlayer('you', 'Astrid'),
-        opponent: buildPlayer('opponent', 'Björn'),
+    GameState stateWithCommerce(int youCommerce, int oppCommerce) {
+      final youBoard = RealmBoard(ownerId: 'you');
+      if (youCommerce > 0) {
+        youBoard.placeSettlement(
+            0, const PlacedCard(card: BasicSetCards.settlement));
+        youBoard.placeExpansion(
+            0,
+            BuildingRow.above,
+            0,
+            PlacedCard(
+                card: BasicSetCards.tollBridge
+                    .copyWith(commercePoints: youCommerce)));
+      }
+      final oppBoard = RealmBoard(ownerId: 'opponent');
+      if (oppCommerce > 0) {
+        oppBoard.placeSettlement(
+            0, const PlacedCard(card: BasicSetCards.settlement));
+        oppBoard.placeExpansion(
+            0,
+            BuildingRow.above,
+            0,
+            PlacedCard(
+                card: BasicSetCards.tollBridge
+                    .copyWith(commercePoints: oppCommerce)));
+      }
+      return GameState(
+        you: Player(id: 'you', name: 'Astrid', principality: youBoard),
+        opponent:
+            Player(id: 'opponent', name: 'Björn', principality: oppBoard),
         centerStacks: const {},
       );
+    }
+
+    test('lika många handelspoäng (båda 0): inget händer', () {
+      final state = stateWithCommerce(0, 0);
 
       expect(resolveEventDieFace(EventDieFace.trade, state),
-          'Ingen spelare har handelsövertaget just nu. Inget händer.');
+          'Ingen spelare har flest handelspoäng just nu. Inget händer.');
     });
 
-    test('du har handelsövertaget: får resurs från motståndaren', () {
-      final state = GameState(
-        you: buildPlayer('you', 'Astrid'),
-        opponent: buildPlayer('opponent', 'Björn'),
-        centerStacks: const {},
-        tradeTokenHolder: 'you',
-      );
+    test('du har flest handelspoäng: får resurs från motståndaren', () {
+      final state = stateWithCommerce(2, 1);
 
       expect(resolveEventDieFace(EventDieFace.trade, state),
-          'Astrid har handelsövertaget och får 1 valfri resurs från Björn.');
+          'Astrid har flest handelspoäng och får 1 valfri resurs från Björn.');
+    });
+
+    test(
+        'gäller redan under Handelsbrickans tröskel på 3 poäng (speltestad bugg: '
+        'den gamla brick-baserade varianten missade utslag här)', () {
+      final state = stateWithCommerce(1, 0);
+
+      expect(resolveEventDieFace(EventDieFace.trade, state),
+          'Astrid har flest handelspoäng och får 1 valfri resurs från Björn.');
     });
   });
 
