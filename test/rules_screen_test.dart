@@ -79,7 +79,7 @@ void main() {
   });
 
   testWidgets(
-      'visar Gulderan (Era of Gold) som en egen sektion, med "Bild saknas" för kort utan bild och en lista på återanvända grundspelskort',
+      'visar Gulderan (Era of Gold) som en egen sektion, nu med bilder på alla 15 kort, och en lista på återanvända grundspelskort',
       (tester) async {
     await pumpRules(tester);
 
@@ -93,15 +93,24 @@ void main() {
           reason: '${card.name} (${card.id}) saknas i Gulderan-listan');
     }
 
-    // De flesta Gulderan-korten saknar fortfarande en riktig bild –
-    // just det är hela poängen med den här granskningssektionen.
-    expect(find.text('Bild\nsaknas'), findsWidgets);
-
     // Korten som återanvänds rakt av från grundspelet (t.ex. Guldsmed)
     // ska nämnas i klartext (som en del av granskningsnotisen) – utan
     // att kräva EXAKT en träff, eftersom Guldsmed redan har sin egen
     // kortruta i grundspelssektionen ovanför.
     expect(find.textContaining(BasicSetCards.goldsmith.name), findsWidgets);
+  });
+
+  testWidgets(
+      'Gulderan har inte längre några "Bild saknas" – bara Utvecklingens tid och Oroligheternas tid saknar fortfarande bilder',
+      (tester) async {
+    await pumpRules(tester);
+
+    // Alla 15 Gulderan-kort fick riktiga bilder – bara de två återstående
+    // temaseten (15 + 18 kort) ska fortfarande sakna bild. Räknar hela
+    // trädet (går inte att scopa till en enda sektion utan en egen
+    // ancestor-finder), men eftersom grundspelet redan har alla sina
+    // bilder är exakt 33 den rätta summan.
+    expect(find.text('Bild\nsaknas'), findsNWidgets(33));
   });
 
   testWidgets(
