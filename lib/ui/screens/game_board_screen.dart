@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/basic_set_cards.dart';
 import '../../models/models.dart';
+import '../../state/event_die_resolution.dart';
 import '../../state/game_notifier.dart';
 import '../../state/game_state.dart';
 import '../theme/catan_assets.dart';
@@ -489,6 +490,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                             eventDieFace: state.eventDieFace!,
                             rolledByMe: state.activePlayerIsMe,
                             opponentName: state.opponent.name,
+                            resolution: resolveEventDieFace(
+                                state.eventDieFace!, state),
                             onDismiss: () => setState(
                                 () => _dismissedDiceRollKey = diceRollKey),
                           ),

@@ -357,12 +357,59 @@ class RealmBoard {
             if (site != null) site.card,
       ];
 
+  /// Kolumnerna (och vilken rad, ovanför/nedanför) där ett visst
+  /// utbyggnadskort ligger utplacerat – jämfört på [GameCard.baseId]
+  /// (så både ett odraget mall-kort och ett draget, suffixerat
+  /// kortexemplar av samma typ matchar). Används för att räkna ut
+  /// kortets grannregioner (`regionAt(column - 1, row)`/
+  /// `regionAt(column + 1, row)`, samma rad som kortet själv sitter
+  /// i) – t.ex. Lagerhus vid Brigadanfall (regelhäftet: "Do not count
+  /// the resources on the 2 neighboring regions"), se
+  /// event_die_resolution.dart.
+  List<({int column, BuildingRow row})> expansionLocations(
+      String cardBaseId) {
+    final result = <({int column, BuildingRow row})>[];
+    for (final entry in _settlements.entries) {
+      final column = entry.key;
+      final node = entry.value;
+      if (node.aboveSites.any((s) => s?.card.baseId == cardBaseId)) {
+        result.add((column: column, row: BuildingRow.above));
+      }
+      if (node.belowSites.any((s) => s?.card.baseId == cardBaseId)) {
+        result.add((column: column, row: BuildingRow.below));
+      }
+    }
+    return result;
+  }
+
   /// Summan av lagrade resurser av given typ över alla regioner i riket
   /// (regelhäftet s. 3: varje region lagrar 0–3 av sin egen resurstyp).
   int resourceTotal(ResourceType type) {
     var total = 0;
     for (final region in [..._regionsAbove.values, ..._regionsBelow.values]) {
       if (region.card.resource == type) total += region.storedResources;
+    }
+    return total;
+  }
+
+  /// Som [resourceTotal], men hoppar över de angivna (kolumn, rad)-
+  /// platserna – se [expansionLocations]. Används av Brigadanfallets
+  /// uträkning (event_die_resolution.dart) för att undanta regioner som
+  /// gränsar till ett Lagerhus.
+  int resourceTotalExcluding(
+      ResourceType type, Set<(int, BuildingRow)> excludedLocations) {
+    var total = 0;
+    for (final entry in _regionsAbove.entries) {
+      if (excludedLocations.contains((entry.key, BuildingRow.above))) {
+        continue;
+      }
+      if (entry.value.card.resource == type) total += entry.value.storedResources;
+    }
+    for (final entry in _regionsBelow.entries) {
+      if (excludedLocations.contains((entry.key, BuildingRow.below))) {
+        continue;
+      }
+      if (entry.value.card.resource == type) total += entry.value.storedResources;
     }
     return total;
   }

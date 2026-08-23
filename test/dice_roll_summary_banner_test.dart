@@ -8,7 +8,7 @@ void main() {
       (w) => w is RichText && w.text.toPlainText().contains(substring));
 
   Future<void> pumpBanner(WidgetTester tester, EventDieFace face,
-      {VoidCallback? onDismiss}) async {
+      {VoidCallback? onDismiss, String? resolution}) async {
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
         body: DiceRollSummaryBanner(
@@ -16,6 +16,7 @@ void main() {
           eventDieFace: face,
           rolledByMe: true,
           opponentName: 'Björn',
+          resolution: resolution,
           onDismiss: onDismiss ?? () {},
         ),
       ),
@@ -51,6 +52,25 @@ void main() {
         .dy;
     expect(eventNameY2, greaterThan(resourceY2),
         reason: 'riklig skörd ska stå under resursraden');
+  });
+
+  testWidgets(
+      'visar den uträknade resolutionen (event_die_resolution.dart) under regeltexten',
+      (tester) async {
+    await pumpBanner(tester, EventDieFace.trade,
+        resolution: 'Astrid har handelsövertaget och får 1 valfri resurs från Björn.');
+
+    expect(
+        find.text(
+            'Astrid har handelsövertaget och får 1 valfri resurs från Björn.'),
+        findsOneWidget);
+  });
+
+  testWidgets('ingen extra rad när resolution är null', (tester) async {
+    await pumpBanner(tester, EventDieFace.plentifulHarvest);
+
+    // Bara regeltextens egna RichText – ingen extra Text-rad tillagd.
+    expect(find.textContaining('får dessutom'), findsNothing);
   });
 
   testWidgets('OK anropar onDismiss', (tester) async {

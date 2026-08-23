@@ -35,6 +35,13 @@ class DiceRollSummaryBanner extends StatelessWidget {
   final String opponentName;
   final VoidCallback onDismiss;
 
+  /// Den faktiska uträkningen av händelsetärningens utfall för just den
+  /// här spelställningen (se event_die_resolution.dart) – t.ex. vem som
+  /// har handelsövertaget eller vem som får mer än 7 resurser just nu.
+  /// `null` när det inte finns något extra att räkna ut utöver den
+  /// generella regeltexten ([EventDieFace.ruleText]).
+  final String? resolution;
+
   const DiceRollSummaryBanner({
     super.key,
     required this.productionRoll,
@@ -42,6 +49,7 @@ class DiceRollSummaryBanner extends StatelessWidget {
     required this.rolledByMe,
     required this.opponentName,
     required this.onDismiss,
+    this.resolution,
   });
 
   @override
@@ -82,16 +90,32 @@ class DiceRollSummaryBanner extends StatelessWidget {
         EventDieIcon(face: face, size: 40),
         const SizedBox(width: 10),
         Expanded(
-          child: RichText(
-            text: TextSpan(
-              style: const TextStyle(color: CatanColors.ink, fontSize: 12.5),
-              children: [
-                TextSpan(
-                    text: '${face.swedishName}: ',
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
-                TextSpan(text: face.ruleText),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              RichText(
+                text: TextSpan(
+                  style:
+                      const TextStyle(color: CatanColors.ink, fontSize: 12.5),
+                  children: [
+                    TextSpan(
+                        text: '${face.swedishName}: ',
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                    TextSpan(text: face.ruleText),
+                  ],
+                ),
+              ),
+              if (resolution != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  resolution!,
+                  style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF4F6F45)),
+                ),
               ],
-            ),
+            ],
           ),
         ),
       ],
