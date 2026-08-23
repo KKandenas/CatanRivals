@@ -1,4 +1,5 @@
 import 'package:catan_rivals/data/basic_set_cards.dart';
+import 'package:catan_rivals/data/era_of_gold_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/ui/screens/rules_screen.dart';
 import 'package:flutter/material.dart';
@@ -47,10 +48,12 @@ void main() {
     expect(find.text('Byggnader'), findsOneWidget);
     expect(find.text('Hjältar'), findsOneWidget);
     expect(find.text('Handelsskepp'), findsOneWidget);
-    expect(find.text('Handlingskort'), findsOneWidget);
-    // Kolliderar med händelsetärningens "?"-sida (EventDieFace.eventCard
-    // heter också "Händelsekort") – bara "minst en gång" är meningsfullt
-    // att testa här.
+    // "Handlingskort"/"Händelsekort" kolliderar med Gulderan-sektionens
+    // egna grupper längre ner (samma titlar återanvänds där) – och
+    // "Händelsekort" dessutom med händelsetärningens "?"-sida
+    // (EventDieFace.eventCard heter också "Händelsekort") – bara
+    // "minst en gång" är meningsfullt att testa här.
+    expect(find.text('Handlingskort'), findsWidgets);
     expect(find.text('Händelsekort'), findsWidgets);
 
     // Varje korttyp har en egen tumnagel – ett namn kan förekomma mer
@@ -70,5 +73,29 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(BasicSetCards.abbey.effectText!), findsOneWidget);
+  });
+
+  testWidgets(
+      'visar Gulderan (Era of Gold) som en egen sektion, med "Bild saknas" för kort utan bild och en lista på återanvända grundspelskort',
+      (tester) async {
+    await pumpRules(tester);
+
+    expect(find.textContaining('Gulderan'), findsOneWidget);
+    expect(find.text('Landskapsutbyggnad'), findsOneWidget);
+    expect(find.text('Stadsutbyggnader'), findsOneWidget);
+    for (final card in EraOfGoldCards.all) {
+      expect(find.text(card.name), findsWidgets,
+          reason: '${card.name} (${card.id}) saknas i Gulderan-listan');
+    }
+
+    // De flesta Gulderan-korten saknar fortfarande en riktig bild –
+    // just det är hela poängen med den här granskningssektionen.
+    expect(find.text('Bild\nsaknas'), findsWidgets);
+
+    // Korten som återanvänds rakt av från grundspelet (t.ex. Guldsmed)
+    // ska nämnas i klartext (som en del av granskningsnotisen) – utan
+    // att kräva EXAKT en träff, eftersom Guldsmed redan har sin egen
+    // kortruta i grundspelssektionen ovanför.
+    expect(find.textContaining(BasicSetCards.goldsmith.name), findsWidgets);
   });
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/basic_set_cards.dart';
+import '../../data/era_of_gold_cards.dart';
 import '../../models/models.dart';
 import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
@@ -8,11 +9,18 @@ import '../widgets/card_detail_dialog.dart';
 
 /// Regelsidan: en kort sammanfattning av hur en omgång går till och
 /// vinstvillkoret, händelsetärningens fem sidor, och (det som faktiskt
-/// efterfrågades) en genomsökbar bildkatalog över samtliga 39 korttyper
-/// i grundspelet – tryck på ett kort för att se det förstorat med
+/// efterfrågades) en genomsökbar bildkatalog över samtliga korttyper i
+/// grundspelet – tryck på ett kort för att se det förstorat med
 /// kostnad/poäng/regeltext (samma [showCardDetail]-dialog som redan
 /// används överallt annars i spelet, i stället för att bygga en egen,
 /// duplicerad kortvy här).
+///
+/// Längst ner finns temaseten (t.ex. Gulderan/"The Era of Gold"), i en
+/// egen, tydligt avgränsad sektion – de är BARA med här för
+/// granskning (rätt kort/text/bilder) innan de eventuellt vävs in i
+/// själva spelet, se [_EraSection]. Kort utan en riktig bild ännu
+/// visas med en tydlig "Bild saknas"-platshållare (se [_CardTile])
+/// i stället för att tyst falla tillbaka till en generisk brun ruta.
 ///
 /// Nås via [RulesButton] (uppe till vänster) både på startskärmen
 /// (lobby_screen.dart) och under själva spelet (game_board_screen.dart).
@@ -130,6 +138,28 @@ class RulesScreen extends StatelessWidget {
             cards: BasicSetCards.all
                 .where((c) => c.category == CardCategory.event)
                 .toList(),
+          ),
+          const SizedBox(height: 28),
+          const Divider(color: CatanColors.woodFrame, thickness: 1),
+          const SizedBox(height: 12),
+          _EraSection(
+            title: 'Gulderan (The Era of Gold)',
+            backAsset: CatanAssets.backEraGold,
+            allCards: EraOfGoldCards.all,
+            supplyCounts: EraOfGoldCards.supplyCounts,
+            groups: [
+              _EraGroup(
+                  'Handlingskort',
+                  (c) => c.category == CardCategory.action),
+              _EraGroup('Landskapsutbyggnad',
+                  (c) => c.category == CardCategory.regionExpansion),
+              _EraGroup(
+                  'Enheter', (c) => c.category == CardCategory.expansion),
+              _EraGroup('Stadsutbyggnader',
+                  (c) => c.category == CardCategory.cityExpansion),
+              _EraGroup(
+                  'Händelsekort', (c) => c.category == CardCategory.event),
+            ],
           ),
         ],
       ),
@@ -257,6 +287,98 @@ class _EventFaceTile extends StatelessWidget {
   }
 }
 
+/// En kategori-grupp inom ett temaset – bara titeln + vilka kort som
+/// hör dit (se [_EraSection]).
+class _EraGroup {
+  final String title;
+  final bool Function(GameCard) matches;
+
+  const _EraGroup(this.title, this.matches);
+}
+
+/// Ett helt temaset (t.ex. Gulderan/"The Era of Gold"), tydligt
+/// avgränsat från grundspelet: en guldkantad rubrik med kortbaksidan,
+/// en granskningsnotis, kortgrupperna (se [_EraGroup]/[_CardGroup]),
+/// och till sist en lista på de kort som ÅTERANVÄNDS rakt av från
+/// grundspelet (bara fler fysiska kopior i det här setets stapel, se
+/// t.ex. [EraOfGoldCards]s egen doc-kommentar) – de får ingen egen
+/// kortruta här (det vore bara en dubblett av grundspelets), bara
+/// namnen så att hela setets 27/... kort ändå går att stämma av mot
+/// regelhäftets kortindex.
+class _EraSection extends StatelessWidget {
+  final String title;
+  final String backAsset;
+  final List<GameCard> allCards;
+  final Map<String, int> supplyCounts;
+  final List<_EraGroup> groups;
+
+  const _EraSection({
+    required this.title,
+    required this.backAsset,
+    required this.allCards,
+    required this.supplyCounts,
+    required this.groups,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final newIds = allCards.map((c) => c.id).toSet();
+    final byId = {for (final c in BasicSetCards.all) c.id: c};
+    final reusedNames = supplyCounts.keys
+        .where((id) => !newIds.contains(id))
+        .map((id) => byId[id]?.name)
+        .whereType<String>()
+        .toList()
+      ..sort();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset(backAsset, width: 44, height: 44 * 283 / 271,
+                  fit: BoxFit.cover),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(title,
+                  style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: CatanColors.ink)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        const _InfoCard(
+          icon: Icons.construction,
+          text:
+              'Under granskning – inte med i själva spelet ännu. Kort utan '
+              'en riktig bild visas med "Bild saknas" nedan.',
+        ),
+        const SizedBox(height: 14),
+        for (final group in groups)
+          _CardGroup(
+              title: group.title,
+              cards: allCards.where(group.matches).toList()),
+        if (reusedNames.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 18),
+            child: Text(
+              'Återanvänds rakt av från grundspelet (bara fler fysiska '
+              'kopior i den här stapeln): ${reusedNames.join(', ')}.',
+              style: const TextStyle(
+                  fontSize: 12.5, color: CatanColors.inkSoft, height: 1.35),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 /// En rubrik + rutnät av tryckbara korttumnaglar för en kategori.
 /// Renderar ingenting (inte ens rubriken) om [cards] är tom – t.ex. om
 /// grundspelet råkar sakna en viss [ExpansionKind].
@@ -314,8 +436,29 @@ class _CardTile extends StatelessWidget {
                   child: Image.asset(
                     CatanAssets.resolveCardImage(card),
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        const ColoredBox(color: CatanColors.woodFrame),
+                    // Tydlig "saknas"-platshållare (i stället för en
+                    // tyst, tom brun ruta) – hela poängen med
+                    // regelsidan för ett temaset under granskning är
+                    // att just det här ska synas i ögonvrån.
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: CatanColors.parchmentDark,
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.all(4),
+                      child: const Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.image_not_supported_outlined,
+                              size: 20, color: CatanColors.inkSoft),
+                          SizedBox(height: 2),
+                          Text('Bild\nsaknas',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: 9,
+                                  color: CatanColors.inkSoft,
+                                  height: 1.1)),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
