@@ -231,6 +231,29 @@ void main() {
       expect(board.hasExpansionCard('building-abbey'), isFalse);
     });
 
+    test(
+        'hasExpansionCard matches by baseId, not the exact per-copy draghögs-id (buggen: två Marknadsplatser gick att bygga)',
+        () {
+      final board = StarterCards.buildStartingPrincipality('p1');
+
+      // De två fysiska kopiorna av Marknadsplats får olika id:n i
+      // draghögen (se BasicSetDrawDeck: "$id-draw-$i") – en spelare kan
+      // alltså bygga den ena kopian, sedan dra den andra fysiska kopian
+      // med ett ANNAT id. hasExpansionCard måste ändå känna igen att det
+      // redan finns en Marknadsplats i riket.
+      board.placeExpansion(
+          2,
+          BuildingRow.below,
+          0,
+          PlacedCard(
+              card: BasicSetCards.marketplace
+                  .copyWith(id: 'building-marketplace-draw-0')));
+
+      expect(board.hasExpansionCard('building-marketplace'), isTrue,
+          reason:
+              'baseId för "building-marketplace-draw-0" är "building-marketplace"');
+    });
+
     test('upgrading to a city adds a second building site on each side', () {
       final board = StarterCards.buildStartingPrincipality('p1');
 

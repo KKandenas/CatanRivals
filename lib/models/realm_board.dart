@@ -332,15 +332,20 @@ class RealmBoard {
     return false;
   }
 
-  /// Om ett kort med [cardId] redan ligger på en byggplats någonstans i
-  /// riket (byar/städers ovanför-/nedanför-platser) – används för att
-  /// kontrollera unika kort (regelhäftet: "(1x)" i kortnamnet, t.ex.
-  /// Kloster/Marknadsplats/Församlingshus), se
-  /// [GameNotifier.dropExpansion].
+  /// Om ett kort av *typen* [cardId] (jämfört via [GameCard.baseId], inte
+  /// [GameCard.id] – annars skulle två olika fysiska kopior av samma
+  /// unika byggnad, t.ex. "building-marketplace-draw-0" och
+  /// "-draw-1", räknas som olika kort och komma förbi kontrollen) redan
+  /// ligger på en byggplats någonstans i riket (byar/städers ovanför-/
+  /// nedanför-platser). Används för att kontrollera unika kort
+  /// (regelhäftet: "(1x)" i kortnamnet, t.ex. Kloster/Marknadsplats/
+  /// Församlingshus), se [GameNotifier.dropExpansion] – anropa med
+  /// [GameCard.baseId], inte [GameCard.id], annars missar kontrollen av
+  /// samma anledning.
   bool hasExpansionCard(String cardId) {
     for (final node in _settlements.values) {
       for (final site in [...node.aboveSites, ...node.belowSites]) {
-        if (site?.card.id == cardId) return true;
+        if (site?.card.baseId == cardId) return true;
       }
     }
     return false;

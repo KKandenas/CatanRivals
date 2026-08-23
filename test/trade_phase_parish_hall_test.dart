@@ -30,9 +30,19 @@ void main() {
     container.read(gameProvider.notifier).playLocally();
 
     if (withParishHall) {
+      // Byggt med ett draghögs-suffixat id (t.ex.
+      // "building-parish-hall-draw-0", se BasicSetDrawDeck) i stället
+      // för det rena grundkortets id – exakt så som ett riktigt draget
+      // Församlingshus faktiskt ser ut. RealmBoard.hasExpansionCard
+      // måste jämföra via GameCard.baseId för att känna igen det (se
+      // motsvarande bugg för Marknadsplats i game_notifier_test.dart).
       container.read(gameProvider).you.principality.placeExpansion(
-          0, BuildingRow.above, 0,
-          const PlacedCard(card: BasicSetCards.parishHall));
+          0,
+          BuildingRow.above,
+          0,
+          PlacedCard(
+              card: BasicSetCards.parishHall
+                  .copyWith(id: 'building-parish-hall-draw-0')));
     }
 
     await tester.pumpAndSettle();

@@ -80,6 +80,34 @@ void main() {
       expect(after.you.principality.settlementAt(2)!.aboveSites[0], isNull);
     });
 
+    test(
+        'dropExpansion refuses en andra fysisk kopia av samma unika byggnad, även med olika draghögs-id (rapporterad bugg: 2 Marknadsplatser gick att bygga)',
+        () {
+      final notifier = container.read(gameProvider.notifier);
+      final before = container.read(gameProvider);
+
+      // De två fysiska Marknadsplats-korten har OLIKA id i draghögen
+      // (se BasicSetDrawDeck: "$id-draw-$i") – det är precis det som
+      // gjorde att den gamla id-baserade kontrollen missade dem.
+      final firstCopy =
+          BasicSetCards.marketplace.copyWith(id: 'building-marketplace-draw-0');
+      final secondCopy =
+          BasicSetCards.marketplace.copyWith(id: 'building-marketplace-draw-1');
+      before.you.hand.addAll([firstCopy, secondCopy]);
+
+      final firstError =
+          notifier.dropExpansion(0, BuildingRow.above, 0, firstCopy);
+      expect(firstError, isNull);
+
+      final secondError =
+          notifier.dropExpansion(2, BuildingRow.above, 0, secondCopy);
+
+      expect(secondError, 'Du kan bara ha en ${secondCopy.name} i ditt rike.');
+      final after = container.read(gameProvider);
+      expect(after.you.hand.contains(secondCopy), isTrue); // slängdes inte
+      expect(after.you.principality.settlementAt(2)!.aboveSites[0], isNull);
+    });
+
     test('dropRoad builds a road at the frontier and decrements the stack', () {
       final notifier = container.read(gameProvider.notifier);
       final before = container.read(gameProvider);
