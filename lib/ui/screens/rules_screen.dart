@@ -93,6 +93,7 @@ class RulesScreen extends StatelessWidget {
             cards: BasicSetCards.all
                 .where((c) => c.category == CardCategory.region)
                 .toList(),
+            supplyCounts: _regionSupplyCounts,
           ),
           _CardGroup(
             title: 'Byar, städer & vägar',
@@ -101,12 +102,14 @@ class RulesScreen extends StatelessWidget {
                     c.category == CardCategory.city ||
                     c.category == CardCategory.road)
                 .toList(),
+            supplyCounts: BasicSetCards.supplyCounts,
           ),
           _CardGroup(
             title: 'Handlingskort',
             cards: BasicSetCards.all
                 .where((c) => c.category == CardCategory.action)
                 .toList(),
+            supplyCounts: BasicSetCards.supplyCounts,
           ),
           _CardGroup(
             title: 'Byggnader',
@@ -115,6 +118,7 @@ class RulesScreen extends StatelessWidget {
                     c.category == CardCategory.expansion &&
                     c.expansionKind == ExpansionKind.building)
                 .toList(),
+            supplyCounts: BasicSetCards.supplyCounts,
           ),
           _CardGroup(
             title: 'Hjältar',
@@ -123,6 +127,7 @@ class RulesScreen extends StatelessWidget {
                     c.category == CardCategory.expansion &&
                     c.expansionKind == ExpansionKind.hero)
                 .toList(),
+            supplyCounts: BasicSetCards.supplyCounts,
           ),
           _CardGroup(
             title: 'Handelsskepp',
@@ -131,6 +136,7 @@ class RulesScreen extends StatelessWidget {
                     c.category == CardCategory.expansion &&
                     c.expansionKind == ExpansionKind.tradeShip)
                 .toList(),
+            supplyCounts: BasicSetCards.supplyCounts,
           ),
           _CardGroup(
             title: 'Övriga enheter',
@@ -139,9 +145,11 @@ class RulesScreen extends StatelessWidget {
                     c.category == CardCategory.expansion &&
                     c.expansionKind == ExpansionKind.otherUnit)
                 .toList(),
+            supplyCounts: BasicSetCards.supplyCounts,
           ),
           _CardGroup(
             title: 'Händelsekort',
+            supplyCounts: BasicSetCards.supplyCounts,
             cards: BasicSetCards.all
                 .where((c) => c.category == CardCategory.event)
                 .toList(),
@@ -429,7 +437,8 @@ class _EraSection extends StatelessWidget {
         for (final group in groups)
           _CardGroup(
               title: group.title,
-              cards: allCards.where(group.matches).toList()),
+              cards: allCards.where(group.matches).toList(),
+              supplyCounts: supplyCounts),
         if (reusedNames.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 18),
@@ -445,6 +454,22 @@ class _EraSection extends StatelessWidget {
   }
 }
 
+/// Antal fysiska kopior per regiontyp i grundspelet: 24 regionkort /
+/// 6 typer = 4 vardera (se [RegionDeck]s doc-kommentar). Ligger inte i
+/// [BasicSetCards.supplyCounts] – där är regioner medvetet undantagna
+/// eftersom varje fysiskt regionkort har sitt eget tärningstal och
+/// räknas som en egen instans – men regelsidans katalog visar bara en
+/// tumnagel per typ, och då är "4 kopior av den här typen" den
+/// meningsfulla, korrekta siffran att visa.
+const Map<String, int> _regionSupplyCounts = {
+  'region-forest': 4,
+  'region-hills': 4,
+  'region-gold-field': 4,
+  'region-pasture': 4,
+  'region-fields': 4,
+  'region-mountains': 4,
+};
+
 /// En rubrik + rutnät av tryckbara korttumnaglar för en kategori.
 /// Renderar ingenting (inte ens rubriken) om [cards] är tom – t.ex. om
 /// grundspelet råkar sakna en viss [ExpansionKind].
@@ -452,7 +477,12 @@ class _CardGroup extends StatelessWidget {
   final String title;
   final List<GameCard> cards;
 
-  const _CardGroup({required this.title, required this.cards});
+  /// Antal fysiska kopior per kort-id (se [_CardTile.count]) – `null`
+  /// för kort som inte finns med i den givna kartan (t.ex. grundspelets
+  /// regioner, se [_regionSupplyCounts]).
+  final Map<String, int>? supplyCounts;
+
+  const _CardGroup({required this.title, required this.cards, this.supplyCounts});
 
   @override
   Widget build(BuildContext context) {
@@ -471,7 +501,10 @@ class _CardGroup extends StatelessWidget {
           Wrap(
             spacing: 10,
             runSpacing: 10,
-            children: [for (final card in cards) _CardTile(card: card)],
+            children: [
+              for (final card in cards)
+                _CardTile(card: card, count: supplyCounts?[card.id]),
+            ],
           ),
         ],
       ),
@@ -482,7 +515,14 @@ class _CardGroup extends StatelessWidget {
 class _CardTile extends StatelessWidget {
   final GameCard card;
 
-  const _CardTile({required this.card});
+  /// Antal fysiska kopior av just den här korttypen (se
+  /// [BasicSetCards.supplyCounts]/motsvarande i temasetens egna
+  /// filer) – `null` om det inte är känt (regionerna i grundspelet,
+  /// se [_regionSupplyCounts]s doc-kommentar) i stället för att visa
+  /// en missvisande "×0"/"×1".
+  final int? count;
+
+  const _CardTile({required this.card, this.count});
 
   @override
   Widget build(BuildContext context) {
@@ -494,39 +534,49 @@ class _CardTile extends StatelessWidget {
           children: [
             AspectRatio(
               aspectRatio: 1,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                      border: Border.all(color: CatanColors.woodFrame)),
-                  child: Image.asset(
-                    CatanAssets.resolveCardImage(card),
-                    fit: BoxFit.cover,
-                    // Tydlig "saknas"-platshållare (i stället för en
-                    // tyst, tom brun ruta) – hela poängen med
-                    // regelsidan för ett temaset under granskning är
-                    // att just det här ska synas i ögonvrån.
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: CatanColors.parchmentDark,
-                      alignment: Alignment.center,
-                      padding: const EdgeInsets.all(4),
-                      child: const Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.image_not_supported_outlined,
-                              size: 20, color: CatanColors.inkSoft),
-                          SizedBox(height: 2),
-                          Text('Bild\nsaknas',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                  fontSize: 9,
-                                  color: CatanColors.inkSoft,
-                                  height: 1.1)),
-                        ],
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                            border: Border.all(color: CatanColors.woodFrame)),
+                        child: Image.asset(
+                          CatanAssets.resolveCardImage(card),
+                          fit: BoxFit.cover,
+                          // Tydlig "saknas"-platshållare (i stället för en
+                          // tyst, tom brun ruta) – hela poängen med
+                          // regelsidan för ett temaset under granskning är
+                          // att just det här ska synas i ögonvrån.
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                            color: CatanColors.parchmentDark,
+                            alignment: Alignment.center,
+                            padding: const EdgeInsets.all(4),
+                            child: const Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.image_not_supported_outlined,
+                                    size: 20, color: CatanColors.inkSoft),
+                                SizedBox(height: 2),
+                                Text('Bild\nsaknas',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        fontSize: 9,
+                                        color: CatanColors.inkSoft,
+                                        height: 1.1)),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                  if (count != null)
+                    Positioned(
+                        right: 3, bottom: 3, child: _CountBadge(count!)),
+                ],
               ),
             ),
             const SizedBox(height: 3),
@@ -540,6 +590,30 @@ class _CardTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Litet "×N"-märke (antal fysiska kopior, se [_CardTile.count]) i
+/// kortbildens nedre högra hörn – samma stil som "Bild saknas"-
+/// platshållaren, bara mindre och alltid synligt (även på kort med en
+/// riktig bild).
+class _CountBadge extends StatelessWidget {
+  final int count;
+
+  const _CountBadge(this.count);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text('×$count',
+          style: const TextStyle(
+              fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700)),
     );
   }
 }

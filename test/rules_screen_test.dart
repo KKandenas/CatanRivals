@@ -152,4 +152,23 @@ void main() {
     expect(
         find.textContaining(EraOfGoldCards.brigands.name), findsWidgets);
   });
+
+  testWidgets(
+      'visar antal fysiska kopior ("×N") på varje korttumnagel, i både grundspelet och temaseten',
+      (tester) async {
+    await pumpRules(tester);
+
+    // Grundspelet: från BasicSetCards.supplyCounts (by/väg delar ×9,
+    // stad ×7, Guldsmed ×2 – samma ×2 återkommer även i Gulderans egen
+    // ruta för Piratskepp längre ner, så bara "minst en gång" testas).
+    expect(find.text('×9'), findsWidgets);
+    expect(find.text('×7'), findsWidgets);
+    expect(find.text('×2'), findsWidgets);
+
+    // Regioner räknas inte i BasicSetCards.supplyCounts (varje fysiskt
+    // regionkort har sitt eget tärningstal), men regelsidan vet ändå
+    // att det finns 4 fysiska kopior av varje typ (se
+    // _regionSupplyCounts) – så även Regioner-gruppen ska ha märken.
+    expect(find.text('×4'), findsWidgets);
+  });
 }
