@@ -1,5 +1,6 @@
 import 'package:catan_rivals/data/basic_set_cards.dart';
 import 'package:catan_rivals/data/era_of_gold_cards.dart';
+import 'package:catan_rivals/data/era_of_progress_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/ui/screens/rules_screen.dart';
 import 'package:flutter/material.dart';
@@ -82,7 +83,9 @@ void main() {
 
     expect(find.textContaining('Gulderan'), findsOneWidget);
     expect(find.text('Landskapsutbyggnad'), findsOneWidget);
-    expect(find.text('Stadsutbyggnader'), findsOneWidget);
+    // "Stadsutbyggnader"/"Enheter" kolliderar med Utvecklingens tid-
+    // sektionens egna grupper längre ner (samma titlar återanvänds där).
+    expect(find.text('Stadsutbyggnader'), findsWidgets);
     for (final card in EraOfGoldCards.all) {
       expect(find.text(card.name), findsWidgets,
           reason: '${card.name} (${card.id}) saknas i Gulderan-listan');
@@ -97,5 +100,27 @@ void main() {
     // att kräva EXAKT en träff, eftersom Guldsmed redan har sin egen
     // kortruta i grundspelssektionen ovanför.
     expect(find.textContaining(BasicSetCards.goldsmith.name), findsWidgets);
+  });
+
+  testWidgets(
+      'visar Utvecklingens tid (Era of Progress) som en egen sektion, med "Bild saknas" för kort utan bild och en lista på återanvända grundspelskort',
+      (tester) async {
+    await pumpRules(tester);
+
+    expect(find.textContaining('Utvecklingens tid'), findsOneWidget);
+    expect(find.text('Enheter'), findsWidgets);
+    expect(find.text('Stadsutbyggnader'), findsWidgets);
+    for (final card in EraOfProgressCards.all) {
+      expect(find.text(card.name), findsWidgets,
+          reason: '${card.name} (${card.id}) saknas i Utvecklingens tid-listan');
+    }
+
+    expect(find.text('Bild\nsaknas'), findsWidgets);
+
+    // Korten som återanvänds rakt av från grundspelet (t.ex. Brigitta)
+    // ska nämnas i klartext – utan att kräva EXAKT en träff, eftersom
+    // Brigitta redan har sin egen kortruta i grundspelssektionen ovanför.
+    expect(find.textContaining(BasicSetCards.brigittaTheWiseWoman.name),
+        findsWidgets);
   });
 }

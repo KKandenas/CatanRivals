@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/basic_set_cards.dart';
 import '../../data/era_of_gold_cards.dart';
+import '../../data/era_of_progress_cards.dart';
 import '../../models/models.dart';
 import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
@@ -15,8 +16,9 @@ import '../widgets/card_detail_dialog.dart';
 /// används överallt annars i spelet, i stället för att bygga en egen,
 /// duplicerad kortvy här).
 ///
-/// Längst ner finns temaseten (t.ex. Gulderan/"The Era of Gold"), i en
-/// egen, tydligt avgränsad sektion – de är BARA med här för
+/// Längst ner finns temaseten (Gulderan/"The Era of Gold" och
+/// Utvecklingens tid/"The Era of Progress"), var och en i en egen,
+/// tydligt avgränsad sektion – de är BARA med här för
 /// granskning (rätt kort/text/bilder) innan de eventuellt vävs in i
 /// själva spelet, se [_EraSection]. Kort utan en riktig bild ännu
 /// visas med en tydlig "Bild saknas"-platshållare (se [_CardTile])
@@ -153,6 +155,26 @@ class RulesScreen extends StatelessWidget {
                   (c) => c.category == CardCategory.action),
               _EraGroup('Landskapsutbyggnad',
                   (c) => c.category == CardCategory.regionExpansion),
+              _EraGroup(
+                  'Enheter', (c) => c.category == CardCategory.expansion),
+              _EraGroup('Stadsutbyggnader',
+                  (c) => c.category == CardCategory.cityExpansion),
+              _EraGroup(
+                  'Händelsekort', (c) => c.category == CardCategory.event),
+            ],
+          ),
+          const SizedBox(height: 28),
+          const Divider(color: CatanColors.woodFrame, thickness: 1),
+          const SizedBox(height: 12),
+          _EraSection(
+            title: 'Utvecklingens tid (The Era of Progress)',
+            backAsset: CatanAssets.backEraProgress,
+            allCards: EraOfProgressCards.all,
+            supplyCounts: EraOfProgressCards.supplyCounts,
+            groups: [
+              _EraGroup(
+                  'Handlingskort',
+                  (c) => c.category == CardCategory.action),
               _EraGroup(
                   'Enheter', (c) => c.category == CardCategory.expansion),
               _EraGroup('Stadsutbyggnader',
