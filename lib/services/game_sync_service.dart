@@ -8,9 +8,11 @@ import '../models/models.dart';
 /// Datamodell (Firebase-implementationen, se firebase_game_sync_service.dart):
 /// ```
 /// /games/{roomCode}/
-///   players/{playerId} -> Player.toJson()
-///   centerStacks       -> Map<String, int>
-///   turnState          -> TurnState.toJson()
+///   players/{playerId}       -> Player.toJson()
+///   centerStacks             -> Map<String, int>
+///   turnState                -> TurnState.toJson()
+///   fraternalFeudsRequest    -> FraternalFeudsRequest.toJson(), eller
+///                                frånvarande/null
 /// ```
 abstract class GameSyncService {
   /// Skapar ett nytt rum med given kod och sätter värden-spelaren som
@@ -44,4 +46,18 @@ abstract class GameSyncService {
   Stream<TurnState> watchTurnState(String roomCode);
 
   Future<void> writeTurnState(String roomCode, TurnState turnState);
+
+  /// Strömmar den aktiva Brödrafejd-förfrågan i rummet (se
+  /// [FraternalFeudsRequest]) – `null` när ingen väntar. Bara relevant
+  /// online; lokalt läge muterar motståndarens data direkt utan nätverk
+  /// (se [GameNotifier.pickFraternalFeudsCard]).
+  Stream<FraternalFeudsRequest?> watchFraternalFeudsRequest(String roomCode);
+
+  Future<void> writeFraternalFeudsRequest(
+      String roomCode, FraternalFeudsRequest request);
+
+  /// Tar bort förfrågan efter att mottagaren tillämpat den (eller om
+  /// den aldrig ska tillämpas) – förhindrar att den appliceras igen,
+  /// t.ex. vid en sidladdning (se [GameNotifier.resumeRoom]).
+  Future<void> clearFraternalFeudsRequest(String roomCode);
 }

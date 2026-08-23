@@ -85,6 +85,61 @@ void main() {
       expect(resumedNotifier.endActionPhase(), isNull);
     });
 
+    test(
+        'en väntande Brödrafejd-förfrågan (skickad medan klienten var nere) tillämpas vid återanslutningen',
+        () async {
+      final fake = FakeGameSyncService();
+      final host = ProviderContainer(
+          overrides: [gameSyncServiceProvider.overrideWithValue(fake)]);
+      final guest = ProviderContainer(
+          overrides: [gameSyncServiceProvider.overrideWithValue(fake)]);
+      addTearDown(host.dispose);
+      addTearDown(guest.dispose);
+
+      final roomCode = await host.read(gameProvider.notifier).hostRoom('Astrid');
+      await pump();
+      await guest.read(gameProvider.notifier).joinRoom(roomCode, 'Björn');
+      await pump();
+      expect(host.read(gameProvider.notifier).chooseStartingStack(0), isNull);
+      await pump();
+      expect(guest.read(gameProvider.notifier).chooseStartingStack(1), isNull);
+      await pump();
+
+      final guestHand = List<GameCard>.of(guest.read(gameProvider).you.hand);
+      expect(guestHand.length, greaterThanOrEqualTo(2));
+
+      // Motsvarar att host (med styrkeövertaget) valde 2 kort ur
+      // gästens hand precis INNAN gästen laddade om sidan – förfrågan
+      // hann alltså skrivas, men gästens (nu nedstängda) klient hann
+      // aldrig se den live.
+      await fake.writeFraternalFeudsRequest(
+        roomCode,
+        FraternalFeudsRequest(
+          requesterId: 'host',
+          cardIds: [guestHand[0].id, guestHand[1].id],
+          stackIndices: [0, 2],
+        ),
+      );
+
+      final resumedGuest = ProviderContainer(
+          overrides: [gameSyncServiceProvider.overrideWithValue(fake)]);
+      addTearDown(resumedGuest.dispose);
+      final error = await resumedGuest
+          .read(gameProvider.notifier)
+          .resumeRoom(roomCode, 'guest', 'Björn');
+
+      expect(error, isNull);
+      final resumedState = resumedGuest.read(gameProvider);
+      expect(resumedState.you.hand.any((c) => c.id == guestHand[0].id), isFalse,
+          reason: 'den väntande förfrågan ska ha tillämpats vid återanslutningen');
+      expect(resumedState.you.hand.any((c) => c.id == guestHand[1].id), isFalse);
+
+      // Förfrågan ska vara rensad så den inte tillämpas igen.
+      final stillPending =
+          await fake.watchFraternalFeudsRequest(roomCode).first;
+      expect(stillPending, isNull);
+    });
+
     test('okänt rum: felmeddelande i stället för krasch', () async {
       final fake = FakeGameSyncService();
       final container = ProviderContainer(

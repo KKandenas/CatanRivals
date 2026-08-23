@@ -39,6 +39,7 @@ class GameNotifier extends Notifier<GameState> {
   StreamSubscription<Map<String, Player>>? _playersSub;
   StreamSubscription<Map<String, int>>? _centerStacksSub;
   StreamSubscription<TurnState>? _turnStateSub;
+  StreamSubscription<FraternalFeudsRequest?>? _fraternalFeudsRequestSub;
 
   /// Regionstapelns kvarvarande, blandade kort (se [RegionDeck]) – dras
   /// från när en ny by byggs. Var spelares klient håller sin egen
@@ -94,6 +95,7 @@ class GameNotifier extends Notifier<GameState> {
       _playersSub?.cancel();
       _centerStacksSub?.cancel();
       _turnStateSub?.cancel();
+      _fraternalFeudsRequestSub?.cancel();
     });
     return GameState(
       you: MockGame.buildYou(),
@@ -117,6 +119,7 @@ class GameNotifier extends Notifier<GameState> {
     _playersSub?.cancel();
     _centerStacksSub?.cancel();
     _turnStateSub?.cancel();
+    _fraternalFeudsRequestSub?.cancel();
     _resetDecks();
 
     // Lokalt läge har ingen egen vy för en andra spelare att trycka
@@ -282,6 +285,26 @@ class GameNotifier extends Notifier<GameState> {
         winnerId: turnState.winnerId,
       );
       _subscribeToRoom(roomCode);
+
+      // En Brödrafejd-förfrågan (se FraternalFeudsRequest) kan ha
+      // kommit in medan den här klienten var nere (t.ex. en sidladdning
+      // strax efter att motståndaren skickade den) – lyssnaren ovan
+      // fångar bara FRAMTIDA värden, så kolla explicit efter en redan
+      // väntande förfrågan också. Inte kritiskt för själva
+      // återanslutningen, så ett fel här hoppas bara över i stället för
+      // att blockera hela [resumeRoom].
+      try {
+        final pendingRequest = await _sync
+            .watchFraternalFeudsRequest(roomCode)
+            .first
+            .timeout(const Duration(seconds: 5));
+        if (pendingRequest != null && pendingRequest.requesterId != role) {
+          _fulfillFraternalFeudsRequest(pendingRequest);
+        }
+      } catch (_) {
+        // Ignoreras medvetet – se kommentaren ovan.
+      }
+
       return null;
     } on TimeoutException {
       return 'Fick ingen kontakt med servern. Kontrollera internetanslutningen och försök igen.';
@@ -429,6 +452,7 @@ class GameNotifier extends Notifier<GameState> {
     _playersSub?.cancel();
     _centerStacksSub?.cancel();
     _turnStateSub?.cancel();
+    _fraternalFeudsRequestSub?.cancel();
 
     _playersSub = _sync.watchPlayers(roomCode).listen(
       (players) {
@@ -478,6 +502,24 @@ class GameNotifier extends Notifier<GameState> {
       },
       onError: (Object e) {
         state = state.copyWith(sessionError: 'Kunde inte synka omgången: $e');
+      },
+    );
+
+    // Brödrafejd online (se pickFraternalFeudsCard/
+    // _fulfillFraternalFeudsRequest): reagerar bara på en förfrågan
+    // NÅGON ANNAN skickade – annars skulle avsändarens egen klient
+    // (som redan hanterat sitt val lokalt) försöka tillämpa den på sig
+    // själv igen så fort skrivningen ekar tillbaka via strömmen.
+    _fraternalFeudsRequestSub =
+        _sync.watchFraternalFeudsRequest(roomCode).listen(
+      (request) {
+        if (request == null) return;
+        if (request.requesterId == state.myPlayerId) return;
+        _fulfillFraternalFeudsRequest(request);
+      },
+      onError: (Object e) {
+        state =
+            state.copyWith(sessionError: 'Kunde inte synka Brödrafejd: $e');
       },
     );
   }
@@ -706,55 +748,126 @@ class GameNotifier extends Notifier<GameState> {
 
   // ---------------------------------------------------------------------
   // Brödrafejd: spelaren MED styrkeövertaget väljer 2 kort från
-  // motståndarens hand. Bara i lokalt läge – varje klient äger bara
-  // sin egen spelardata (se [_syncMyPlayer]), så en ändring i
-  // motståndarens hand skulle aldrig nå fram i ett riktigt rum. Där
-  // hålls kortet självbevakat i stället (se game_board_screen.dart).
+  // motståndarens hand. Lokalt muteras motståndarens hand/draghög
+  // direkt (samma [GameNotifier] äger båda spelarnas data där). Online
+  // äger ingen klient skrivrätt till den andra spelarens Firebase-post
+  // (se [_syncMyPlayer] – bara "mig själv" skrivs), så i stället för att
+  // mutera lokalt skickas en [FraternalFeudsRequest] så fort båda korten
+  // är valda – motståndarens klient tillämpar den på sig själv (se
+  // [_fulfillFraternalFeudsRequest]) och rensar den sedan.
   // ---------------------------------------------------------------------
 
-  /// Startar handväljaren när du har styrkeövertaget. No-op online,
-  /// utan uppslaget Brödrafejd-kort, vid oavgjort, eller om det är
+  /// Startar handväljaren när du har styrkeövertaget. No-op utan
+  /// uppslaget Brödrafejd-kort, vid oavgjort, eller om det är
   /// motståndaren som har övertaget.
   String? startFraternalFeudsPick() {
-    if (state.isOnline) return null;
     if (state.drawnEventCard == null) return null;
     if (state.strengthAdvantagePlayerId != state.myPlayerId) return null;
     state = state.copyWith(
-        fraternalFeudsPicking: true, fraternalFeudsPicked: const []);
+        fraternalFeudsPicking: true,
+        fraternalFeudsPicked: const [],
+        fraternalFeudsPickedStacks: const []);
     return null;
   }
 
   /// Avbryter handväljaren utan att göra något.
   String? cancelFraternalFeudsPick() {
     state = state.copyWith(
-        fraternalFeudsPicking: false, fraternalFeudsPicked: const []);
+        fraternalFeudsPicking: false,
+        fraternalFeudsPicked: const [],
+        fraternalFeudsPickedStacks: const []);
     return null;
   }
 
   /// Väljer [card] från motståndarens hand och lägger den underst i
   /// draghög [stackIndex]. Upprepas tills 2 kort är valda, då avslutas
-  /// Brödrafejd automatiskt.
+  /// Brödrafejd automatiskt – lokalt genom att mutera motståndarens
+  /// hand/draghög direkt, online genom att skicka en
+  /// [FraternalFeudsRequest] som motståndarens klient tillämpar på sig
+  /// själv.
   String? pickFraternalFeudsCard(GameCard card, int stackIndex) {
     if (!state.fraternalFeudsPicking) return null;
     if (!state.opponent.hand.contains(card)) return null;
 
-    _drawStacks[stackIndex] = [..._drawStacks[stackIndex], card];
-    final updatedOpponent = state.opponent
-        .copyWith(hand: List.of(state.opponent.hand)..remove(card));
     final picked = [...state.fraternalFeudsPicked, card];
+    final pickedStacks = [...state.fraternalFeudsPickedStacks, stackIndex];
     final done = picked.length >= 2;
 
+    if (!state.isOnline) {
+      _drawStacks[stackIndex] = [..._drawStacks[stackIndex], card];
+      final updatedOpponent = state.opponent
+          .copyWith(hand: List.of(state.opponent.hand)..remove(card));
+      state = state.copyWith(
+        opponent: updatedOpponent,
+        centerStacks: Map.of(state.centerStacks)
+          ..update('draw${stackIndex + 1}', (v) => v + 1),
+        fraternalFeudsPicked: picked,
+        fraternalFeudsPickedStacks: pickedStacks,
+        fraternalFeudsPicking: !done,
+        clearDrawnEventCard: done,
+      );
+      _syncCenterStacks();
+      if (done) _syncTurnState();
+      return null;
+    }
+
+    // Online: bara lokalt UI-state tills båda korten är valda – ingen
+    // mutation av motståndarens (synkade, men bara läsbara) data här.
     state = state.copyWith(
-      opponent: updatedOpponent,
-      centerStacks: Map.of(state.centerStacks)
-        ..update('draw${stackIndex + 1}', (v) => v + 1),
       fraternalFeudsPicked: picked,
+      fraternalFeudsPickedStacks: pickedStacks,
       fraternalFeudsPicking: !done,
       clearDrawnEventCard: done,
     );
-    _syncCenterStacks();
-    if (done) _syncTurnState();
+    if (done) {
+      final roomCode = state.roomCode;
+      if (roomCode != null) {
+        unawaited(_sync.writeFraternalFeudsRequest(
+          roomCode,
+          FraternalFeudsRequest(
+            requesterId: state.myPlayerId,
+            cardIds: picked.map((c) => c.id).toList(),
+            stackIndices: pickedStacks,
+          ),
+        ));
+      }
+      _syncTurnState();
+    }
     return null;
+  }
+
+  /// Tillämpar en mottagen [FraternalFeudsRequest] på DIN EGEN hand –
+  /// bara motståndarens klient (den UTAN styrkeövertaget) kör den här,
+  /// som svar på att den MED övertaget (online) valt 2 kort ur din hand
+  /// (se [pickFraternalFeudsCard]). Letar upp de två angivna korten via
+  /// id (precis som andra handkorts-operationer) och lägger dem underst
+  /// i respektive draghög, sedan rensar förfrågan så den inte tillämpas
+  /// igen (t.ex. efter en sidladdning, se [resumeRoom]).
+  void _fulfillFraternalFeudsRequest(FraternalFeudsRequest request) {
+    var hand = List<GameCard>.of(state.you.hand);
+    final centerStacks = Map<String, int>.of(state.centerStacks);
+    for (var i = 0; i < request.cardIds.length; i++) {
+      GameCard? card;
+      for (final c in hand) {
+        if (c.id == request.cardIds[i]) {
+          card = c;
+          break;
+        }
+      }
+      if (card == null) continue; // redan borta – t.ex. dubbelleverans
+      hand = List.of(hand)..remove(card);
+      final stackIndex = request.stackIndices[i];
+      _drawStacks[stackIndex] = [..._drawStacks[stackIndex], card];
+      centerStacks.update('draw${stackIndex + 1}', (v) => v + 1);
+    }
+    state = state.copyWith(
+      you: state.you.copyWith(hand: hand),
+      centerStacks: centerStacks,
+    );
+    _syncMyPlayer();
+    _syncCenterStacks();
+    final roomCode = state.roomCode;
+    if (roomCode != null) unawaited(_sync.clearFraternalFeudsRequest(roomCode));
   }
 
   /// Spelar ett självbevakat handlingskort (Handelskaravan/Guldsmed):
@@ -851,6 +964,7 @@ class GameNotifier extends Notifier<GameState> {
       clearFeudPickedBuilding: true,
       fraternalFeudsPicking: false,
       fraternalFeudsPicked: const [],
+      fraternalFeudsPickedStacks: const [],
     );
     _syncTurnState();
   }

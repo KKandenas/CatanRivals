@@ -87,4 +87,26 @@ class FirebaseGameSyncService implements GameSyncService {
   Future<void> writeTurnState(String roomCode, TurnState turnState) {
     return _roomRef(roomCode).child('turnState').set(turnState.toJson());
   }
+
+  @override
+  Stream<FraternalFeudsRequest?> watchFraternalFeudsRequest(String roomCode) {
+    return _roomRef(roomCode).child('fraternalFeudsRequest').onValue.map((event) {
+      final raw = event.snapshot.value;
+      if (raw is! Map) return null;
+      return FraternalFeudsRequest.fromJson(Map<String, dynamic>.from(raw));
+    });
+  }
+
+  @override
+  Future<void> writeFraternalFeudsRequest(
+      String roomCode, FraternalFeudsRequest request) {
+    return _roomRef(roomCode)
+        .child('fraternalFeudsRequest')
+        .set(request.toJson());
+  }
+
+  @override
+  Future<void> clearFraternalFeudsRequest(String roomCode) {
+    return _roomRef(roomCode).child('fraternalFeudsRequest').remove();
+  }
 }

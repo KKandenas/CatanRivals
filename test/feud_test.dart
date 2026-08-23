@@ -297,7 +297,7 @@ void main() {
   });
 
   group('Brödrafejd', () {
-    test('startFraternalFeudsPick är no-op online även om du har övertaget',
+    test('startFraternalFeudsPick aktiveras även online om du har övertaget',
         () {
       final container = readyContainer();
       addTearDown(container.dispose);
@@ -307,9 +307,47 @@ void main() {
       notifier.state =
           container.read(gameProvider).copyWith(mode: SessionMode.host);
 
-      notifier.startFraternalFeudsPick();
+      final error = notifier.startFraternalFeudsPick();
 
-      expect(container.read(gameProvider).fraternalFeudsPicking, isFalse);
+      expect(error, isNull);
+      expect(container.read(gameProvider).fraternalFeudsPicking, isTrue);
+    });
+
+    test(
+        'pickFraternalFeudsCard online: samlar båda picken lokalt utan att mutera motståndarens hand direkt (ingen roomCode här, så nätverksskrivningen hoppas bara över – se multiplayer_fraternal_feuds_test.dart för den riktiga två-klients-vägen)',
+        () {
+      final container = readyContainer();
+      addTearDown(container.dispose);
+      giveStrength(container.read(gameProvider).you, 2);
+      forceFeudCard(container, BasicSetCards.fraternalFeuds);
+      final notifier = container.read(gameProvider.notifier);
+      notifier.state =
+          container.read(gameProvider).copyWith(mode: SessionMode.host);
+      notifier.startFraternalFeudsPick();
+      final hand =
+          List<GameCard>.of(container.read(gameProvider).opponent.hand);
+      expect(hand, hasLength(2));
+
+      final error1 = notifier.pickFraternalFeudsCard(hand[0], 0);
+      expect(error1, isNull);
+      var state = container.read(gameProvider);
+      // Online muteras INTE motståndarens hand lokalt – bara UI-läget
+      // för vad DU valt samlas, i väntan på att båda korten är valda.
+      expect(state.opponent.hand.contains(hand[0]), isTrue);
+      expect(state.fraternalFeudsPicking, isTrue);
+      expect(state.fraternalFeudsPicked, [hand[0]]);
+      expect(state.fraternalFeudsPickedStacks, [0]);
+
+      final error2 = notifier.pickFraternalFeudsCard(hand[1], 2);
+      expect(error2, isNull);
+      state = container.read(gameProvider);
+      expect(state.fraternalFeudsPicking, isFalse);
+      expect(state.fraternalFeudsPicked, [hand[0], hand[1]]);
+      expect(state.fraternalFeudsPickedStacks, [0, 2]);
+      expect(state.drawnEventCard, isNull);
+      // Fortfarande opåverkad lokalt – det är motståndarens EGEN klient
+      // som ska tillämpa förfrågan på sig själv.
+      expect(state.opponent.hand, hand);
     });
 
     test('startFraternalFeudsPick är no-op om motståndaren har övertaget',

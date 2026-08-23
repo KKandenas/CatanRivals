@@ -2,6 +2,7 @@
 library;
 
 export 'event_die_face.dart';
+export 'fraternal_feuds_request.dart';
 export 'game_card.dart';
 export 'player.dart';
 export 'realm_board.dart';

@@ -161,12 +161,18 @@ class GameState {
   final RelocationSelection? feudPickedBuilding;
 
   /// Brödrafejd (regelhäftet: "selects 2 cards from the opponent's
-  /// hand") – bara möjligt i lokalt läge (kräver att mutera
-  /// motståndarens hand direkt, se [GameNotifier.startFraternalFeudsPick]).
-  /// [fraternalFeudsPicked] samlar de redan valda korten (0–2) medan
-  /// [fraternalFeudsPicking] är sant.
+  /// hand") – se [GameNotifier.startFraternalFeudsPick]/
+  /// [GameNotifier.pickFraternalFeudsCard]. [fraternalFeudsPicked]
+  /// samlar de redan valda korten (0–2) medan [fraternalFeudsPicking]
+  /// är sant; [fraternalFeudsPickedStacks] samlar vilken draghög (0–3)
+  /// varje motsvarande kort i [fraternalFeudsPicked] ska läggas underst
+  /// i – bara relevant online (se [FraternalFeudsRequest]), där båda
+  /// picken måste vara kända innan förfrågan kan skickas i väg i ett
+  /// enda steg (lokalt muteras motståndarens hand/draghög direkt, kort
+  /// för kort, i stället).
   final bool fraternalFeudsPicking;
   final List<GameCard> fraternalFeudsPicked;
+  final List<int> fraternalFeudsPickedStacks;
 
   const GameState({
     required this.you,
@@ -202,6 +208,7 @@ class GameState {
     this.feudPickedBuilding,
     this.fraternalFeudsPicking = false,
     this.fraternalFeudsPicked = const [],
+    this.fraternalFeudsPickedStacks = const [],
   });
 
   bool get isOnline => mode != SessionMode.local;
@@ -334,6 +341,7 @@ class GameState {
     bool clearFeudPickedBuilding = false,
     bool? fraternalFeudsPicking,
     List<GameCard>? fraternalFeudsPicked,
+    List<int>? fraternalFeudsPickedStacks,
   }) {
     return GameState(
       you: you ?? this.you,
@@ -393,6 +401,8 @@ class GameState {
           fraternalFeudsPicking ?? this.fraternalFeudsPicking,
       fraternalFeudsPicked:
           fraternalFeudsPicked ?? this.fraternalFeudsPicked,
+      fraternalFeudsPickedStacks:
+          fraternalFeudsPickedStacks ?? this.fraternalFeudsPickedStacks,
     );
   }
 }

@@ -563,7 +563,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                             isTie: state.strengthAdvantagePlayerId == null,
                             youHaveAdvantage: state.strengthAdvantagePlayerId ==
                                 state.myPlayerId,
-                            isOnline: state.isOnline,
                             opponentName: state.opponent.name,
                             hasBuildingToRemove:
                                 state.strengthAdvantagePlayerId ==
@@ -599,10 +598,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           ),
                         ),
                       ),
-                    // Brödrafejd (bara lokalt läge, se
-                    // GameNotifier.startFraternalFeudsPick): motståndarens
-                    // hand öppen för fritt val, sedan (per valt kort) vilken
-                    // draghög det ska läggas underst i.
+                    // Brödrafejd (se GameNotifier.startFraternalFeudsPick,
+                    // både lokalt och online): motståndarens hand öppen
+                    // för fritt val, sedan (per valt kort) vilken draghög
+                    // det ska läggas underst i.
                     if (state.fraternalFeudsPicking &&
                         _pendingFraternalFeudsCard == null)
                       Positioned.fill(

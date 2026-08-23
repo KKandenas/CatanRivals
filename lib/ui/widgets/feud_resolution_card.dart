@@ -13,16 +13,17 @@ import '../theme/catan_colors.dart';
 /// Fejd rör bara den utan övertaget (tar bort en av sina egna
 /// byggnader), vilket alltid går att göra interaktivt – riktig
 /// bygg-väljare (se [onStartFeudPick]) i stället för en
-/// påminnelsetext. Brödrafejd rör motståndarens hand, vilket bara går
-/// att göra interaktivt i lokalt läge (se [isOnline]/
-/// [onStartFraternalFeudsPick]) – annars (och när det är motståndaren
-/// som har övertaget) visas bara en påminnelsetext, precis som andra
+/// påminnelsetext. Brödrafejd rör motståndarens hand, vilket är
+/// interaktivt både lokalt och online (se [onStartFraternalFeudsPick] –
+/// lokalt muteras motståndarens hand direkt, online skickas en
+/// [FraternalFeudsRequest] som motståndarens klient tillämpar på sig
+/// själv, se GameNotifier.pickFraternalFeudsCard) – bara den UTAN
+/// övertaget ser i stället en ren påminnelsetext, precis som andra
 /// händelsekort.
 class FeudResolutionCard extends StatelessWidget {
   final GameCard card;
   final bool isTie;
   final bool youHaveAdvantage;
-  final bool isOnline;
   final String opponentName;
 
   /// Om den utan styrkeövertaget faktiskt har en byggnad (inte
@@ -41,7 +42,6 @@ class FeudResolutionCard extends StatelessWidget {
     required this.card,
     required this.isTie,
     required this.youHaveAdvantage,
-    required this.isOnline,
     required this.opponentName,
     required this.hasBuildingToRemove,
     required this.onDismiss,
@@ -175,10 +175,6 @@ class FeudResolutionCard extends StatelessWidget {
               'att ta bort.';
     }
     // Brödrafejd: gäller den med övertaget.
-    if (!isOnline && youHaveAdvantage) {
-      return 'Titta i $opponentName' 's hand och välj 2 kort att lägga '
-          'underst i valfria draghögar.';
-    }
     return youHaveAdvantage
         ? 'Titta i $opponentName' 's hand och välj 2 kort att lägga '
             'underst i valfria draghögar.'
@@ -191,7 +187,7 @@ class FeudResolutionCard extends StatelessWidget {
     if (!_isFraternalFeuds && !youHaveAdvantage && hasBuildingToRemove) {
       return 'Välj byggnad';
     }
-    if (_isFraternalFeuds && !isOnline && youHaveAdvantage) {
+    if (_isFraternalFeuds && youHaveAdvantage) {
       return 'Välj kort';
     }
     return 'OK';
@@ -202,7 +198,7 @@ class FeudResolutionCard extends StatelessWidget {
     if (!_isFraternalFeuds && !youHaveAdvantage && hasBuildingToRemove) {
       return onStartFeudPick;
     }
-    if (_isFraternalFeuds && !isOnline && youHaveAdvantage) {
+    if (_isFraternalFeuds && youHaveAdvantage) {
       return onStartFraternalFeudsPick;
     }
     return onDismiss;

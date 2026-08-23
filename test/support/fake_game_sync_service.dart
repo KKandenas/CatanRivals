@@ -12,9 +12,12 @@ class FakeGameSyncService implements GameSyncService {
   final Map<String, Map<String, Player>> _players = {};
   final Map<String, Map<String, int>> _centerStacks = {};
   final Map<String, TurnState> _turnStates = {};
+  final Map<String, FraternalFeudsRequest?> _fraternalFeudsRequests = {};
   final Map<String, StreamController<Map<String, Player>>> _playerControllers = {};
   final Map<String, StreamController<Map<String, int>>> _centerStackControllers = {};
   final Map<String, StreamController<TurnState>> _turnStateControllers = {};
+  final Map<String, StreamController<FraternalFeudsRequest?>>
+      _fraternalFeudsRequestControllers = {};
 
   StreamController<Map<String, Player>> _playersController(String roomCode) =>
       _playerControllers.putIfAbsent(roomCode, () => StreamController.broadcast());
@@ -24,6 +27,11 @@ class FakeGameSyncService implements GameSyncService {
 
   StreamController<TurnState> _turnStateController(String roomCode) =>
       _turnStateControllers.putIfAbsent(roomCode, () => StreamController.broadcast());
+
+  StreamController<FraternalFeudsRequest?> _fraternalFeudsRequestController(
+          String roomCode) =>
+      _fraternalFeudsRequestControllers.putIfAbsent(
+          roomCode, () => StreamController.broadcast());
 
   @override
   Future<void> createRoom(
@@ -101,5 +109,25 @@ class FakeGameSyncService implements GameSyncService {
   Future<void> writeTurnState(String roomCode, TurnState turnState) async {
     _turnStates[roomCode] = turnState;
     _turnStateController(roomCode).add(turnState);
+  }
+
+  @override
+  Stream<FraternalFeudsRequest?> watchFraternalFeudsRequest(String roomCode) {
+    final controller = _fraternalFeudsRequestController(roomCode);
+    return controller.stream
+        .transform(_replayLatest(_fraternalFeudsRequests[roomCode]));
+  }
+
+  @override
+  Future<void> writeFraternalFeudsRequest(
+      String roomCode, FraternalFeudsRequest request) async {
+    _fraternalFeudsRequests[roomCode] = request;
+    _fraternalFeudsRequestController(roomCode).add(request);
+  }
+
+  @override
+  Future<void> clearFraternalFeudsRequest(String roomCode) async {
+    _fraternalFeudsRequests[roomCode] = null;
+    _fraternalFeudsRequestController(roomCode).add(null);
   }
 }
