@@ -26,10 +26,19 @@ class EventCardRevealCard extends StatelessWidget {
   final GameCard card;
   final VoidCallback onDismiss;
 
+  /// Den faktiska uträkningen av kortets effekt för just den här
+  /// spelställningen (se event_die_resolution.dart:s
+  /// `resolveEventCard`) – t.ex. vem som har flest handelsskepp just
+  /// nu. `null` när kortet inte har någon egen uträkning att visa
+  /// utöver [GameCard.effectText] (t.ex. Fejd/Brödrafejd, som redan har
+  /// egna väljarflöden).
+  final String? resolution;
+
   const EventCardRevealCard({
     super.key,
     required this.card,
     required this.onDismiss,
+    this.resolution,
   });
 
   @override
@@ -89,6 +98,17 @@ class EventCardRevealCard extends StatelessWidget {
                                   fontSize: 13,
                                   height: 1.35,
                                   color: Colors.white.withValues(alpha: 0.92)),
+                            ),
+                          ],
+                          if (resolution != null) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              resolution!,
+                              style: const TextStyle(
+                                  fontSize: 13,
+                                  height: 1.35,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF9FE39A)),
                             ),
                           ],
                         ],

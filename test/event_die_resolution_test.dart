@@ -271,4 +271,175 @@ void main() {
       expect(resolveEventDieFace(EventDieFace.eventCard, state), isNull);
     });
   });
+
+  group('resolveEventCard: Uppfinning', () {
+    test('ingen byggnad med framstegspoäng: ingen extra rad', () {
+      final state = GameState(
+        you: buildPlayer('you', 'Astrid'),
+        opponent: buildPlayer('opponent', 'Björn'),
+        centerStacks: const {},
+      );
+
+      expect(resolveEventCard(BasicSetCards.invention, state), isNull);
+    });
+
+    test('1 byggnad med framstegspoäng (Kloster): 1 spelare får 1 resurs', () {
+      final board = RealmBoard(ownerId: 'you');
+      board.placeSettlement(
+          0, const PlacedCard(card: BasicSetCards.settlement));
+      board.placeExpansion(0, BuildingRow.above, 0,
+          const PlacedCard(card: BasicSetCards.abbey));
+      final state = GameState(
+        you: Player(id: 'you', name: 'Astrid', principality: board),
+        opponent: buildPlayer('opponent', 'Björn'),
+        centerStacks: const {},
+      );
+
+      expect(resolveEventCard(BasicSetCards.invention, state),
+          'Astrid har 1 byggnad med framstegspoäng och får ta 1 valfri resurs.');
+    });
+
+    test(
+        '3 byggnader med framstegspoäng: räknar alla 3 men täcker resurserna vid taket på 2',
+        () {
+      final board = RealmBoard(ownerId: 'you');
+      board.placeSettlement(
+          0, const PlacedCard(card: BasicSetCards.settlement));
+      board.placeSettlement(
+          2, const PlacedCard(card: BasicSetCards.settlement));
+      board.placeExpansion(
+          0,
+          BuildingRow.above,
+          0,
+          PlacedCard(
+              card: BasicSetCards.marketplace.copyWith(progressPoints: 1)));
+      board.placeExpansion(
+          0,
+          BuildingRow.below,
+          0,
+          PlacedCard(
+              card: BasicSetCards.parishHall.copyWith(progressPoints: 1)));
+      board.placeExpansion(
+          2,
+          BuildingRow.above,
+          0,
+          PlacedCard(
+              card: BasicSetCards.storehouse.copyWith(progressPoints: 1)));
+      final state = GameState(
+        you: Player(id: 'you', name: 'Astrid', principality: board),
+        opponent: buildPlayer('opponent', 'Björn'),
+        centerStacks: const {},
+      );
+
+      expect(resolveEventCard(BasicSetCards.invention, state),
+          'Astrid har 3 byggnader med framstegspoäng och får ta 2 valfria resurser.');
+    });
+  });
+
+  group('resolveEventCard: Handelsskeppskapplöpning', () {
+    GameState stateWithShips(int youShips, int oppShips) {
+      RealmBoard buildBoard(String owner, int shipCount) {
+        final board = RealmBoard(ownerId: owner);
+        if (shipCount == 0) return board;
+        board.placeSettlement(
+            0, const PlacedCard(card: BasicSetCards.settlement));
+        for (var i = 0; i < shipCount && i < 2; i++) {
+          board.placeExpansion(
+              0,
+              i == 0 ? BuildingRow.above : BuildingRow.below,
+              0,
+              PlacedCard(card: BasicSetCards.grainShip));
+        }
+        return board;
+      }
+
+      return GameState(
+        you: Player(
+            id: 'you', name: 'Astrid', principality: buildBoard('you', youShips)),
+        opponent: Player(
+            id: 'opponent',
+            name: 'Björn',
+            principality: buildBoard('opponent', oppShips)),
+        centerStacks: const {},
+      );
+    }
+
+    test('ingen har handelsskepp: inget händer', () {
+      final state = stateWithShips(0, 0);
+
+      expect(resolveEventCard(BasicSetCards.tradeShipsRace, state),
+          'Ingen spelare har något handelsskepp. Inget händer.');
+    });
+
+    test('lika många handelsskepp: båda får en resurs', () {
+      final state = stateWithShips(1, 1);
+
+      expect(resolveEventCard(BasicSetCards.tradeShipsRace, state),
+          'Båda spelarna har lika många handelsskepp (1 var) och får 1 valfri resurs var.');
+    });
+
+    test('du har flest handelsskepp: du får en resurs', () {
+      final state = stateWithShips(2, 1);
+
+      expect(resolveEventCard(BasicSetCards.tradeShipsRace, state),
+          'Astrid har flest handelsskepp (2) och får 1 valfri resurs.');
+    });
+  });
+
+  group('resolveEventCard: Goda året', () {
+    test('ingen region gränsar till Lagerhus/Kloster: ingen extra rad', () {
+      final board = RealmBoard(ownerId: 'you');
+      board.placeSettlement(
+          0, const PlacedCard(card: BasicSetCards.settlement));
+      board.placeRegion(-1, BuildingRow.above,
+          const PlacedCard(card: BasicSetCards.forest));
+      final state = GameState(
+        you: Player(id: 'you', name: 'Astrid', principality: board),
+        opponent: buildPlayer('opponent', 'Björn'),
+        centerStacks: const {},
+      );
+
+      expect(resolveEventCard(BasicSetCards.yearOfPlenty, state), isNull);
+    });
+
+    test('en region gränsar till Kloster: namnger regionen', () {
+      final board = RealmBoard(ownerId: 'you');
+      board.placeSettlement(
+          0, const PlacedCard(card: BasicSetCards.settlement));
+      board.placeRegion(-1, BuildingRow.above,
+          const PlacedCard(card: BasicSetCards.forest));
+      board.placeExpansion(0, BuildingRow.above, 0,
+          const PlacedCard(card: BasicSetCards.abbey));
+      final state = GameState(
+        you: Player(id: 'you', name: 'Astrid', principality: board),
+        opponent: buildPlayer('opponent', 'Björn'),
+        centerStacks: const {},
+      );
+
+      expect(resolveEventCard(BasicSetCards.yearOfPlenty, state),
+          'Astrid har skog angränsande till Lagerhus/Kloster och får 1 resurs per region (om det finns plats).');
+    });
+
+    test(
+        'ett Lagerhus gränsar till 2 regioner samtidigt: listar båda med "och"',
+        () {
+      final board = RealmBoard(ownerId: 'you');
+      board.placeSettlement(
+          0, const PlacedCard(card: BasicSetCards.settlement));
+      board.placeRegion(-1, BuildingRow.above,
+          const PlacedCard(card: BasicSetCards.forest));
+      board.placeRegion(1, BuildingRow.above,
+          const PlacedCard(card: BasicSetCards.goldField));
+      board.placeExpansion(0, BuildingRow.above, 0,
+          const PlacedCard(card: BasicSetCards.storehouse));
+      final state = GameState(
+        you: Player(id: 'you', name: 'Astrid', principality: board),
+        opponent: buildPlayer('opponent', 'Björn'),
+        centerStacks: const {},
+      );
+
+      expect(resolveEventCard(BasicSetCards.yearOfPlenty, state),
+          'Astrid har skog och guldfält angränsande till Lagerhus/Kloster och får 1 resurs per region (om det finns plats).');
+    });
+  });
 }

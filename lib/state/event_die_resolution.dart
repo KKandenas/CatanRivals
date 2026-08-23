@@ -117,3 +117,129 @@ String? _resolvePlentifulHarvest(GameState state) {
   }
   return null;
 }
+
+/// Räknar ut den FAKTISKA uträkningen av ett draget händelsekorts effekt
+/// (se [EventDieFace.eventCard]/[GameNotifier.drawEventCard]) – samma
+/// princip som [resolveEventDieFace], bara TEXT (appen flyttar inga
+/// resurser åt spelarna). `null` för kort utan någon egen uträkning att
+/// visa (t.ex. Fejd/Brödrafejd, som redan har egna väljarflöden, eller
+/// ett kort utan träff för någon spelare).
+String? resolveEventCard(GameCard card, GameState state) {
+  switch (card.baseId) {
+    case 'event-invention':
+      return _resolveInvention(state);
+    case 'event-trade-ships-race':
+      return _resolveTradeShipsRace(state);
+    case 'event-year-of-plenty':
+      return _resolveYearOfPlenty(state);
+    default:
+      return null;
+  }
+}
+
+/// Uppfinning: "Varje spelare får 1 valfri resurs för varje byggnad med
+/// en framstegspoäng – upp till max 2 resurser."
+String? _resolveInvention(GameState state) {
+  final lines = <String>[];
+  for (final player in [state.you, state.opponent]) {
+    final buildingsWithProgress = player.principality.placedExpansionCards
+        .where((c) =>
+            c.expansionKind == ExpansionKind.building && c.progressPoints > 0)
+        .length;
+    if (buildingsWithProgress == 0) continue;
+    final awarded = buildingsWithProgress > 2 ? 2 : buildingsWithProgress;
+    final buildingWord = buildingsWithProgress == 1 ? 'byggnad' : 'byggnader';
+    final resourceWord = awarded == 1 ? 'valfri resurs' : 'valfria resurser';
+    lines.add(
+        '${player.name} har $buildingsWithProgress $buildingWord med framstegspoäng och får ta $awarded $resourceWord.');
+  }
+  if (lines.isEmpty) return null;
+  return lines.join('\n');
+}
+
+/// Handelsskeppskapplöpning: "Spelaren som äger flest handelsskepp får
+/// 1 valfri resurs. Vid lika antal får båda spelarna 1 valfri resurs
+/// var (båda måste ha minst 1 handelsskepp)."
+String _resolveTradeShipsRace(GameState state) {
+  int shipCount(Player player) => player.principality.placedExpansionCards
+      .where((c) => c.expansionKind == ExpansionKind.tradeShip)
+      .length;
+
+  final youShips = shipCount(state.you);
+  final oppShips = shipCount(state.opponent);
+
+  if (youShips == 0 && oppShips == 0) {
+    return 'Ingen spelare har något handelsskepp. Inget händer.';
+  }
+  if (youShips == oppShips) {
+    return 'Båda spelarna har lika många handelsskepp ($youShips var) och får 1 valfri resurs var.';
+  }
+  final winnerName =
+      youShips > oppShips ? state.you.name : state.opponent.name;
+  final winnerShips = youShips > oppShips ? youShips : oppShips;
+  return '$winnerName har flest handelsskepp ($winnerShips) och får 1 valfri resurs.';
+}
+
+/// Antal Lagerhus/Kloster som gränsar till regionen på [regionColumn]/
+/// [row] – de sitter i samma rad, på byggplatserna hos de två
+/// grannbyarna/-städerna (`regionColumn - 1`/`+ 1`), se
+/// [RealmBoard.expansionLocations] för motsvarande uträkning åt andra
+/// hållet (byggnadens grannregioner).
+int _neighboringStorehouseOrAbbeyCount(
+    RealmBoard board, int regionColumn, BuildingRow row) {
+  bool isStorehouseOrAbbey(PlacedCard? site) =>
+      site != null &&
+      (site.card.baseId == BasicSetCards.storehouse.id ||
+          site.card.baseId == BasicSetCards.abbey.id);
+
+  int countAt(int settlementColumn) {
+    final node = board.settlementAt(settlementColumn);
+    if (node == null) return 0;
+    final sites = row == BuildingRow.above ? node.aboveSites : node.belowSites;
+    return sites.where(isStorehouseOrAbbey).length;
+  }
+
+  return countAt(regionColumn - 1) + countAt(regionColumn + 1);
+}
+
+/// Skriver ihop en lista på svenska: "skog", "skog och guldfält", eller
+/// "skog, guldfält och åker".
+String _swedishJoin(List<String> items) {
+  if (items.length == 1) return items.single;
+  return '${items.sublist(0, items.length - 1).join(', ')} och ${items.last}';
+}
+
+String? _resolveYearOfPlentyForPlayer(Player player) {
+  final board = player.principality;
+  final qualifyingRegionNames = <String>[];
+  void checkRegions(Map<int, PlacedCard> regions, BuildingRow row) {
+    for (final entry in regions.entries) {
+      if (_neighboringStorehouseOrAbbeyCount(board, entry.key, row) == 0) {
+        continue;
+      }
+      final name = entry.value.card.name.toLowerCase();
+      if (!qualifyingRegionNames.contains(name)) {
+        qualifyingRegionNames.add(name);
+      }
+    }
+  }
+
+  checkRegions(board.regionsAbove, BuildingRow.above);
+  checkRegions(board.regionsBelow, BuildingRow.below);
+  if (qualifyingRegionNames.isEmpty) return null;
+
+  return '${player.name} har ${_swedishJoin(qualifyingRegionNames)} '
+      'angränsande till Lagerhus/Kloster och får 1 resurs per region '
+      '(om det finns plats).';
+}
+
+/// Goda året: "Varje region får 1 resurs för varje angränsande Lagerhus
+/// och Kloster, förutsatt att det finns lagringsutrymme kvar."
+String? _resolveYearOfPlenty(GameState state) {
+  final lines = [state.you, state.opponent]
+      .map(_resolveYearOfPlentyForPlayer)
+      .whereType<String>()
+      .toList();
+  if (lines.isEmpty) return null;
+  return lines.join('\n');
+}

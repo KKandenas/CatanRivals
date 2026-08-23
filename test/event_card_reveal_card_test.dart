@@ -24,4 +24,36 @@ void main() {
 
     expect(dismissed, isTrue);
   });
+
+  testWidgets(
+      'visar den uträknade resolutionen (event_die_resolution.dart) under regeltexten',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: EventCardRevealCard(
+          card: BasicSetCards.tradeShipsRace,
+          resolution: 'Astrid har flest handelsskepp (2) och får 1 valfri resurs.',
+          onDismiss: () {},
+        ),
+      ),
+    ));
+
+    expect(
+        find.text('Astrid har flest handelsskepp (2) och får 1 valfri resurs.'),
+        findsOneWidget);
+  });
+
+  testWidgets('ingen extra rad när resolution är null', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: EventCardRevealCard(
+          card: BasicSetCards.feud,
+          onDismiss: () {},
+        ),
+      ),
+    ));
+
+    expect(find.text(BasicSetCards.feud.name), findsOneWidget);
+    expect(find.text(BasicSetCards.feud.effectText!), findsOneWidget);
+  });
 }

@@ -542,6 +542,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           padding: const EdgeInsets.all(12),
                           child: EventCardRevealCard(
                             card: state.drawnEventCard!,
+                            resolution:
+                                resolveEventCard(state.drawnEventCard!, state),
                             onDismiss: () => _handleResult(
                                 context, notifier.dismissEventCard()),
                           ),
