@@ -392,6 +392,17 @@ class RealmBoard {
     return total;
   }
 
+  /// Summan av ALLA lagrade resurser, oavsett typ – används av
+  /// handlingskort med krav på ett visst totalt resursinnehav för att
+  /// gå att spela (t.ex. Handelskaravan, se hand_dock.dart).
+  int get totalStoredResources {
+    var total = 0;
+    for (final region in [..._regionsAbove.values, ..._regionsBelow.values]) {
+      total += region.storedResources;
+    }
+    return total;
+  }
+
   /// Som [resourceTotal], men hoppar över de angivna (kolumn, rad)-
   /// platserna – se [expansionLocations]. Används av Brigadanfallets
   /// uträkning (event_die_resolution.dart) för att undanta regioner som

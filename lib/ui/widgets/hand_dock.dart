@@ -8,6 +8,27 @@ import 'expansion_card_view.dart';
 import 'pop_in.dart';
 import 'score_summary.dart';
 
+/// Om [card] är ett handlingskort med ett resurskrav som [player] inte
+/// uppfyller just nu, returneras en förklarande text (visas i stället
+/// för "Använd kortet", se [showCardDetail]:blockedReason) – annars
+/// `null`. Handelskaravan ("Släng exakt 2 av dina resurser...") kräver
+/// minst 2 resurser av valfri typ totalt, Guldsmed ("Släng 3 guld...")
+/// kräver minst 3 guld – båda måste gå att betala för att kortet
+/// överhuvudtaget ska gå att spela.
+String? _actionCardBlockedReason(GameCard card, Player player) {
+  if (card.baseId == BasicSetCards.merchantCaravan.id) {
+    if (player.totalResourceCount < 2) {
+      return 'Du behöver minst 2 resurser för att kunna använda det här kortet.';
+    }
+  }
+  if (card.baseId == BasicSetCards.goldsmith.id) {
+    if (player.resourceCount(ResourceType.gold) < 3) {
+      return 'Du behöver minst 3 guld för att kunna använda det här kortet.';
+    }
+  }
+  return null;
+}
+
 /// Bottenfältet (~10%): halvtransparent docka med handkort samt
 /// spelarens aktuella ställning (VP och poäng).
 ///
@@ -21,6 +42,11 @@ import 'score_summary.dart';
 /// stund som en ny by byggs – den frågan visas i stället automatiskt
 /// då (se GameNotifier.dropSettlement), så ett tryck på Spejare i
 /// handen visar bara det vanliga, rena kortförstoringsläget.
+///
+/// Handelskaravan och Guldsmed har dessutom ett resurskrav för att gå
+/// att spela (se [_actionCardBlockedReason]) – är det inte uppfyllt
+/// visas ingen "Använd kortet"-fråga, bara en förklarande text i den
+/// förstorade kortvyn (card_detail_dialog.dart:blockedReason).
 class HandDock extends StatelessWidget {
   final Player player;
   final void Function(GameCard card)? onDragStarted;
@@ -109,6 +135,7 @@ class HandDock extends StatelessWidget {
                           key: ValueKey(player.hand[i].id),
                           child: _HandCard(
                             card: player.hand[i],
+                            player: player,
                             onDragStarted: onDragStarted,
                             onDragEnd: onDragEnd,
                             onUseActionCard: onUseActionCard,
@@ -139,6 +166,7 @@ class HandDock extends StatelessWidget {
 
 class _HandCard extends StatelessWidget {
   final GameCard card;
+  final Player player;
   final void Function(GameCard card)? onDragStarted;
   final VoidCallback? onDragEnd;
   final void Function(GameCard card)? onUseActionCard;
@@ -149,6 +177,7 @@ class _HandCard extends StatelessWidget {
 
   const _HandCard({
     required this.card,
+    required this.player,
     this.onDragStarted,
     this.onDragEnd,
     this.onUseActionCard,
@@ -182,9 +211,13 @@ class _HandCard extends StatelessWidget {
           onTap: onSelectForDiscard);
     }
 
+    final blockedReason =
+        isUsableAction ? _actionCardBlockedReason(card, player) : null;
     final useActionTap = isUsableAction && onUseActionCard != null
         ? () => showCardDetail(context, card,
-            onUseCard: () => onUseActionCard!(card))
+            onUseCard:
+                blockedReason == null ? () => onUseActionCard!(card) : null,
+            blockedReason: blockedReason)
         : null;
 
     final face = _CardFace(card: card, playable: playable, onTap: useActionTap);

@@ -33,6 +33,10 @@ class Player {
 
   int resourceCount(ResourceType type) => principality.resourceTotal(type);
 
+  /// Summan av ALLA lagrade resurser, oavsett typ (se
+  /// [RealmBoard.totalStoredResources]).
+  int get totalResourceCount => principality.totalStoredResources;
+
   Player copyWith({
     String? id,
     String? name,

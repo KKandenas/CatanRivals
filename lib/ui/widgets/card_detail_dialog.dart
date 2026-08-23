@@ -20,8 +20,16 @@ import 'dice_face.dart';
 /// kortet?" med Använd kortet/Avbryt) – se [HandDock] där handlings-
 /// kort med den här kroken skickas in. De två är ömsesidigt uteslutande
 /// (ett kort frågar aldrig både "ta" och "använd").
+///
+/// [blockedReason] ersätter "Använd kortet"-frågan med en förklarande
+/// text i stället, för handlingskort som har ett resurskrav som inte är
+/// uppfyllt just nu (t.ex. Handelskaravan/Guldsmed, se
+/// hand_dock.dart:_actionCardBlockedReason) – kortet går fortfarande
+/// att förstora och läsa, men går inte att spela härifrån. Ömsesidigt
+/// uteslutande med [onUseCard] (anroparen väljer det ena eller det
+/// andra beroende på om kravet är uppfyllt).
 Future<void> showCardDetail(BuildContext context, GameCard card,
-    {VoidCallback? onTakeCard, VoidCallback? onUseCard}) {
+    {VoidCallback? onTakeCard, VoidCallback? onUseCard, String? blockedReason}) {
   return showDialog<void>(
     context: context,
     barrierColor: Colors.black54,
@@ -29,7 +37,10 @@ Future<void> showCardDetail(BuildContext context, GameCard card,
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(24),
       child: _CardDetailContent(
-          card: card, onTakeCard: onTakeCard, onUseCard: onUseCard),
+          card: card,
+          onTakeCard: onTakeCard,
+          onUseCard: onUseCard,
+          blockedReason: blockedReason),
     ),
   );
 }
@@ -49,8 +60,10 @@ class _CardDetailContent extends StatelessWidget {
   final GameCard card;
   final VoidCallback? onTakeCard;
   final VoidCallback? onUseCard;
+  final String? blockedReason;
 
-  const _CardDetailContent({required this.card, this.onTakeCard, this.onUseCard});
+  const _CardDetailContent(
+      {required this.card, this.onTakeCard, this.onUseCard, this.blockedReason});
 
   @override
   Widget build(BuildContext context) {
@@ -244,6 +257,35 @@ class _CardDetailContent extends StatelessWidget {
                             ),
                           ),
                         ],
+                      ),
+                    ],
+                    if (blockedReason != null) ...[
+                      const SizedBox(height: 14),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: CatanColors.parchmentDark,
+                          borderRadius: BorderRadius.circular(8),
+                          border:
+                              Border.all(color: CatanColors.woodFrame),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.info_outline,
+                                size: 18, color: CatanColors.ink),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                blockedReason!,
+                                style: const TextStyle(
+                                    fontSize: 13,
+                                    color: CatanColors.ink,
+                                    height: 1.35),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                     if (onUseCard != null) ...[

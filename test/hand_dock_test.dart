@@ -25,13 +25,16 @@ void main() {
     void Function(GameCard card)? onSelectForDiscard,
     bool diceRolled = false,
     bool canBuild = true,
+    RealmBoard? principality,
+    Size viewSize = const Size(1200, 300),
   }) async {
-    tester.view.physicalSize = const Size(1200, 300);
+    tester.view.physicalSize = viewSize;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    final player = Player(id: 'you', name: 'Du', hand: hand);
+    final player =
+        Player(id: 'you', name: 'Du', hand: hand, principality: principality);
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
         body: HandDock(
@@ -111,6 +114,99 @@ void main() {
       await pumpDock(tester, hand: [BasicSetCards.storehouse], canBuild: true);
 
       expect(find.byType(LongPressDraggable<GameCard>), findsOneWidget);
+    });
+  });
+
+  group('Handelskaravan/Guldsmed – resurskrav för att gå att spela', () {
+    testWidgets(
+        'Handelskaravan: färre än 2 resurser visar en förklarande text i stället för "Använd kortet"',
+        (tester) async {
+      var used = false;
+      await pumpDock(tester,
+          hand: [BasicSetCards.merchantCaravan],
+          onUseActionCard: (_) => used = true,
+          principality: RealmBoard(ownerId: 'you', regionsAbove: {
+            0: const PlacedCard(
+                card: BasicSetCards.goldField, storedResources: 1),
+          }));
+
+      await tester.tap(find.text('Handelskaravan'));
+      await tester.pumpAndSettle();
+
+      expect(
+          find.text(
+              'Du behöver minst 2 resurser för att kunna använda det här kortet.'),
+          findsOneWidget);
+      expect(find.text('Använd kortet'), findsNothing);
+      expect(used, isFalse);
+    });
+
+    testWidgets(
+        'Handelskaravan: minst 2 resurser (oavsett typ) visar "Använd kortet" som vanligt',
+        (tester) async {
+      var used = false;
+      await pumpDock(tester,
+          hand: [BasicSetCards.merchantCaravan],
+          onUseActionCard: (_) => used = true,
+          viewSize: const Size(1200, 1600),
+          principality: RealmBoard(ownerId: 'you', regionsAbove: {
+            0: const PlacedCard(
+                card: BasicSetCards.goldField, storedResources: 1),
+            1: const PlacedCard(
+                card: BasicSetCards.forest, storedResources: 1),
+          }));
+
+      await tester.tap(find.text('Handelskaravan'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Vill du använda kortet?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Använd kortet'));
+      await tester.pumpAndSettle();
+      expect(used, isTrue);
+    });
+
+    testWidgets(
+        'Guldsmed: färre än 3 guld visar en förklarande text i stället för "Använd kortet"',
+        (tester) async {
+      var used = false;
+      await pumpDock(tester,
+          hand: [BasicSetCards.goldsmith],
+          onUseActionCard: (_) => used = true,
+          principality: RealmBoard(ownerId: 'you', regionsAbove: {
+            0: const PlacedCard(
+                card: BasicSetCards.goldField, storedResources: 2),
+          }));
+
+      await tester.tap(find.text('Guldsmed'));
+      await tester.pumpAndSettle();
+
+      expect(
+          find.text(
+              'Du behöver minst 3 guld för att kunna använda det här kortet.'),
+          findsOneWidget);
+      expect(find.text('Använd kortet'), findsNothing);
+      expect(used, isFalse);
+    });
+
+    testWidgets('Guldsmed: minst 3 guld visar "Använd kortet" som vanligt',
+        (tester) async {
+      var used = false;
+      await pumpDock(tester,
+          hand: [BasicSetCards.goldsmith],
+          onUseActionCard: (_) => used = true,
+          viewSize: const Size(1200, 1600),
+          principality: RealmBoard(ownerId: 'you', regionsAbove: {
+            0: const PlacedCard(
+                card: BasicSetCards.goldField, storedResources: 3),
+          }));
+
+      await tester.tap(find.text('Guldsmed'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Vill du använda kortet?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Använd kortet'));
+      await tester.pumpAndSettle();
+      expect(used, isTrue);
     });
   });
 

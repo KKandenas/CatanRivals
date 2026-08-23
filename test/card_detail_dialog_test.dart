@@ -58,6 +58,38 @@ void main() {
     expect(find.text('Vill du använda kortet?'), findsNothing);
   });
 
+  testWidgets(
+      'blockedReason visar förklarande text i stället för "Använd kortet"',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showCardDetail(
+                context, BasicSetCards.goldsmith,
+                blockedReason:
+                    'Du behöver minst 3 guld för att kunna använda det här kortet.'),
+            child: const Text('öppna'),
+          ),
+        ),
+      ),
+    ));
+    await tester.tap(find.text('öppna'));
+    await tester.pumpAndSettle();
+
+    expect(
+        find.text(
+            'Du behöver minst 3 guld för att kunna använda det här kortet.'),
+        findsOneWidget);
+    expect(find.text('Vill du använda kortet?'), findsNothing);
+    expect(find.text('Använd kortet'), findsNothing);
+  });
+
   testWidgets('utan onUseCard/onTakeCard visas ingen fråga alls', (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
