@@ -14,8 +14,9 @@ import '../theme/catan_colors.dart';
 ///   kort gratis / kika i en hög mot betalning).
 /// - [TradePhase.exchangeDiscard]/[exchangeDraw]: en instruktionsrad –
 ///   själva högarna (tryckbara) sitter i [CenterStacksStrip].
-/// - [TradePhase.peekPaying]: kostnaden (2 valfria resurser,
-///   självbevakat precis som byggkostnader) + Betalt/Avbryt.
+/// - [TradePhase.peekPaying]: kostnaden (2 valfria resurser – 1 om
+///   spelaren har byggt Församlingshus, se [peekCost] – självbevakat
+///   precis som byggkostnader) + Betalt/Avbryt.
 /// - [TradePhase.peekDiscard]: en instruktionsrad – man slänger ett
 ///   kort innan man kikar, precis som det gratis bytet (annars skulle
 ///   handen bara växa).
@@ -31,6 +32,12 @@ class TradePhaseCard extends StatelessWidget {
   final VoidCallback? onConfirmPeekPayment;
   final VoidCallback? onCancelPeek;
 
+  /// Vad det kostar att kika i en hel draghög (regelhäftet s. 9: 2
+  /// valfria resurser, men bara 1 med Församlingshus i spel – se
+  /// BasicSetCards.parishHall.effectText). Styr både knapptexten
+  /// ("Kika (N resurs/er)") och betaltexten under [TradePhase.peekPaying].
+  final int peekCost;
+
   const TradePhaseCard({
     super.key,
     required this.phase,
@@ -39,10 +46,12 @@ class TradePhaseCard extends StatelessWidget {
     this.onStartPeek,
     this.onConfirmPeekPayment,
     this.onCancelPeek,
+    this.peekCost = 2,
   });
 
   @override
   Widget build(BuildContext context) {
+    final resourceWord = peekCost == 1 ? 'resurs' : 'resurser';
     switch (phase) {
       case TradePhase.none:
       case TradePhase.peekViewing:
@@ -53,7 +62,8 @@ class TradePhaseCard extends StatelessWidget {
           actions: [
             _ActionButton(label: 'Behåll handen', onTap: onSkip),
             _ActionButton(label: 'Byt ett kort', onTap: onStartExchange),
-            _ActionButton(label: 'Kika (2 resurser)', onTap: onStartPeek),
+            _ActionButton(
+                label: 'Kika ($peekCost $resourceWord)', onTap: onStartPeek),
           ],
         );
       case TradePhase.exchangeDiscard:
@@ -65,8 +75,10 @@ class TradePhaseCard extends StatelessWidget {
           label: 'Byt: tryck på en draghög för att dra ett kort.',
         );
       case TradePhase.peekPaying:
+        final valfri = peekCost == 1 ? 'valfri' : 'valfria';
         return _Banner(
-          label: 'Betala 2 valfria resurser genom att trycka − på valfria regioner.',
+          label:
+              'Betala $peekCost $valfri $resourceWord genom att trycka − på valfria regioner.',
           actions: [
             _ActionButton(label: 'Avbryt', onTap: onCancelPeek, filled: false),
             _ActionButton(label: 'Betalt', onTap: onConfirmPeekPayment),

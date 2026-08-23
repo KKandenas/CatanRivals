@@ -411,6 +411,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                     _handleResult(context, notifier.confirmPeekPayment()),
                 onCancelPeek: () =>
                     _handleResult(context, notifier.cancelPeek()),
+                peekCost: state.you.principality
+                        .hasExpansionCard(BasicSetCards.parishHall.id)
+                    ? 1
+                    : 2,
               ),
               Expanded(
                 flex: 4,
