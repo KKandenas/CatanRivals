@@ -71,6 +71,10 @@ void main() {
     setUp(() {
       container = ProviderContainer();
       addTearDown(container.dispose);
+      // discardActionCard kräver numera action-fasen (samma villkor som
+      // ett bygge, se GameNotifier._checkCanBuild) – precis som
+      // Omlokaliseringens setUp nedan.
+      container.read(gameProvider.notifier).rollProductionDie();
     });
 
     test('discardActionCard tar bort kortet från handen utan att röra resurser', () {
@@ -96,6 +100,25 @@ void main() {
 
       expect(error, isNull);
       expect(container.read(gameProvider).you.hand, hasLength(handCountBefore));
+    });
+
+    test('avvisas med tydligt fel innan tärningen slagits', () {
+      // Ny container – ingen rollProductionDie() i den här gruppens
+      // setUp (till skillnad från Omlokalisering nedan), så tärningen
+      // är fortfarande oslagen.
+      final freshContainer = ProviderContainer();
+      addTearDown(freshContainer.dispose);
+      final notifier = freshContainer.read(gameProvider.notifier);
+      final card = freshContainer
+          .read(gameProvider)
+          .you
+          .hand
+          .firstWhere((c) => c.id == BasicSetCards.merchantCaravan.id);
+
+      final error = notifier.discardActionCard(card);
+
+      expect(error, isNotNull);
+      expect(freshContainer.read(gameProvider).you.hand.contains(card), isTrue);
     });
   });
 
@@ -249,6 +272,21 @@ void main() {
 
       expect(error, isNull);
       expect(container.read(gameProvider).relocationActive, isFalse);
+    });
+
+    test('startRelocation avvisas med tydligt fel innan tärningen slagits',
+        () {
+      // Ny container – ingen rollProductionDie() här (till skillnad
+      // från gruppens setUp ovan), så tärningen är fortfarande oslagen.
+      final freshContainer = ProviderContainer();
+      addTearDown(freshContainer.dispose);
+      freshContainer.read(gameProvider).you.hand.add(BasicSetCards.relocation);
+
+      final error =
+          freshContainer.read(gameProvider.notifier).startRelocation();
+
+      expect(error, isNotNull);
+      expect(freshContainer.read(gameProvider).relocationActive, isFalse);
     });
   });
 }

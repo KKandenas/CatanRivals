@@ -57,6 +57,13 @@ class HandDock extends StatelessWidget {
   /// vad "använda" innebär för respektive kort.
   final void Function(GameCard card)? onUseActionCard;
 
+  /// Om det är din tur just nu – varken Brigitta eller övriga
+  /// handlingskort (se [canBuild]) går att spela på motståndarens tur,
+  /// så ett tryck visar då bara den vanliga, rena kortförstoringen
+  /// (ingen "Vill du använda kortet?"-fråga) i stället för att låta
+  /// spelaren välja/bekräfta och sedan möta ett "Inte din tur"-fel.
+  final bool isMyTurn;
+
   /// Om tärningen redan är slagen den här omgången – Brigitta får bara
   /// spelas INNAN tärningen slås (regelhäftet: "Play this card before
   /// rolling the dice"), så ett tryck på den visar bara den vanliga,
@@ -68,7 +75,11 @@ class HandDock extends StatelessWidget {
   /// Om bygg-/enhetskort går att dra ut på riket just nu (se
   /// [GameState.canBuildRightNow]) – annars visas de bara, precis som
   /// handlingskort, i stället för att gå att dra och sedan mötas av ett
-  /// felmeddelande efter "Betalt".
+  /// felmeddelande efter "Betalt". Övriga handlingskort (utom Brigitta,
+  /// se [diceRolled]) delar samma villkor: de spelas under action-fasen
+  /// (efter tärningsslaget, ingen annan väljare aktiv) precis som ett
+  /// bygge, så samma flagga styr om deras "Använd kortet?"-fråga går
+  /// att öppna över huvud taget.
   final bool canBuild;
 
   /// Handjustering i slutet av action-fasen (se [HandAdjustmentPhase.
@@ -90,6 +101,7 @@ class HandDock extends StatelessWidget {
     this.onDragStarted,
     this.onDragEnd,
     this.onUseActionCard,
+    this.isMyTurn = true,
     this.diceRolled = false,
     this.canBuild = true,
     this.selectedDiscardCard,
@@ -139,6 +151,7 @@ class HandDock extends StatelessWidget {
                             onDragStarted: onDragStarted,
                             onDragEnd: onDragEnd,
                             onUseActionCard: onUseActionCard,
+                            isMyTurn: isMyTurn,
                             diceRolled: diceRolled,
                             canBuild: canBuild,
                             selected: player.hand[i] == selectedDiscardCard,
@@ -170,6 +183,7 @@ class _HandCard extends StatelessWidget {
   final void Function(GameCard card)? onDragStarted;
   final VoidCallback? onDragEnd;
   final void Function(GameCard card)? onUseActionCard;
+  final bool isMyTurn;
   final bool diceRolled;
   final bool canBuild;
   final bool selected;
@@ -181,6 +195,7 @@ class _HandCard extends StatelessWidget {
     this.onDragStarted,
     this.onDragEnd,
     this.onUseActionCard,
+    this.isMyTurn = true,
     this.diceRolled = false,
     this.canBuild = true,
     this.selected = false,
@@ -192,13 +207,17 @@ class _HandCard extends StatelessWidget {
     final playable = card.category == CardCategory.expansion;
     // Spejare undantas: den frågas automatiskt vid by-bygge i stället
     // (se klassdocen på [HandDock]), inte via ett tryck i handen.
-    // Brigitta undantas efter att tärningen redan slagits – kortet
-    // måste spelas INNAN slaget (regelhäftet), annars visas bara den
-    // vanliga kortförstoringen utan "använd"-frågan.
+    // Brigitta går bara att spela på din egen tur, INNAN tärningen
+    // slås (regelhäftet) – övriga handlingskort delar i stället samma
+    // villkor som byggkort ([canBuild], se HandDock-doc), eftersom de
+    // spelas under action-fasen (efter tärningsslaget, ingen annan
+    // väljare aktiv) precis som ett bygge. Annars visas bara den
+    // vanliga kortförstoringen, utan "använd"-frågan, i stället för att
+    // gå att trycka och sedan mötas av ett felmeddelande.
     final isBrigitta = card.baseId == BasicSetCards.brigittaTheWiseWoman.id;
     final isUsableAction = card.category == CardCategory.action &&
         card.baseId != BasicSetCards.scout.id &&
-        !(isBrigitta && diceRolled);
+        (isBrigitta ? (isMyTurn && !diceRolled) : canBuild);
 
     // Under handjusteringen (slänga kort) går varje kort – oavsett
     // kategori – bara att trycka på för att välja det, ingen dra-för-

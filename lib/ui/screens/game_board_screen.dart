@@ -824,6 +824,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   onDragEnd: notifier.endDrag,
                   onUseActionCard: (card) =>
                       _handleUseActionCard(context, card, notifier),
+                  isMyTurn: state.isMyTurn,
                   diceRolled: state.diceRolled,
                   canBuild: canBuildRightNow,
                   selectedDiscardCard:

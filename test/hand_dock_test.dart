@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Testar HandDocks handlingskortslogik och handjusteringens
-/// slängval – tre buggar som upptäcktes vid speltest:
+/// slängval – flera buggar som upptäcktes vid speltest:
 /// 1) Brigitta ska inte gå att "använda" efter att tärningen redan
 ///    slagits (kortet måste spelas INNAN, regelhäftet).
 /// 3) Bygg-/enhetskort ska inte gå att dra ut när [HandDock.canBuild]
@@ -17,12 +17,21 @@ import 'package:flutter_test/flutter_test.dart';
 ///    (`DecoratedBox` utan `IgnorePointer`) låg ovanpå kortet i
 ///    Stacken och fångade trycket självt för alla
 ///    [CardCategory.expansion]-kort (byggnader/hjältar/handelsskepp).
+/// 6) Övriga handlingskort (Omlokalisering m.fl., inte Brigitta) ska
+///    inte gå att "använda" innan tärningen slagits, eller på
+///    motståndarens tur – annars visas "Vill du använda kortet?" och
+///    man möter i stället ett felmeddelande (t.ex. "Inte din tur")
+///    EFTER att man redan valt/bekräftat, se [HandDock.canBuild]/
+///    [HandDock.isMyTurn]. Brigitta har omvänt villkor (bara INNAN
+///    tärningen slagits) men ska på samma sätt inte gå att använda på
+///    motståndarens tur.
 void main() {
   Future<void> pumpDock(
     WidgetTester tester, {
     required List<GameCard> hand,
     void Function(GameCard card)? onUseActionCard,
     void Function(GameCard card)? onSelectForDiscard,
+    bool isMyTurn = true,
     bool diceRolled = false,
     bool canBuild = true,
     RealmBoard? principality,
@@ -42,6 +51,7 @@ void main() {
           totalVictoryPoints: 0,
           onUseActionCard: onUseActionCard,
           onSelectForDiscard: onSelectForDiscard,
+          isMyTurn: isMyTurn,
           diceRolled: diceRolled,
           canBuild: canBuild,
         ),
@@ -82,6 +92,59 @@ void main() {
       expect(used, isFalse);
       // Kortet förstoras ändå (går att läsa regeltexten).
       expect(find.text('Brigitta, den visa kvinnan'), findsWidgets);
+    });
+
+    testWidgets(
+        'på motståndarens tur visas bara vanlig kortförstoring, även innan tärningen slagits',
+        (tester) async {
+      var used = false;
+      await pumpDock(tester,
+          hand: [BasicSetCards.brigittaTheWiseWoman],
+          onUseActionCard: (_) => used = true,
+          isMyTurn: false);
+
+      await tester.tap(find.text('Brigitta, den visa kvinnan'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Vill du använda kortet?'), findsNothing);
+      expect(used, isFalse);
+    });
+  });
+
+  group('Övriga handlingskort (t.ex. Omlokalisering) styrs av canBuild', () {
+    testWidgets(
+        'canBuild=false (innan tärningen slagits eller motståndarens tur) visar bara vanlig kortförstoring',
+        (tester) async {
+      var used = false;
+      await pumpDock(tester,
+          hand: [BasicSetCards.relocation],
+          onUseActionCard: (_) => used = true,
+          canBuild: false);
+
+      await tester.tap(find.text('Omlokalisering'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Vill du använda kortet?'), findsNothing);
+      expect(used, isFalse);
+      expect(find.text('Omlokalisering'), findsWidgets);
+    });
+
+    testWidgets('canBuild=true visar "Vill du använda kortet?" som vanligt',
+        (tester) async {
+      var used = false;
+      await pumpDock(tester,
+          hand: [BasicSetCards.relocation],
+          onUseActionCard: (_) => used = true,
+          canBuild: true,
+          viewSize: const Size(1200, 1600));
+
+      await tester.tap(find.text('Omlokalisering'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Vill du använda kortet?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Använd kortet'));
+      await tester.pumpAndSettle();
+      expect(used, isTrue);
     });
   });
 

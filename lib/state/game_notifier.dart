@@ -901,9 +901,12 @@ class GameNotifier extends Notifier<GameState> {
   /// tar bara bort kortet från handen – spelaren justerar sedan själv
   /// resurserna manuellt med +/- på sina regioner utifrån kortets
   /// `effectText`, precis som byggkostnader och tärningsutdelning. Bara
-  /// giltigt på din egen tur.
+  /// giltigt under action-fasen, precis som ett bygge (se
+  /// [_checkCanBuild]) – handlingskort spelas efter tärningsslaget, inte
+  /// innan.
   String? discardActionCard(GameCard card) {
-    if (!state.isMyTurn) return 'Inte din tur.';
+    final turnError = _checkCanBuild();
+    if (turnError != null) return turnError;
     if (!state.you.hand.contains(card)) return null;
 
     state = state.copyWith(
@@ -1465,9 +1468,12 @@ class GameNotifier extends Notifier<GameState> {
   /// [selectRelocationTarget]). Kortet tas bort från handen först när
   /// bytet faktiskt genomförs (efter det andra valet), inte redan här
   /// – spelaren ska kunna ångra sig med [cancelRelocation] utan att
-  /// förlora kortet.
+  /// förlora kortet. Bara giltigt under action-fasen, precis som ett
+  /// bygge (se [_checkCanBuild]) – kortet spelas efter tärningsslaget,
+  /// inte innan.
   String? startRelocation() {
-    if (!state.isMyTurn) return 'Inte din tur.';
+    final turnError = _checkCanBuild();
+    if (turnError != null) return turnError;
     if (!state.you.hand.any((c) => c.baseId == BasicSetCards.relocation.id)) {
       return null;
     }
