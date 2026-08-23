@@ -659,10 +659,37 @@ class GameNotifier extends Notifier<GameState> {
   /// Stänger det uppslagna händelsekortet (se [drawEventCard]) – vem
   /// som helst av spelarna kan stänga det när det är läst och (om det
   /// påverkar någon) genomfört, det är bara en informationsruta.
+  ///
+  /// UNDANTAG (Fejd/Brödrafejd online): den ena sidan ser bara en
+  /// passiv "OK"-knapp medan den andra faktiskt ska göra något
+  /// interaktivt (Fejd: den UTAN styrkeövertaget väljer bort en
+  /// byggnad, se [startFeudBuildingPick]. Brödrafejd: den MED
+  /// övertaget väljer 2 kort, se [startFraternalFeudsPick]). Trycker
+  /// den passiva sidan OK för snabbt hinner det synkas till
+  /// motståndaren (via [TurnState.drawnEventCard]) innan den aktiva
+  /// sidan hunnit agera – båda de metoderna kräver ett uppslaget kort
+  /// och skulle då tyst vägra starta, så den aktiva sidan fick aldrig
+  /// chansen att göra sitt val. Så länge den aktiva sidan faktiskt har
+  /// något att göra (en byggnad att ta bort, respektive kort kvar i
+  /// handen att välja bland) stängs kortet därför bara LOKALT här (utan
+  /// synk) – det riktiga, synkade avslutet sker i stället i
+  /// [resolveFeudBuildingRemoval] respektive när båda Brödrafejd-korten
+  /// är valda i [pickFraternalFeudsCard].
   String? dismissEventCard() {
     if (state.drawnEventCard == null) return null;
+    final baseId = state.drawnEventCard!.baseId;
+    final isFeud = baseId == BasicSetCards.feud.id;
+    final isFraternalFeuds = baseId == BasicSetCards.fraternalFeuds.id;
+    final advantage = state.strengthAdvantagePlayerId;
+    final otherSideMustActFirst = (isFeud &&
+            advantage == state.myPlayerId &&
+            state.opponent.principality.hasAnyBuilding) ||
+        (isFraternalFeuds &&
+            advantage != null &&
+            advantage != state.myPlayerId &&
+            state.you.hand.isNotEmpty);
     state = state.copyWith(clearDrawnEventCard: true);
-    _syncTurnState();
+    if (!otherSideMustActFirst) _syncTurnState();
     return null;
   }
 

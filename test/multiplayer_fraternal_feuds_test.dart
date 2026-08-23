@@ -142,4 +142,42 @@ void main() {
     expect(hostState.you.hand.contains(hostHandBefore[0]), isFalse);
     expect(hostState.you.hand.contains(hostHandBefore[1]), isFalse);
   });
+
+  test(
+      'samma buggmönster som Fejd: gästen (utan övertaget) trycker "OK" direkt – ska INTE hindra host från att sedan välja 2 kort',
+      () async {
+    final (host, guest) = await connectedRoom();
+    addTearDown(host.dispose);
+    addTearDown(guest.dispose);
+
+    giveStrength(host.read(gameProvider).you, 3);
+    host.read(gameProvider.notifier).adjustRegionResource(-1, BuildingRow.above, 0);
+    await pump();
+
+    final roomCode = host.read(gameProvider).roomCode!;
+    final fakeSync =
+        host.read(gameSyncServiceProvider) as FakeGameSyncService;
+    await fakeSync.writeTurnState(
+        roomCode,
+        const TurnState(
+            activePlayerId: 'host',
+            diceRolled: true,
+            drawnEventCard: BasicSetCards.fraternalFeuds));
+    await pump();
+    expect(host.read(gameProvider).strengthAdvantagePlayerId, 'host');
+
+    // Gästen (utan övertaget) ser bara en passiv "OK"-knapp för
+    // Brödrafejd (se FeudResolutionCard._primaryAction) och trycker
+    // den direkt, INNAN host hunnit trycka "Välj kort".
+    final guestNotifier = guest.read(gameProvider.notifier);
+    expect(guest.read(gameProvider).drawnEventCard, isNotNull);
+    expect(guestNotifier.dismissEventCard(), isNull);
+    await pump();
+
+    final hostNotifier = host.read(gameProvider.notifier);
+    expect(host.read(gameProvider).drawnEventCard, isNotNull,
+        reason: 'gästens tidiga "OK" fick inte rensa hosts uppslagna kort');
+    expect(hostNotifier.startFraternalFeudsPick(), isNull);
+    expect(host.read(gameProvider).fraternalFeudsPicking, isTrue);
+  });
 }
