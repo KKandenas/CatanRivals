@@ -1,6 +1,7 @@
 import 'package:catan_rivals/data/basic_set_cards.dart';
 import 'package:catan_rivals/data/era_of_gold_cards.dart';
 import 'package:catan_rivals/data/era_of_progress_cards.dart';
+import 'package:catan_rivals/data/era_of_turmoil_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/ui/screens/rules_screen.dart';
 import 'package:flutter/material.dart';
@@ -46,16 +47,17 @@ void main() {
 
     expect(find.text('Alla kort i grundspelet'), findsOneWidget);
     expect(find.text('Regioner'), findsOneWidget);
-    expect(find.text('Byggnader'), findsOneWidget);
-    expect(find.text('Hjältar'), findsOneWidget);
     expect(find.text('Handelsskepp'), findsOneWidget);
-    // "Handlingskort"/"Händelsekort" kolliderar med Gulderan-sektionens
-    // egna grupper längre ner (samma titlar återanvänds där) – och
+    // "Handlingskort"/"Händelsekort"/"Byggnader"/"Hjältar" kolliderar
+    // med temasetens egna grupper längre ner (samma titlar återanvänds
+    // där, t.ex. Oroligheternas tids "Byggnader"/"Hjältar") – och
     // "Händelsekort" dessutom med händelsetärningens "?"-sida
     // (EventDieFace.eventCard heter också "Händelsekort") – bara
     // "minst en gång" är meningsfullt att testa här.
     expect(find.text('Handlingskort'), findsWidgets);
     expect(find.text('Händelsekort'), findsWidgets);
+    expect(find.text('Byggnader'), findsWidgets);
+    expect(find.text('Hjältar'), findsWidgets);
 
     // Varje korttyp har en egen tumnagel – ett namn kan förekomma mer
     // än en gång i trädet (rubrik + eventuell dubblett bland kortnamnen
@@ -122,5 +124,32 @@ void main() {
     // Brigitta redan har sin egen kortruta i grundspelssektionen ovanför.
     expect(find.textContaining(BasicSetCards.brigittaTheWiseWoman.name),
         findsWidgets);
+  });
+
+  testWidgets(
+      'visar Oroligheternas tid (Era of Turmoil) som en egen sektion, med "Bild saknas" för kort utan bild och en lista på återanvända kort (grundspel + Gulderan)',
+      (tester) async {
+    await pumpRules(tester);
+
+    expect(find.textContaining('Oroligheternas tid'), findsOneWidget);
+    expect(find.text('Byggnader'), findsWidgets);
+    expect(find.text('Hjältar'), findsWidgets);
+    expect(find.text('Stadsutbyggnader'), findsWidgets);
+    for (final card in EraOfTurmoilCards.all) {
+      expect(find.text(card.name), findsWidgets,
+          reason: '${card.name} (${card.id}) saknas i Oroligheternas tid-listan');
+    }
+
+    expect(find.text('Bild\nsaknas'), findsWidgets);
+
+    // Återanvänds från grundspelet (Fejd/Brödrafejd) OCH från Gulderan
+    // (Rövare, action-brigands) – footnoten ska hitta bägge källorna,
+    // inte bara BasicSetCards (se _EraSection:byId).
+    expect(
+        find.textContaining(BasicSetCards.feud.name), findsWidgets);
+    expect(find.textContaining(BasicSetCards.fraternalFeuds.name),
+        findsWidgets);
+    expect(
+        find.textContaining(EraOfGoldCards.brigands.name), findsWidgets);
   });
 }
