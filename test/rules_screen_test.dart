@@ -101,20 +101,19 @@ void main() {
   });
 
   testWidgets(
-      'Gulderan har inte längre några "Bild saknas" – bara Utvecklingens tid och Oroligheternas tid saknar fortfarande bilder',
+      'inga "Bild saknas" kvar någonstans – alla tre temaseten har nu riktiga bilder på samtliga kort',
       (tester) async {
     await pumpRules(tester);
 
-    // Alla 15 Gulderan-kort fick riktiga bilder – bara de två återstående
-    // temaseten (15 + 18 kort) ska fortfarande sakna bild. Räknar hela
-    // trädet (går inte att scopa till en enda sektion utan en egen
-    // ancestor-finder), men eftersom grundspelet redan har alla sina
-    // bilder är exakt 33 den rätta summan.
-    expect(find.text('Bild\nsaknas'), findsNWidgets(33));
+    // Gulderan (15), Utvecklingens tid (15) och Oroligheternas tid (18)
+    // hade tidigare varsin uppsättning "Bild saknas"-rutor – nu när alla
+    // tre temaseten fått riktiga bilder ska ingen enda finnas kvar,
+    // varken i grundspelet eller i något temaset.
+    expect(find.text('Bild\nsaknas'), findsNothing);
   });
 
   testWidgets(
-      'visar Utvecklingens tid (Era of Progress) som en egen sektion, med "Bild saknas" för kort utan bild och en lista på återanvända grundspelskort',
+      'visar Utvecklingens tid (Era of Progress) som en egen sektion, nu med bilder på alla 15 kort, och en lista på återanvända grundspelskort',
       (tester) async {
     await pumpRules(tester);
 
@@ -126,8 +125,6 @@ void main() {
           reason: '${card.name} (${card.id}) saknas i Utvecklingens tid-listan');
     }
 
-    expect(find.text('Bild\nsaknas'), findsWidgets);
-
     // Korten som återanvänds rakt av från grundspelet (t.ex. Brigitta)
     // ska nämnas i klartext – utan att kräva EXAKT en träff, eftersom
     // Brigitta redan har sin egen kortruta i grundspelssektionen ovanför.
@@ -136,7 +133,7 @@ void main() {
   });
 
   testWidgets(
-      'visar Oroligheternas tid (Era of Turmoil) som en egen sektion, med "Bild saknas" för kort utan bild och en lista på återanvända kort (grundspel + Gulderan)',
+      'visar Oroligheternas tid (Era of Turmoil) som en egen sektion, nu med bilder på alla 18 kort, och en lista på återanvända kort (grundspel + Gulderan)',
       (tester) async {
     await pumpRules(tester);
 
@@ -148,8 +145,6 @@ void main() {
       expect(find.text(card.name), findsWidgets,
           reason: '${card.name} (${card.id}) saknas i Oroligheternas tid-listan');
     }
-
-    expect(find.text('Bild\nsaknas'), findsWidgets);
 
     // Återanvänds från grundspelet (Fejd/Brödrafejd) OCH från Gulderan
     // (Rövare, action-brigands) – footnoten ska hitta bägge källorna,
