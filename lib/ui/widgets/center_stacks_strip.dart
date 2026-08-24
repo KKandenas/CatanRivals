@@ -77,6 +77,16 @@ class CenterStacksStrip extends StatelessWidget {
   final void Function(int stackIndex)? onDiscardToStack;
   final bool hasSelectedDiscardCard;
 
+  /// Om det handkort som just nu är valt att slängas (i vilken som
+  /// helst av [hasSelectedDiscardCard]/[hasSelectedExchangeCard]s tre
+  /// lägen – samma lokala val, se game_board_screen.dart-doc) hör till
+  /// Gulderans egna högar eller grundspelets – styr vilka högar som
+  /// faktiskt går att slänga det i (se [_isGoldStack]/
+  /// [GameNotifier._checkStackMatchesCardOrigin]): en grundspelskort
+  /// får bara läggas i en grundspelshög, ett Gulderan-kort bara i en av
+  /// Gulderans. `null` när inget kort är valt.
+  final bool? selectedDiscardCardIsGold;
+
   /// Kortbytesfasen (regelhäftet s. 9) – se [TradePhase]. Under
   /// [TradePhase.exchangeDiscard] eller [TradePhase.peekDiscard] går
   /// högarna att trycka på för att slänga det valda handkortet dit
@@ -120,6 +130,7 @@ class CenterStacksStrip extends StatelessWidget {
     this.onDrawStack,
     this.onDiscardToStack,
     this.hasSelectedDiscardCard = false,
+    this.selectedDiscardCardIsGold,
     this.tradePhase = TradePhase.none,
     this.onExchangeDiscardToStack,
     this.onExchangeDrawStack,
@@ -188,15 +199,27 @@ class CenterStacksStrip extends StatelessWidget {
     );
   }
 
+  /// Om draghög [index] är en av Gulderans EGNA högar (de sista 2 av 5,
+  /// se [GameState.initialDrawStackSizes]/[GameNotifier._isGoldStackIndex])
+  /// – styr både vilken kortbaksbild som visas ([_backAssetFor]) och
+  /// (tillsammans med [selectedDiscardCardIsGold]) vilka högar som går
+  /// att slänga ett valt handkort i.
+  bool _isGoldStack(int index) =>
+      initialStackSizes.length == 5 && index >= initialStackSizes.length - 2;
+
+  String _backAssetFor(int index) =>
+      _isGoldStack(index) ? CatanAssets.backEraGold : CatanAssets.backBasicSet;
+
   Widget _drawStackPile(int index) {
     final count = stackCounts['draw${index + 1}'] ?? 0;
     final claimed = count < initialStackSizes[index];
     final peeking = peekingStackIndex == index;
+    final asset = _backAssetFor(index);
 
     if (handAdjustmentPhase == HandAdjustmentPhase.drawing) {
       final tappable = count > 0;
       return _StackPile(
-        asset: CatanAssets.backBasicSet,
+        asset: asset,
         count: count,
         width: 48,
         dimmed: !tappable,
@@ -206,33 +229,38 @@ class CenterStacksStrip extends StatelessWidget {
       );
     }
     if (handAdjustmentPhase == HandAdjustmentPhase.discarding) {
+      // Ett valt handkort får bara slängas i en hög av samma set (se
+      // GameNotifier._checkStackMatchesCardOrigin) – bara den
+      // matchande högen highlightas/går att trycka på, i stället för
+      // att gå att trycka och sedan mötas av ett felmeddelande.
+      final tappable = hasSelectedDiscardCard &&
+          selectedDiscardCardIsGold == _isGoldStack(index);
       return _StackPile(
-        asset: CatanAssets.backBasicSet,
+        asset: asset,
         count: count,
         width: 48,
-        highlighted: hasSelectedDiscardCard,
+        highlighted: tappable,
         peeking: peeking,
-        onTap:
-            hasSelectedDiscardCard ? () => onDiscardToStack?.call(index) : null,
+        onTap: tappable ? () => onDiscardToStack?.call(index) : null,
       );
     }
     if (tradePhase == TradePhase.exchangeDiscard ||
         tradePhase == TradePhase.peekDiscard) {
+      final tappable = hasSelectedExchangeCard &&
+          selectedDiscardCardIsGold == _isGoldStack(index);
       return _StackPile(
-        asset: CatanAssets.backBasicSet,
+        asset: asset,
         count: count,
         width: 48,
-        highlighted: hasSelectedExchangeCard,
+        highlighted: tappable,
         peeking: peeking,
-        onTap: hasSelectedExchangeCard
-            ? () => onExchangeDiscardToStack?.call(index)
-            : null,
+        onTap: tappable ? () => onExchangeDiscardToStack?.call(index) : null,
       );
     }
     if (tradePhase == TradePhase.exchangeDraw) {
       final tappable = count > 0;
       return _StackPile(
-        asset: CatanAssets.backBasicSet,
+        asset: asset,
         count: count,
         width: 48,
         dimmed: !tappable,
@@ -244,7 +272,7 @@ class CenterStacksStrip extends StatelessWidget {
     if (tradePhase == TradePhase.peekChoosingStack) {
       final tappable = count > 0;
       return _StackPile(
-        asset: CatanAssets.backBasicSet,
+        asset: asset,
         count: count,
         width: 48,
         dimmed: !tappable,
@@ -256,7 +284,7 @@ class CenterStacksStrip extends StatelessWidget {
 
     final tappable = isChoosingHand && isMyTurnToChooseHand && !claimed;
     return _StackPile(
-      asset: CatanAssets.backBasicSet,
+      asset: asset,
       count: count,
       width: 48,
       dimmed: isChoosingHand && claimed,

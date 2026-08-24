@@ -11,13 +11,18 @@ import 'package:flutter_test/flutter_test.dart';
 /// 5 draghögar i stället för 4, och den öppna ansikte-upp-högen visas
 /// (och går att dra ut) när den inte är tom.
 void main() {
-  int backBasicSetImageCount(WidgetTester tester) {
+  int imageCount(WidgetTester tester, String assetName) {
     return tester
         .widgetList<Image>(find.byType(Image))
-        .where((img) =>
-            (img.image as AssetImage).assetName == CatanAssets.backBasicSet)
+        .where((img) => (img.image as AssetImage).assetName == assetName)
         .length;
   }
+
+  int backBasicSetImageCount(WidgetTester tester) =>
+      imageCount(tester, CatanAssets.backBasicSet);
+
+  int backEraGoldImageCount(WidgetTester tester) =>
+      imageCount(tester, CatanAssets.backEraGold);
 
   testWidgets('utan tema: 4 draghögar', (tester) async {
     await tester.pumpWidget(const MaterialApp(
@@ -68,7 +73,12 @@ void main() {
       ),
     ));
 
-    expect(backBasicSetImageCount(tester), 5);
+    // De 3 grundspelshögarna (draw1-3) har grundspelets kortbaksbild,
+    // de 2 Gulderan-egna högarna (draw4-5) en annan (se
+    // CenterStacksStrip._backAssetFor) – annars skulle man inte kunna
+    // se skillnad på högarna när man ska slänga ett kort tillbaka.
+    expect(backBasicSetImageCount(tester), 3);
+    expect(backEraGoldImageCount(tester), 2);
     expect(find.byType(ExpansionCardView), findsNWidgets(2));
   });
 

@@ -350,29 +350,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                                 : 'Väntar på att ${state.opponent.name} väljer en draghög …',
                             textAlign: TextAlign.center,
                           ),
-                        )
-                      else if (showTurnEmphasis)
-                        // Rundad pill i stället för en helbred remsa – lika
-                        // omöjligt att missa vems tur det är, kompletterar den
-                        // gröna ramen runt egna riket och den lätta
-                        // nedtoningen när det inte är din tur.
-                        PillBanner(
-                          color: state.activePlayerIsMe
-                              ? const Color(0xFF4F6F45)
-                              : CatanColors.woodFrameDark,
-                          child: Text(
-                            state.activePlayerIsMe
-                                ? 'DIN TUR – ${turnPhaseLabel()}'
-                                : '${state.opponent.name}s TUR',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              letterSpacing: 1.5,
-                            ),
-                          ),
                         ),
+                      // "DIN TUR"-indikatorn visas inte längre här som en
+                      // egen bred banner – den sitter numera kompakt i
+                      // toppraden bredvid Regler-/Lämna-knapparna (se
+                      // _TurnIndicatorChip nedan), så att den och
+                      // "Avsluta action-fas"-knappen inte hamnar dolda
+                      // bakom varandra i samma hörn.
                       TopStatusBar(
                         opponent: state.opponent,
                         opponentIsRed: !state.amIRed,
@@ -384,10 +368,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   ),
                   // Totalställningen (segerpoäng för båda spelarna, se
                   // TotalScoreBoard) svävar i övre högra hörnet och
-                  // sträcker sig över både DIN TUR-pillen och raden med
-                  // motståndarens namn i stället för att pressas in i den
-                  // senare – då slapp den raden växa på höjden bara för att
-                  // få plats med två rader poäng.
+                  // sträcker sig över raden med motståndarens namn i
+                  // stället för att pressas in i den – då slapp den raden
+                  // växa på höjden bara för att få plats med två rader
+                  // poäng.
                   if (showTurnEmphasis)
                     Positioned(
                       top: 4,
@@ -402,29 +386,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                         opponentPoints: opponentTotalVictoryPoints,
                         opponentHasHeroToken: opponentHasHeroToken,
                         opponentHasTradeToken: opponentHasTradeToken,
-                      ),
-                    ),
-                  // "Avsluta action-fas"/handjusteringens läge/kikande-
-                  // etiketten – flyttad hit från mittremsan (se
-                  // TurnActionPill-doc) för att lämna mer plats åt
-                  // draghögarna där. Vänstra hörnet speglar
-                  // TotalScoreBoard i det högra.
-                  if (showTurnEmphasis)
-                    Positioned(
-                      top: 4,
-                      left: 10,
-                      child: TurnActionPill(
-                        isYourTurn: state.isMyTurn,
-                        diceRolled: state.diceRolled,
-                        isChoosingHand: false,
-                        handAdjustmentPhase: state.handAdjustmentPhase,
-                        tradePhase: state.tradePhase,
-                        handCount: state.you.hand.length,
-                        handLimit: state.handLimit,
-                        onEndTurn: () =>
-                            _handleResult(context, notifier.endActionPhase()),
-                        peekingStackIndex:
-                            state.isMyTurn ? null : state.peekingStackIndex,
                       ),
                     ),
                 ],
@@ -477,7 +438,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           // CenterStacksStrip/HandDock, så den delade
                           // träbakgrunden syns igenom här också.
                           color: CatanColors.woodFrameDark.withValues(alpha: 0.75),
-                          alignment: Alignment.center,
+                          // Toppjusterad (i stället för vertikalt
+                          // centrerad) med lite luft överst – annars
+                          // flyter tärningarna mitt i den höga kolumnen
+                          // med ett stort, obalanserat mellanrum ner till
+                          // slänghögen under dem.
+                          alignment: Alignment.topCenter,
+                          padding: const EdgeInsets.only(top: 10),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -504,9 +471,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                               // under tärningarna i stället för i
                               // mittremsan, så draghögarna där får mer
                               // plats (särskilt med fler högar när ett
-                              // temaset är aktivt).
+                              // temaset är aktivt). Rubriken gör tydligt
+                              // vad den lilla bilden faktiskt föreställer.
                               if (state.discardPile.isNotEmpty) ...[
-                                const SizedBox(height: 6),
+                                const SizedBox(height: 10),
+                                const Text(
+                                  'Slänghög',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
                                 DiscardPileView(discardPile: state.discardPile),
                               ],
                             ],
@@ -734,6 +711,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 hasSelectedDiscardCard: state.handAdjustmentPhase ==
                         HandAdjustmentPhase.discarding &&
                     _selectedDiscardCard != null,
+                selectedDiscardCardIsGold:
+                    _selectedDiscardCard?.id.contains('-gold-draw-'),
                 onDiscardToStack: (index) {
                   final card = _selectedDiscardCard;
                   if (card == null) return;
@@ -907,6 +886,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(8),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     RulesButton(onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
@@ -914,11 +894,80 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                     const SizedBox(width: 8),
                     _ExitButton(
                         onTap: () => _confirmLeaveGame(context, notifier)),
+                    // "DIN TUR"-etiketten och "Avsluta action-fas"-knappen
+                    // (se _TurnIndicatorChip/TurnActionPill) satt i samma
+                    // rad, direkt till höger om Regler/Lämna – tidigare låg
+                    // de båda uppe i vänstra hörnet ovanpå den här raden,
+                    // vilket gjorde att "Avsluta action-fas" doldes bakom
+                    // Regler-/Lämna-knapparna.
+                    if (showTurnEmphasis) ...[
+                      const SizedBox(width: 8),
+                      _TurnIndicatorChip(
+                        activePlayerIsMe: state.activePlayerIsMe,
+                        label: state.activePlayerIsMe
+                            ? 'DIN TUR – ${turnPhaseLabel()}'
+                            : '${state.opponent.name}s TUR',
+                      ),
+                      const SizedBox(width: 8),
+                      TurnActionPill(
+                        isYourTurn: state.isMyTurn,
+                        diceRolled: state.diceRolled,
+                        isChoosingHand: false,
+                        handAdjustmentPhase: state.handAdjustmentPhase,
+                        tradePhase: state.tradePhase,
+                        handCount: state.you.hand.length,
+                        handLimit: state.handLimit,
+                        onEndTurn: () =>
+                            _handleResult(context, notifier.endActionPhase()),
+                        peekingStackIndex:
+                            state.isMyTurn ? null : state.peekingStackIndex,
+                      ),
+                    ],
                   ],
                 ),
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Kompakt "DIN TUR"/"{motståndare}s TUR"-etikett – satt direkt i
+/// toppradens Row bredvid Regler-/Lämna-knapparna (se
+/// [_GameBoardScreenState.build]) i stället för en egen bred banner
+/// ovanför brädet, så den och [TurnActionPill] alltid får plats i
+/// samma rad utan att överlappa något.
+class _TurnIndicatorChip extends StatelessWidget {
+  final bool activePlayerIsMe;
+  final String label;
+
+  const _TurnIndicatorChip(
+      {required this.activePlayerIsMe, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: activePlayerIsMe
+            ? const Color(0xFF4F6F45)
+            : CatanColors.woodFrameDark,
+        borderRadius: BorderRadius.circular(999),
+        border: const Border.fromBorderSide(
+            BorderSide(color: Color(0xFFC9A227), width: 1.4)),
+        boxShadow: const [
+          BoxShadow(color: Colors.black38, blurRadius: 4, offset: Offset(0, 2)),
+        ],
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 13,
+          letterSpacing: 0.8,
+        ),
       ),
     );
   }

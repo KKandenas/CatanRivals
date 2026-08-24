@@ -1,4 +1,5 @@
 import 'package:catan_rivals/state/game_notifier.dart';
+import 'package:catan_rivals/state/game_state.dart';
 import 'package:catan_rivals/ui/screens/game_board_screen.dart';
 import 'package:catan_rivals/ui/screens/lobby_screen.dart';
 import 'package:catan_rivals/ui/screens/rules_screen.dart';
@@ -79,5 +80,48 @@ void main() {
     expect(find.byIcon(Icons.logout), findsNothing);
     expect(find.text('?'), findsNothing);
     expect(find.text('Till huvudmenyn'), findsOneWidget);
+  });
+
+  testWidgets(
+      '"DIN TUR"/"Avsluta action-fas" ligger i samma rad som Regler/Lämna, inte bakom dem',
+      (tester) async {
+    final container = await pumpBoard(tester);
+    container.read(gameProvider.notifier).rollProductionDie();
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('DIN TUR'), findsOneWidget);
+    expect(find.text('Avsluta action-fas'), findsOneWidget);
+
+    // Regler, Lämna, "DIN TUR"-etiketten och "Avsluta action-fas" ska
+    // alla ligga i EN OCH SAMMA Row – annars riskerar de överlappa
+    // varandra igen (rapporterad bugg: "Avsluta action-fas" hamnade
+    // dolt bakom Regler-/Lämna-knapparna, se commit-doc).
+    final row = tester.widget<Row>(find.ancestor(
+      of: find.text('Avsluta action-fas'),
+      matching: find.byType(Row),
+    ).first);
+    expect(find.descendant(of: find.byWidget(row), matching: find.text('?')),
+        findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byWidget(row), matching: find.byIcon(Icons.logout)),
+        findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byWidget(row), matching: find.textContaining('DIN TUR')),
+        findsOneWidget);
+
+    await tester.tap(find.text('Avsluta action-fas'));
+    await tester.pumpAndSettle();
+    // Action-fasen är slut: antingen väntar handjusteringen (för
+    // få/många kort) eller så gick det direkt vidare till
+    // kortbytesfasen (rätt antal kort från start) – i det förra fallet
+    // syns knappen inte längre, i det senare har fasen bytt.
+    final state = container.read(gameProvider);
+    expect(
+        state.handAdjustmentPhase != HandAdjustmentPhase.none ||
+            state.tradePhase != TradePhase.none,
+        isTrue,
+        reason: 'action-fasen ska ha avslutats');
   });
 }

@@ -967,6 +967,14 @@ class GameNotifier extends Notifier<GameState> {
   String? resolveFeudBuildingRemoval(int stackIndex) {
     final picked = state.feudPickedBuilding;
     if (picked == null) return null;
+    // Peek:ar kortet (utan att ta bort det) för att kunna avvisa fel
+    // hög INNAN byggnaden faktiskt plockas bort från riket – annars
+    // skulle den kunna gå förlorad om högen visade sig vara fel typ.
+    final peeked = state.you.principality
+        .expansionAt(picked.column, picked.row, picked.slotIndex);
+    if (peeked == null) return null;
+    final originError = _checkStackMatchesCardOrigin(peeked.card, stackIndex);
+    if (originError != null) return originError;
 
     final removed = state.you.principality
         .removeExpansion(picked.column, picked.row, picked.slotIndex);
@@ -1029,6 +1037,8 @@ class GameNotifier extends Notifier<GameState> {
   String? pickFraternalFeudsCard(GameCard card, int stackIndex) {
     if (!state.fraternalFeudsPicking) return null;
     if (!state.opponent.hand.contains(card)) return null;
+    final originError = _checkStackMatchesCardOrigin(card, stackIndex);
+    if (originError != null) return originError;
 
     final picked = [...state.fraternalFeudsPicked, card];
     final pickedStacks = [...state.fraternalFeudsPickedStacks, stackIndex];
@@ -1237,6 +1247,35 @@ class GameNotifier extends Notifier<GameState> {
     return card;
   }
 
+  /// Om draghög [stackIndex] är en av Gulderans EGNA högar (de sista 2
+  /// av 5, se [_resetDecks]/[EraOfGoldDrawDeck]) – `false` för
+  /// grundspelets högar, och alltid `false` utan Gulderan aktivt (bara
+  /// 4 högar då).
+  bool _isGoldStackIndex(int stackIndex) =>
+      _drawStacks.length == 5 && stackIndex >= _drawStacks.length - 2;
+
+  /// Om [card] fysiskt drogs från en av Gulderans egna högar – avgörs
+  /// av draghögs-suffixet i [GameCard.id] ("-gold-draw-N", se
+  /// [EraOfGoldDrawDeck]/[_reconstructDrawStacksFromKnownCards]), INTE
+  /// av [GameCard.expansionSet]: fyra korttyper (Guldsmed/Lagerhus/
+  /// Tullbro/Stora handelsskeppet) återanvänds från grundspelets egna
+  /// definition (`expansionSet: basic`) men fyller ändå platser i
+  /// Gulderans fysiska hög – bara suffixet avslöjar vilken pool kortet
+  /// faktiskt kom ifrån.
+  bool _isGoldCard(GameCard card) => card.id.contains('-gold-draw-');
+
+  /// Kollar att [card] hör hemma i draghög [stackIndex] – grundspelskort
+  /// får bara läggas tillbaka i grundspelets högar, Gulderan-kort bara i
+  /// Gulderans (regelhäftets uppdelning per set, se
+  /// [_isGoldStackIndex]/[_isGoldCard]) – annars ett tydligt
+  /// felmeddelande i stället för att tyst blanda ihop högarna.
+  String? _checkStackMatchesCardOrigin(GameCard card, int stackIndex) {
+    if (_isGoldCard(card) == _isGoldStackIndex(stackIndex)) return null;
+    return _isGoldCard(card)
+        ? 'Det kortet hör till en av Gulderans högar.'
+        : 'Det kortet hör till en av grundspelets högar.';
+  }
+
   /// Slänger [card] till botten av draghög [stackIndex], och
   /// uppdaterar centerStacks/synk (så motståndaren ser vilken hög –
   /// centerStacks synkas alltid). Delas av [discardHandCard] och
@@ -1268,15 +1307,18 @@ class GameNotifier extends Notifier<GameState> {
   }
 
   /// Slänger [card] från din hand till botten av draghög [stackIndex]
-  /// (0–3) under [HandAdjustmentPhase.discarding] – spelaren väljer
-  /// själv vilken av de fyra högarna, ingen matchning mot korttyp
-  /// krävs. Går vidare till kortbytesfasen automatiskt så fort
+  /// under [HandAdjustmentPhase.discarding] – spelaren väljer själv
+  /// vilken hög, men den måste höra till samma set som [card]
+  /// ursprungligen kom ifrån (se [_checkStackMatchesCardOrigin]). Går
+  /// vidare till kortbytesfasen automatiskt så fort
   /// [GameState.handLimit] är nått.
   String? discardHandCard(GameCard card, int stackIndex) {
     if (state.handAdjustmentPhase != HandAdjustmentPhase.discarding) {
       return null;
     }
     if (!state.you.hand.contains(card)) return null;
+    final originError = _checkStackMatchesCardOrigin(card, stackIndex);
+    if (originError != null) return originError;
 
     _discardCardToStack(card, stackIndex);
     if (state.you.hand.length <= state.handLimit) {
@@ -1321,6 +1363,8 @@ class GameNotifier extends Notifier<GameState> {
   String? exchangeDiscard(GameCard card, int stackIndex) {
     if (state.tradePhase != TradePhase.exchangeDiscard) return null;
     if (!state.you.hand.contains(card)) return null;
+    final originError = _checkStackMatchesCardOrigin(card, stackIndex);
+    if (originError != null) return originError;
 
     _discardCardToStack(card, stackIndex);
     state = state.copyWith(tradePhase: TradePhase.exchangeDraw);
@@ -1377,6 +1421,8 @@ class GameNotifier extends Notifier<GameState> {
   String? peekDiscardCard(GameCard card, int stackIndex) {
     if (state.tradePhase != TradePhase.peekDiscard) return null;
     if (!state.you.hand.contains(card)) return null;
+    final originError = _checkStackMatchesCardOrigin(card, stackIndex);
+    if (originError != null) return originError;
 
     _discardCardToStack(card, stackIndex);
     state = state.copyWith(tradePhase: TradePhase.peekChoosingStack);
