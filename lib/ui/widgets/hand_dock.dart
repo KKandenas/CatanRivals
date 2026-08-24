@@ -96,12 +96,14 @@ class HandDock extends StatelessWidget {
   final bool hasHeroToken;
   final bool hasTradeToken;
 
-  /// Ett av de (högst 2) korten i den delade ansikte-upp-högen (se
+  /// Det första kortet (om något) i den delade ansikte-upp-högen (se
   /// [GameState.faceUpExpansionCards]) – visas mellan handkorten och
-  /// [ScoreSummary] (det andra kortet, om något, visas i stället vid
-  /// [TopStatusBar]) så det känns tillgängligt nära den egna handen.
-  /// Fortfarande samma delade pool – se
-  /// [GameNotifier.buyFaceUpExpansion].
+  /// [ScoreSummary], i samma format som ett vanligt handkort (72×72,
+  /// se [_CardFace._size]). Bara ETT kort visas här (motståndarens
+  /// sida behöver inte se det alls) – bygger man det byter
+  /// `faceUpExpansionCards.first` automatiskt till nästa kvarvarande
+  /// kort (om något), se game_board_screen.dart. Fortfarande samma
+  /// delade pool – se [GameNotifier.buyFaceUpExpansion].
   final GameCard? faceUpExpansionCard;
   final void Function(GameCard card)? onFaceUpDragStarted;
   final VoidCallback? onFaceUpDragEnd;
@@ -183,6 +185,7 @@ class HandDock extends StatelessWidget {
                   onDragStarted: onFaceUpDragStarted,
                   onDragEnd: onFaceUpDragEnd,
                   canBuild: canBuild,
+                  cardSize: _CardFace._size,
                 ),
                 const SizedBox(width: 12),
               ],

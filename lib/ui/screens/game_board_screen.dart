@@ -314,6 +314,57 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
           ),
           Column(
             children: [
+              // Regler-/Lämna-knapparna, "DIN TUR"-etiketten och
+              // "Avsluta action-fas"-knappen (se
+              // _TurnIndicatorChip/TurnActionPill) i en egen rad, i det
+              // vanliga flödet (INTE ett svävande Stack-lager) – annars
+              // hamnar den ovanpå/överlappande [TopStatusBar] (som också
+              // ligger allra högst upp), i stället för att ge den sin
+              // egen rad precis som i grundspelets uppställning. Döljs
+              // helt när matchen är slut ([GameOverOverlay] har sin egen
+              // "Till huvudmenyn"-knapp i stället, se nedan).
+              if (state.winnerId == null)
+                SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        RulesButton(onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => const RulesScreen()))),
+                        const SizedBox(width: 8),
+                        _ExitButton(
+                            onTap: () => _confirmLeaveGame(context, notifier)),
+                        if (showTurnEmphasis) ...[
+                          const SizedBox(width: 8),
+                          _TurnIndicatorChip(
+                            activePlayerIsMe: state.activePlayerIsMe,
+                            label: state.activePlayerIsMe
+                                ? 'DIN TUR – ${turnPhaseLabel()}'
+                                : '${state.opponent.name}s TUR',
+                          ),
+                          const SizedBox(width: 8),
+                          TurnActionPill(
+                            isYourTurn: state.isMyTurn,
+                            diceRolled: state.diceRolled,
+                            isChoosingHand: false,
+                            handAdjustmentPhase: state.handAdjustmentPhase,
+                            tradePhase: state.tradePhase,
+                            handCount: state.you.hand.length,
+                            handLimit: state.handLimit,
+                            onEndTurn: () => _handleResult(
+                                context, notifier.endActionPhase()),
+                            peekingStackIndex: state.isMyTurn
+                                ? null
+                                : state.peekingStackIndex,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
               Stack(
                 children: [
                   Column(
@@ -363,13 +414,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                         totalVictoryPoints: opponentTotalVictoryPoints,
                         hasHeroToken: opponentHasHeroToken,
                         hasTradeToken: opponentHasTradeToken,
-                        faceUpExpansionCard:
-                            state.faceUpExpansionCards.isNotEmpty
-                                ? state.faceUpExpansionCards[0]
-                                : null,
-                        onFaceUpDragStarted: notifier.startDrag,
-                        onFaceUpDragEnd: notifier.endDrag,
-                        canBuild: canBuildRightNow,
                       ),
                     ],
                   ),
@@ -445,54 +489,60 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           // CenterStacksStrip/HandDock, så den delade
                           // träbakgrunden syns igenom här också.
                           color: CatanColors.woodFrameDark.withValues(alpha: 0.75),
-                          // Toppjusterad (i stället för vertikalt
-                          // centrerad) med lite luft överst – annars
-                          // flyter tärningarna mitt i den höga kolumnen
-                          // med ett stort, obalanserat mellanrum ner till
-                          // slänghögen under dem.
-                          alignment: Alignment.topCenter,
-                          padding: const EdgeInsets.only(top: 10),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          // Tärningarna längst upp, slänghögen (se
+                          // DiscardPileView-doc) längst ner – precis ovanför
+                          // mittremsan (CenterStacksStrip) som följer direkt
+                          // under den här kolumnen – i stället för centrerat
+                          // eller klistrat direkt under tärningarna, vilket
+                          // gav ett stort, obalanserat tomrum i mitten av den
+                          // höga kolumnen.
                           child: Column(
-                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              DiceRollButton(
-                                value: state.productionRoll,
-                                rollable: diceRollable,
-                                onTap: rollDice,
-                              ),
-                              // Händelsetärningen slås samtidigt som
-                              // produktionstärningen (se EventDieFace) –
-                              // visas alltid tillsammans med den, även
-                              // innan första kastet (samma "väntar"-
-                              // utseende, samma storlek), inte bara i
-                              // den tillfälliga popupen ovan. Båda
-                              // tärningarna går att trycka på för att
-                              // slå (de slås alltid ihop).
-                              const SizedBox(height: 6),
-                              EventDieIcon(
-                                face: state.eventDieFace,
-                                rollable: diceRollable,
-                                onTap: rollDice,
-                              ),
-                              // Slänghögen (se DiscardPileView-doc) –
-                              // under tärningarna i stället för i
-                              // mittremsan, så draghögarna där får mer
-                              // plats (särskilt med fler högar när ett
-                              // temaset är aktivt). Rubriken gör tydligt
-                              // vad den lilla bilden faktiskt föreställer.
-                              if (state.discardPile.isNotEmpty) ...[
-                                const SizedBox(height: 10),
-                                const Text(
-                                  'Slänghög',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  DiceRollButton(
+                                    value: state.productionRoll,
+                                    rollable: diceRollable,
+                                    onTap: rollDice,
                                   ),
-                                ),
-                                const SizedBox(height: 2),
-                                DiscardPileView(discardPile: state.discardPile),
-                              ],
+                                  // Händelsetärningen slås samtidigt som
+                                  // produktionstärningen (se EventDieFace) –
+                                  // visas alltid tillsammans med den, även
+                                  // innan första kastet (samma "väntar"-
+                                  // utseende, samma storlek), inte bara i
+                                  // den tillfälliga popupen ovan. Båda
+                                  // tärningarna går att trycka på för att
+                                  // slå (de slås alltid ihop).
+                                  const SizedBox(height: 6),
+                                  EventDieIcon(
+                                    face: state.eventDieFace,
+                                    rollable: diceRollable,
+                                    onTap: rollDice,
+                                  ),
+                                ],
+                              ),
+                              if (state.discardPile.isNotEmpty)
+                                Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text(
+                                      'Slänghög',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    DiscardPileView(
+                                        discardPile: state.discardPile),
+                                  ],
+                                )
+                              else
+                                const SizedBox.shrink(),
                             ],
                           ),
                         ),
@@ -867,8 +917,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   totalVictoryPoints: youTotalVictoryPoints,
                   hasHeroToken: youHaveHeroToken,
                   hasTradeToken: youHaveTradeToken,
-                  faceUpExpansionCard: state.faceUpExpansionCards.length > 1
-                      ? state.faceUpExpansionCards[1]
+                  // Bara ETT kort visas här (inte båda) – när det byggs
+                  // blir nästa kvarvarande (om något) automatiskt det nya
+                  // "första", se HandDock-doc.
+                  faceUpExpansionCard: state.faceUpExpansionCards.isNotEmpty
+                      ? state.faceUpExpansionCards.first
                       : null,
                   onFaceUpDragStarted: notifier.startDrag,
                   onFaceUpDragEnd: notifier.endDrag,
@@ -891,52 +944,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   state.isOnline ? null : () => notifier.playLocally(),
               onToMainMenu: () => _confirmLeaveGame(context, notifier,
                   showConfirmation: false),
-            )
-          else
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    RulesButton(onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => const RulesScreen()))),
-                    const SizedBox(width: 8),
-                    _ExitButton(
-                        onTap: () => _confirmLeaveGame(context, notifier)),
-                    // "DIN TUR"-etiketten och "Avsluta action-fas"-knappen
-                    // (se _TurnIndicatorChip/TurnActionPill) satt i samma
-                    // rad, direkt till höger om Regler/Lämna – tidigare låg
-                    // de båda uppe i vänstra hörnet ovanpå den här raden,
-                    // vilket gjorde att "Avsluta action-fas" doldes bakom
-                    // Regler-/Lämna-knapparna.
-                    if (showTurnEmphasis) ...[
-                      const SizedBox(width: 8),
-                      _TurnIndicatorChip(
-                        activePlayerIsMe: state.activePlayerIsMe,
-                        label: state.activePlayerIsMe
-                            ? 'DIN TUR – ${turnPhaseLabel()}'
-                            : '${state.opponent.name}s TUR',
-                      ),
-                      const SizedBox(width: 8),
-                      TurnActionPill(
-                        isYourTurn: state.isMyTurn,
-                        diceRolled: state.diceRolled,
-                        isChoosingHand: false,
-                        handAdjustmentPhase: state.handAdjustmentPhase,
-                        tradePhase: state.tradePhase,
-                        handCount: state.you.hand.length,
-                        handLimit: state.handLimit,
-                        onEndTurn: () =>
-                            _handleResult(context, notifier.endActionPhase()),
-                        peekingStackIndex:
-                            state.isMyTurn ? null : state.peekingStackIndex,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
             ),
         ],
       ),

@@ -3,6 +3,7 @@ import 'package:catan_rivals/state/game_state.dart';
 import 'package:catan_rivals/ui/screens/game_board_screen.dart';
 import 'package:catan_rivals/ui/screens/lobby_screen.dart';
 import 'package:catan_rivals/ui/screens/rules_screen.dart';
+import 'package:catan_rivals/ui/widgets/top_status_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -110,6 +111,13 @@ void main() {
         find.descendant(
             of: find.byWidget(row), matching: find.textContaining('DIN TUR')),
         findsOneWidget);
+
+    // Regel-/Lämna-raden ska ligga OVANFÖR motståndarraden
+    // (TopStatusBar), inte ovanpå den – annars (rapporterad bugg) ser
+    // det ut som att de delar rad.
+    final rowTop = tester.getTopLeft(find.byWidget(row)).dy;
+    final statusBarTop = tester.getTopLeft(find.byType(TopStatusBar)).dy;
+    expect(rowTop, lessThan(statusBarTop));
 
     await tester.tap(find.text('Avsluta action-fas'));
     await tester.pumpAndSettle();

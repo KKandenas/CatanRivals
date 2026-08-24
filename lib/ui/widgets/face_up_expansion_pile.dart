@@ -26,12 +26,19 @@ class FaceUpExpansionPile extends StatelessWidget {
   /// förstora, som vanligt.
   final bool canBuild;
 
+  /// Kortets bredd/höjd – 48 (samma som center-högarna) som standard,
+  /// men [HandDock] begär 72 för att matcha de vanliga handkorten (se
+  /// [HandDock._CardFace._size]) eftersom det liggande kortet numera
+  /// visas ibland handkorten i stället för i mittremsan.
+  final double cardSize;
+
   const FaceUpExpansionPile({
     super.key,
     required this.cards,
     this.onDragStarted,
     this.onDragEnd,
     this.canBuild = true,
+    this.cardSize = 48,
   });
 
   @override
@@ -41,7 +48,14 @@ class FaceUpExpansionPile extends StatelessWidget {
       children: [
         for (var i = 0; i < cards.length; i++) ...[
           if (i > 0) const SizedBox(width: 4),
-          SizedBox(width: 48, child: _FaceUpCard(card: cards[i], canBuild: canBuild, onDragStarted: onDragStarted, onDragEnd: onDragEnd)),
+          SizedBox(
+              width: cardSize,
+              child: _FaceUpCard(
+                  card: cards[i],
+                  canBuild: canBuild,
+                  cardSize: cardSize,
+                  onDragStarted: onDragStarted,
+                  onDragEnd: onDragEnd)),
         ],
       ],
     );
@@ -51,12 +65,14 @@ class FaceUpExpansionPile extends StatelessWidget {
 class _FaceUpCard extends StatelessWidget {
   final GameCard card;
   final bool canBuild;
+  final double cardSize;
   final void Function(GameCard card)? onDragStarted;
   final VoidCallback? onDragEnd;
 
   const _FaceUpCard({
     required this.card,
     required this.canBuild,
+    required this.cardSize,
     this.onDragStarted,
     this.onDragEnd,
   });
@@ -72,7 +88,7 @@ class _FaceUpCard extends StatelessWidget {
       feedback: Material(
         color: Colors.transparent,
         child: SizedBox(
-            width: 48, child: Transform.scale(scale: 1.3, child: face)),
+            width: cardSize, child: Transform.scale(scale: 1.3, child: face)),
       ),
       childWhenDragging: Opacity(opacity: 0.35, child: face),
       onDragStarted: () => onDragStarted?.call(card),
