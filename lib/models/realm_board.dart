@@ -177,6 +177,8 @@ class RealmBoard {
   final Map<int, PlacedCard> _roads;
   final Map<int, PlacedCard> _regionsAbove;
   final Map<int, PlacedCard> _regionsBelow;
+  final Map<int, PlacedCard> _regionExpansionsAbove;
+  final Map<int, PlacedCard> _regionExpansionsBelow;
 
   RealmBoard({
     required this.ownerId,
@@ -184,15 +186,23 @@ class RealmBoard {
     Map<int, PlacedCard>? roads,
     Map<int, PlacedCard>? regionsAbove,
     Map<int, PlacedCard>? regionsBelow,
+    Map<int, PlacedCard>? regionExpansionsAbove,
+    Map<int, PlacedCard>? regionExpansionsBelow,
   })  : _settlements = settlements ?? {},
         _roads = roads ?? {},
         _regionsAbove = regionsAbove ?? {},
-        _regionsBelow = regionsBelow ?? {};
+        _regionsBelow = regionsBelow ?? {},
+        _regionExpansionsAbove = regionExpansionsAbove ?? {},
+        _regionExpansionsBelow = regionExpansionsBelow ?? {};
 
   Map<int, SettlementNode> get settlements => Map.unmodifiable(_settlements);
   Map<int, PlacedCard> get roads => Map.unmodifiable(_roads);
   Map<int, PlacedCard> get regionsAbove => Map.unmodifiable(_regionsAbove);
   Map<int, PlacedCard> get regionsBelow => Map.unmodifiable(_regionsBelow);
+  Map<int, PlacedCard> get regionExpansionsAbove =>
+      Map.unmodifiable(_regionExpansionsAbove);
+  Map<int, PlacedCard> get regionExpansionsBelow =>
+      Map.unmodifiable(_regionExpansionsBelow);
 
   SettlementNode? settlementAt(int column) => _settlements[column];
 
@@ -200,6 +210,18 @@ class RealmBoard {
       row == BuildingRow.above
           ? _regionsAbove[junctionColumn]
           : _regionsBelow[junctionColumn];
+
+  /// Ett utplacerat landskapsutbyggnadskort (brun textruta, t.ex.
+  /// Guldgömma) intill en region – regelhäftet: "Region Expansions are
+  /// always placed either above or below a region", högst 1 per
+  /// region. Sitter fast i sin (kolumn, rad)-plats: följer INTE med
+  /// regionen vid Omlokalisering/den fria regionomflyttningen (se
+  /// [swapRegions]) – ett medvetet, enkelt designval, motsvarande hur
+  /// byggplatser inte påverkas av en stadsuppgradering.
+  PlacedCard? regionExpansionAt(int junctionColumn, BuildingRow row) =>
+      row == BuildingRow.above
+          ? _regionExpansionsAbove[junctionColumn]
+          : _regionExpansionsBelow[junctionColumn];
 
   /// De två hörnregioner (vänster/höger knutpunkt) som ligger ovanför
   /// respektive nedanför byn/staden i given kolumn.
@@ -237,6 +259,25 @@ class RealmBoard {
           'Det ligger redan en region i kolumn $junctionColumn ($row).');
     }
     target[junctionColumn] = regionCard;
+  }
+
+  /// Placerar ett landskapsutbyggnadskort (t.ex. Guldgömma) intill en
+  /// redan utplacerad region – se [regionExpansionAt]. Kastar
+  /// [StateError] om det inte finns någon region på platsen, eller om
+  /// platsen redan har en landskapsutbyggnad (regelhäftet: högst 1 per
+  /// region).
+  void placeRegionExpansion(
+      int junctionColumn, BuildingRow row, PlacedCard expansionCard) {
+    if (regionAt(junctionColumn, row) == null) {
+      throw StateError('Ingen region i kolumn $junctionColumn ($row).');
+    }
+    final target =
+        row == BuildingRow.above ? _regionExpansionsAbove : _regionExpansionsBelow;
+    if (target.containsKey(junctionColumn)) {
+      throw StateError(
+          'Den regionen har redan en landskapsutbyggnad ($junctionColumn, $row).');
+    }
+    target[junctionColumn] = expansionCard;
   }
 
   /// Placerar ett bygg-/enhetskort på en av byggplatserna för byn/staden
@@ -367,14 +408,22 @@ class RealmBoard {
   }
 
   /// Alla bygg-/enhetskort som just nu ligger på en byggplats någonstans
-  /// i riket (byar/städers ovanför-/nedanför-platser) – används för att
-  /// räkna ut vilka kort som redan är "kända" (utdelade) när
-  /// [GameNotifier.resumeRoom] bygger om de lokala draghögarna efter en
-  /// sidladdning.
+  /// i riket (byar/städers ovanför-/nedanför-platser), PLUS utplacerade
+  /// landskapsutbyggnadskort (t.ex. Guldgömma, se [regionExpansionAt])
+  /// – används för att räkna ut vilka kort som redan är "kända"
+  /// (utdelade) när [GameNotifier.resumeRoom] bygger om de lokala
+  /// draghögarna efter en sidladdning. Utan landskapsutbyggnaderna här
+  /// skulle en redan placerad Guldgömma kunna "dyka upp" igen i den
+  /// ombyggda draghögen.
   List<GameCard> get placedExpansionCards => [
         for (final node in _settlements.values)
           for (final site in [...node.aboveSites, ...node.belowSites])
             if (site != null) site.card,
+        for (final expansion in [
+          ..._regionExpansionsAbove.values,
+          ..._regionExpansionsBelow.values,
+        ])
+          expansion.card,
       ];
 
   /// Kolumnerna (och vilken rad, ovanför/nedanför) där ett visst
@@ -403,11 +452,33 @@ class RealmBoard {
   }
 
   /// Summan av lagrade resurser av given typ över alla regioner i riket
-  /// (regelhäftet s. 3: varje region lagrar 0–3 av sin egen resurstyp).
+  /// (regelhäftet s. 3: varje region lagrar 0–3 av sin egen resurstyp),
+  /// PLUS eventuellt guld lagrat i en Guldgömma (se
+  /// [regionExpansionResourceTotal]) – det räknas som spelarens vanliga
+  /// guld (spelbart, syns i [Player.resourceCount]), bara skyddat mot
+  /// Brigadanfallets uträkning specifikt (se event_die_resolution.dart).
   int resourceTotal(ResourceType type) {
     var total = 0;
     for (final region in [..._regionsAbove.values, ..._regionsBelow.values]) {
       if (region.card.resource == type) total += region.storedResources;
+    }
+    return total + regionExpansionResourceTotal(type);
+  }
+
+  /// Summan av lagrade resurser av given typ i landskapsutbyggnadernas
+  /// EGNA lager (t.ex. guld i en Guldgömma) – separat från
+  /// [resourceTotal]s vanliga regioner eftersom Brigadanfallets
+  /// uträkning (event_die_resolution.dart:_effectiveResourceTotal)
+  /// alltid ska undanta det här, oavsett Lagerhus-grannskap (till
+  /// skillnad från [resourceTotalExcluding], som bara gäller Lagerhus
+  /// specifika grannregioner).
+  int regionExpansionResourceTotal(ResourceType type) {
+    var total = 0;
+    for (final expansion in [
+      ..._regionExpansionsAbove.values,
+      ..._regionExpansionsBelow.values,
+    ]) {
+      if (expansion.card.resource == type) total += expansion.storedResources;
     }
     return total;
   }
@@ -419,6 +490,12 @@ class RealmBoard {
     var total = 0;
     for (final region in [..._regionsAbove.values, ..._regionsBelow.values]) {
       total += region.storedResources;
+    }
+    for (final expansion in [
+      ..._regionExpansionsAbove.values,
+      ..._regionExpansionsBelow.values,
+    ]) {
+      total += expansion.storedResources;
     }
     return total;
   }
@@ -504,6 +581,18 @@ class RealmBoard {
     target[junctionColumn] = region.copyWith(storedResources: storedResources);
   }
 
+  /// Som [addResourceToRegion], men för Guldgömmans egen guldlagring
+  /// (regelhäftet: "Guldgömman kan även användas för att lagra guld du
+  /// fått") i stället för en vanlig regions. Klämmer till 0–3.
+  void addResourceToRegionExpansion(int junctionColumn, BuildingRow row, int delta) {
+    final expansion = regionExpansionAt(junctionColumn, row);
+    if (expansion == null) return;
+    final clamped = (expansion.storedResources + delta).clamp(0, 3);
+    final target =
+        row == BuildingRow.above ? _regionExpansionsAbove : _regionExpansionsBelow;
+    target[junctionColumn] = expansion.copyWith(storedResources: clamped);
+  }
+
   int get leftmostColumn => _settlements.keys.isEmpty
       ? 0
       : _settlements.keys.reduce((a, b) => a < b ? a : b);
@@ -535,6 +624,12 @@ class RealmBoard {
     for (final region in [..._regionsAbove.values, ..._regionsBelow.values]) {
       total += points(region.card);
     }
+    for (final expansion in [
+      ..._regionExpansionsAbove.values,
+      ..._regionExpansionsBelow.values,
+    ]) {
+      total += points(expansion.card);
+    }
     return total;
   }
 
@@ -556,6 +651,10 @@ class RealmBoard {
             .map((col, card) => MapEntry(_columnKey(col), card.toJson())),
         'regionsBelow': _regionsBelow
             .map((col, card) => MapEntry(_columnKey(col), card.toJson())),
+        'regionExpansionsAbove': _regionExpansionsAbove
+            .map((col, card) => MapEntry(_columnKey(col), card.toJson())),
+        'regionExpansionsBelow': _regionExpansionsBelow
+            .map((col, card) => MapEntry(_columnKey(col), card.toJson())),
       };
 
   factory RealmBoard.fromJson(Map<String, dynamic> json) {
@@ -573,6 +672,10 @@ class RealmBoard {
       roads: parseColumnMap(json['roads'], PlacedCard.fromJson),
       regionsAbove: parseColumnMap(json['regionsAbove'], PlacedCard.fromJson),
       regionsBelow: parseColumnMap(json['regionsBelow'], PlacedCard.fromJson),
+      regionExpansionsAbove:
+          parseColumnMap(json['regionExpansionsAbove'], PlacedCard.fromJson),
+      regionExpansionsBelow:
+          parseColumnMap(json['regionExpansionsBelow'], PlacedCard.fromJson),
     );
   }
 }

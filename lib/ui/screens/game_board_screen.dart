@@ -938,6 +938,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                         onDropCityUpgrade: (column, card) => _handleResult(
                             context, notifier.dropCityUpgrade(column, card)),
                         onAdjustRegion: notifier.adjustRegionResource,
+                        onDropRegionExpansion: (column, row, card) =>
+                            _handleResult(context,
+                                notifier.dropRegionExpansion(column, row, card)),
+                        onAdjustRegionExpansion:
+                            notifier.adjustRegionExpansionResource,
                         onRequestBuildConfirm: _requestBuildConfirm,
                         pendingRegionJunction: state.pendingRegionJunction,
                         onDropPendingRegion: (row, card) => _handleResult(

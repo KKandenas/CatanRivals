@@ -1167,6 +1167,15 @@ class GameNotifier extends Notifier<GameState> {
     _syncMyPlayer();
   }
 
+  /// Som [adjustRegionResource], men för en landskapsutbyggnads EGNA
+  /// lager (t.ex. guld i en Guldgömma), se
+  /// [RealmBoard.addResourceToRegionExpansion].
+  void adjustRegionExpansionResource(int junctionColumn, BuildingRow row, int delta) {
+    state.you.principality.addResourceToRegionExpansion(junctionColumn, row, delta);
+    state = state.copyWith(you: state.you);
+    _syncMyPlayer();
+  }
+
   /// Avslutar action-fasen (regelhäftet s. 9). Om handen redan har rätt
   /// antal kort ([GameState.handLimit]) går det direkt vidare till
   /// kortbytesfasen ([TradePhase]) – annars startar handjusteringen:
@@ -1753,6 +1762,33 @@ class GameNotifier extends Notifier<GameState> {
     state = state.copyWith(
         you: state.you.copyWith(hand: List.of(state.you.hand)..remove(card)));
     _placeExpansionCardAndSync(column, row, slotIndex, card);
+    return null;
+  }
+
+  /// Bygger ett landskapsutbyggnadskort (brun textruta, t.ex.
+  /// Guldgömma) FRÅN HANDEN intill en av dina egna, redan utplacerade
+  /// regioner (regelhäftet: "Region Expansions are always placed
+  /// either above or below a region", högst 1 per region) – se
+  /// [RealmBoard.placeRegionExpansion]. Ingen "byt ut"-variant behövs
+  /// (bara 1 fysisk kopia av Guldgömma finns i hela spelet, kan aldrig
+  /// behöva ersättas), och ingen kostnad dras av – precis som övriga
+  /// bygg-/enhetskort visas kostnaden bara, den dras aldrig av
+  /// automatiskt (se [_placeExpansionCardAndSync]-doc).
+  String? dropRegionExpansion(int column, BuildingRow row, GameCard card) {
+    final turnError = _checkCanBuild();
+    if (turnError != null) return turnError;
+    if (!state.you.hand.contains(card)) return null;
+    if (state.you.principality.regionAt(column, row) == null) return null;
+    if (state.you.principality.regionExpansionAt(column, row) != null) {
+      return 'Den regionen har redan en landskapsutbyggnad.';
+    }
+
+    state = state.copyWith(
+        you: state.you.copyWith(hand: List.of(state.you.hand)..remove(card)));
+    state.you.principality.placeRegionExpansion(column, row, PlacedCard(card: card));
+    state = state.copyWith(you: state.you, clearDraggingCard: true);
+    recomputeTokenHolders();
+    _syncMyPlayer();
     return null;
   }
 

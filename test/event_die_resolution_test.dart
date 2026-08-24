@@ -1,4 +1,5 @@
 import 'package:catan_rivals/data/basic_set_cards.dart';
+import 'package:catan_rivals/data/era_of_gold_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/state/event_die_resolution.dart';
 import 'package:catan_rivals/state/game_state.dart';
@@ -105,7 +106,7 @@ void main() {
 
       expect(
           resolveEventDieFace(EventDieFace.brigandAttack, state),
-          'Ingen spelare har fler än 7 resurser (Lagerhus oräknat). Inget händer.');
+          'Ingen spelare har fler än 7 resurser (Lagerhus/Guldgömma oräknat). Inget händer.');
     });
 
     test('en spelare över 7 resurser: namnges och tappar guld/ull', () {
@@ -123,7 +124,55 @@ void main() {
 
       expect(
           resolveEventDieFace(EventDieFace.brigandAttack, state),
-          'Ingen spelare har fler än 7 resurser (Lagerhus oräknat). Inget händer.');
+          'Ingen spelare har fler än 7 resurser (Lagerhus/Guldgömma oräknat). Inget händer.');
+    });
+  });
+
+  group('resolveEventDieFace: Brigadanfall + Guldgömma', () {
+    GameState stateWithGoldCache(int youLumber, int goldCacheGold) {
+      final board = RealmBoard(ownerId: 'you');
+      board.placeSettlement(
+          0, const PlacedCard(card: BasicSetCards.settlement));
+      board.placeRegion(-1, BuildingRow.above,
+          PlacedCard(card: BasicSetCards.forest, storedResources: youLumber));
+      board.placeRegionExpansion(
+          -1,
+          BuildingRow.above,
+          PlacedCard(
+              card: EraOfGoldCards.goldCache, storedResources: goldCacheGold));
+      return GameState(
+        you: Player(id: 'you', name: 'Astrid', principality: board),
+        opponent: buildPlayer('opponent', 'Björn'),
+        centerStacks: const {},
+      );
+    }
+
+    test('guld i Guldgömman räknas inte med i 7-gränsen', () {
+      // 5 timmer + 3 guld i gömman = 8 fysiska resurser, men gömmans
+      // guld är skyddat (regelhäftet: "det kan inte stjälas") och ska
+      // alltså inte trigga Brigadanfallet.
+      final state = stateWithGoldCache(5, 3);
+
+      expect(
+          resolveEventDieFace(EventDieFace.brigandAttack, state),
+          'Ingen spelare har fler än 7 resurser (Lagerhus/Guldgömma oräknat). Inget händer.');
+    });
+
+    test(
+        'spelaren drabbas ändå om ÖVRIGA resurser (utöver gömmans guld) redan är fler än 7 – texten nämner skyddet',
+        () {
+      final state = stateWithGoldCache(8, 3);
+
+      expect(
+          resolveEventDieFace(EventDieFace.brigandAttack, state),
+          'Astrid har 8 resurser och blir av med allt guld och ull '
+          '(guldet i Guldgömman är skyddat och räknas inte bort).');
+    });
+
+    test('guldet i Guldgömman räknas ändå i Player.resourceCount(gold)', () {
+      final state = stateWithGoldCache(5, 3);
+
+      expect(state.you.resourceCount(ResourceType.gold), 3);
     });
   });
 

@@ -34,7 +34,14 @@ String? resolveEventDieFace(EventDieFace face, GameState state) {
 /// Alla resurser en spelare har lagrade, UTOM de som ligger på en
 /// region som gränsar till ett av spelarens Lagerhus (regelhäftet,
 /// Lagerhusets egen regeltext: "Do not count the resources on the 2
-/// neighboring regions when the event Brigand Attack is rolled").
+/// neighboring regions when the event Brigand Attack is rolled).
+/// Räknar bara [RealmBoard.regionsAbove]/[regionsBelow] (via
+/// [RealmBoard.resourceTotalExcluding]) – guld lagrat i en Guldgömma
+/// ligger i en helt separat karta ([RealmBoard.regionExpansionsAbove]/
+/// [regionExpansionsBelow]) och är därför redan, per konstruktion,
+/// automatiskt undantaget här (regelhäftet, Guldgömmans egen
+/// regeltext: "det kan inte stjälas") – INGEN extra avdrag behövs
+/// (och skulle dra bort det två gånger om det gjordes här).
 int _effectiveResourceTotal(Player player) {
   final board = player.principality;
   final excluded = <(int, BuildingRow)>{};
@@ -50,6 +57,19 @@ int _effectiveResourceTotal(Player player) {
   return total;
 }
 
+/// Texten för en drabbad spelare (se [_resolveBrigandAttack]) – nämner
+/// Guldgömman uttryckligen när den håller guld, så att det inte ser ut
+/// som ett missat fall när spelarens guld inte minskar lika mycket som
+/// väntat (se regelhäftets Guldgömma-text: "det kan inte stjälas").
+String _brigandAffectedLine(Player player, int total) {
+  final protectedGold =
+      player.principality.regionExpansionResourceTotal(ResourceType.gold);
+  final protectedNote = protectedGold > 0
+      ? ' (guldet i Guldgömman är skyddat och räknas inte bort)'
+      : '';
+  return '${player.name} har $total resurser och blir av med allt guld och ull$protectedNote.';
+}
+
 String _resolveBrigandAttack(GameState state) {
   final youTotal = _effectiveResourceTotal(state.you);
   final oppTotal = _effectiveResourceTotal(state.opponent);
@@ -57,18 +77,12 @@ String _resolveBrigandAttack(GameState state) {
   final oppAffected = oppTotal > 7;
 
   if (!youAffected && !oppAffected) {
-    return 'Ingen spelare har fler än 7 resurser (Lagerhus oräknat). Inget händer.';
+    return 'Ingen spelare har fler än 7 resurser (Lagerhus/Guldgömma oräknat). Inget händer.';
   }
 
   final lines = <String>[];
-  if (youAffected) {
-    lines.add(
-        '${state.you.name} har $youTotal resurser och blir av med allt guld och ull.');
-  }
-  if (oppAffected) {
-    lines.add(
-        '${state.opponent.name} har $oppTotal resurser och blir av med allt guld och ull.');
-  }
+  if (youAffected) lines.add(_brigandAffectedLine(state.you, youTotal));
+  if (oppAffected) lines.add(_brigandAffectedLine(state.opponent, oppTotal));
   return lines.join('\n');
 }
 

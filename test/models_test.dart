@@ -400,4 +400,84 @@ void main() {
       expect(board.totalProgressPoints, 1);
     });
   });
+
+  group('RealmBoard – landskapsutbyggnad (Guldgömma)', () {
+    test('placeRegionExpansion kräver en region på platsen', () {
+      final board = StarterCards.buildStartingPrincipality('p1', isRed: true);
+
+      expect(
+          () => board.placeRegionExpansion(
+              5, BuildingRow.above, const PlacedCard(card: EraOfGoldCards.goldCache)),
+          throwsStateError);
+    });
+
+    test('placeRegionExpansion kastar om platsen redan är upptagen', () {
+      final board = StarterCards.buildStartingPrincipality('p1', isRed: true);
+      board.placeRegionExpansion(
+          -1, BuildingRow.above, const PlacedCard(card: EraOfGoldCards.goldCache));
+
+      expect(
+          () => board.placeRegionExpansion(-1, BuildingRow.above,
+              const PlacedCard(card: EraOfGoldCards.goldCache)),
+          throwsStateError);
+    });
+
+    test('addResourceToRegionExpansion klämmer 0-3', () {
+      final board = StarterCards.buildStartingPrincipality('p1', isRed: true);
+      board.placeRegionExpansion(
+          -1, BuildingRow.above, const PlacedCard(card: EraOfGoldCards.goldCache));
+
+      board.addResourceToRegionExpansion(-1, BuildingRow.above, 10);
+      expect(board.regionExpansionAt(-1, BuildingRow.above)!.storedResources, 3);
+
+      board.addResourceToRegionExpansion(-1, BuildingRow.above, -10);
+      expect(board.regionExpansionAt(-1, BuildingRow.above)!.storedResources, 0);
+    });
+
+    test(
+        'guld i Guldgömman räknas i resourceTotal/totalStoredResources, men separat i regionExpansionResourceTotal',
+        () {
+      final board = RealmBoard(ownerId: 'p1');
+      board.placeRegion(-1, BuildingRow.above,
+          const PlacedCard(card: BasicSetCards.forest));
+      board.placeRegion(1, BuildingRow.above,
+          const PlacedCard(card: BasicSetCards.goldField));
+      board.placeRegionExpansion(
+          -1, BuildingRow.above, const PlacedCard(card: EraOfGoldCards.goldCache));
+      board.addResourceToRegionExpansion(-1, BuildingRow.above, 2);
+
+      expect(board.resourceTotal(ResourceType.gold), 2);
+      expect(board.totalStoredResources, 2);
+      expect(board.regionExpansionResourceTotal(ResourceType.gold), 2);
+      // En vanlig regions guld (om någon) ska INTE räknas här - bara
+      // landskapsutbyggnadernas egna lager.
+      board.addResourceToRegion(1, BuildingRow.above, 2); // Guldfältet
+      expect(board.regionExpansionResourceTotal(ResourceType.gold), 2);
+      expect(board.resourceTotal(ResourceType.gold), 4);
+    });
+
+    test('placedExpansionCards inkluderar en placerad Guldgömma', () {
+      final board = StarterCards.buildStartingPrincipality('p1', isRed: true);
+      board.placeRegionExpansion(
+          -1, BuildingRow.above, const PlacedCard(card: EraOfGoldCards.goldCache));
+
+      expect(
+          board.placedExpansionCards.any((c) => c.id == EraOfGoldCards.goldCache.id),
+          isTrue);
+    });
+
+    test('JSON round-trip bevarar regionExpansionsAbove/regionExpansionsBelow', () {
+      final board = StarterCards.buildStartingPrincipality('p1', isRed: true);
+      board.placeRegionExpansion(
+          -1, BuildingRow.above, const PlacedCard(card: EraOfGoldCards.goldCache));
+      board.addResourceToRegionExpansion(-1, BuildingRow.above, 1);
+
+      final restored = RealmBoard.fromJson(board.toJson());
+
+      expect(restored.regionExpansionAt(-1, BuildingRow.above)!.card.id,
+          EraOfGoldCards.goldCache.id);
+      expect(
+          restored.regionExpansionAt(-1, BuildingRow.above)!.storedResources, 1);
+    });
+  });
 }

@@ -6,6 +6,7 @@ import '../theme/catan_colors.dart';
 import 'expansion_card_view.dart';
 import 'pop_in.dart';
 import 'region_card_view.dart';
+import 'region_expansion_card_view.dart';
 import 'settlement_card_view.dart';
 
 /// Anropas när ett kort släpps på en tom byggplats.
@@ -46,6 +47,11 @@ typedef BuildConfirmRequest = void Function(GameCard card, VoidCallback onConfir
 typedef RelocationSelectCallback = void Function(
     RelocationTargetKind kind, int column, BuildingRow row, int slotIndex);
 
+/// Anropas när ett landskapsutbyggnadskort (t.ex. Guldgömma) släpps
+/// intill en region – se [GameNotifier.dropRegionExpansion].
+typedef RegionExpansionDropCallback = void Function(
+    int column, BuildingRow row, GameCard card);
+
 /// Ritar ut ett [RealmBoard] enligt kolumnmodellen: byar/städer i en rad,
 /// vägar mellan dem, och regioner delade diagonalt i hörnen ovanför och
 /// nedanför (se "Rikets koordinatsystem"-skissen). Alla kort är
@@ -81,6 +87,12 @@ class PrincipalityGrid extends StatelessWidget {
   final ColumnDropCallback? onDropCityUpgrade;
   final RegionAdjustCallback? onAdjustRegion;
   final BuildConfirmRequest? onRequestBuildConfirm;
+
+  /// Landskapsutbyggnad (t.ex. Guldgömma, se [RegionExpansionDropCallback])
+  /// – dropp-mål intill en region, och +/- för dess egna lagrade
+  /// resurser (samma mönster som [onAdjustRegion]).
+  final RegionExpansionDropCallback? onDropRegionExpansion;
+  final RegionAdjustCallback? onAdjustRegionExpansion;
 
   /// Om en redan bebyggd byggplats går att släppa ett nytt kort på för
   /// att byta ut det gamla (se [_buildingSite]) – den mekaniken finns
@@ -136,6 +148,8 @@ class PrincipalityGrid extends StatelessWidget {
     this.onDropCityUpgrade,
     this.onAdjustRegion,
     this.onRequestBuildConfirm,
+    this.onDropRegionExpansion,
+    this.onAdjustRegionExpansion,
     this.allowReplaceExpansion = false,
     this.pendingRegionJunction,
     this.onDropPendingRegion,
@@ -157,6 +171,8 @@ class PrincipalityGrid extends StatelessWidget {
   bool get _draggingExpansion =>
       draggingCard?.category == CardCategory.expansion;
   bool get _draggingRegion => draggingCard?.category == CardCategory.region;
+  bool get _draggingRegionExpansion =>
+      draggingCard?.category == CardCategory.regionExpansion;
 
   @override
   Widget build(BuildContext context) {
@@ -279,11 +295,68 @@ class PrincipalityGrid extends StatelessWidget {
     final region = board.regionAt(col, row);
     final isPendingJunction = interactive && col == pendingRegionJunction;
     final child = region != null
-        ? _region(region, col, row)
+        ? _regionWithExpansionSlot(region, col, row)
         : (isPendingJunction ? _pendingRegionSlot(row) : const SizedBox());
     return Align(
       alignment: row == BuildingRow.above ? Alignment.bottomCenter : Alignment.topCenter,
       child: SizedBox(width: unit, height: unit, child: child),
+    );
+  }
+
+  /// Wrappar [_region] med ett litet hörn-märke för en eventuell
+  /// landskapsutbyggnad (t.ex. Guldgömma, se
+  /// [RealmBoard.regionExpansionAt]). Till skillnad från de vanliga
+  /// byggplatserna (som alltid visar en tom platshållare) visas den
+  /// tomma drop-ytan bara MEDAN ett landskapsutbyggnadskort faktiskt
+  /// dras ([_draggingRegionExpansion]) – annars skulle varenda region
+  /// på brädet permanent få ett extra `DragTarget<GameCard>` i trädet,
+  /// vilket bland annat stör tester/kod som räknar drop-mål generiskt
+  /// (bara 1 fysisk kopia av Guldgömma finns i hela spelet, så den
+  /// permanenta platshållaren gav väldigt lite värde ändå). En redan
+  /// utplacerad utbyggnad visas alltid, oavsett dragläge – även på
+  /// motståndarens (icke-interaktiva) rike, som ren information.
+  Widget _regionWithExpansionSlot(PlacedCard region, int column, BuildingRow row) {
+    final regionView = _region(region, column, row);
+    final expansion = board.regionExpansionAt(column, row);
+    final showEmptySlot =
+        expansion == null && interactive && _draggingRegionExpansion;
+    if (expansion == null && !showEmptySlot) return regionView;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        regionView,
+        Positioned(
+          right: -unit * 0.08,
+          bottom: -unit * 0.08,
+          width: unit * 0.5,
+          height: unit * 0.5,
+          child: expansion != null
+              ? RegionExpansionCardView(
+                  card: expansion.card,
+                  stored: expansion.storedResources,
+                  onAdjust: interactive && onAdjustRegionExpansion != null
+                      ? (delta) => onAdjustRegionExpansion!(column, row, delta)
+                      : null)
+              : _regionExpansionDropTarget(column, row),
+        ),
+      ],
+    );
+  }
+
+  Widget _regionExpansionDropTarget(int column, BuildingRow row) {
+    return DragTarget<GameCard>(
+      onWillAcceptWithDetails: (details) =>
+          details.data.category == CardCategory.regionExpansion,
+      onAcceptWithDetails: (details) => onRequestBuildConfirm?.call(
+        details.data,
+        () => onDropRegionExpansion?.call(column, row, details.data),
+      ),
+      builder: (context, candidates, rejected) {
+        final isHovering = candidates.isNotEmpty;
+        return BuildingSiteView(
+            highlighted: isHovering || _draggingRegionExpansion,
+            hovering: isHovering);
+      },
     );
   }
 

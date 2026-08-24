@@ -85,6 +85,12 @@ class EraOfGoldCards {
     name: 'Guldgömma',
     category: CardCategory.regionExpansion,
     expansionSet: ExpansionSet.eraOfGold,
+    // Guldet som lagras i Guldgömman (se RealmBoard.placeRegionExpansion/
+    // addResourceToRegionExpansion) räknas som spelarens vanliga guld
+    // (RealmBoard.resourceTotal matchar mot card.resource) – bara
+    // undantaget från Brigadanfallets uträkning specifikt, se
+    // event_die_resolution.dart.
+    resource: ResourceType.gold,
     requirement: 'Hjälte med minst 1 styrkepoäng',
     effectText:
         'Guldgömman kan även användas för att lagra guld du fått. När '
