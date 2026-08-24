@@ -1,15 +1,13 @@
-import 'package:catan_rivals/data/era_of_gold_cards.dart';
-import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/ui/theme/catan_assets.dart';
 import 'package:catan_rivals/ui/widgets/center_stacks_strip.dart';
-import 'package:catan_rivals/ui/widgets/expansion_card_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Testar att [CenterStacksStrip] anpassar sig efter Gulderan (se
-/// [GameState.initialDrawStackSizes]/[GameState.faceUpExpansionCards]):
-/// 5 draghögar i stället för 4, och den öppna ansikte-upp-högen visas
-/// (och går att dra ut) när den inte är tom.
+/// [GameState.initialDrawStackSizes]): 5 draghögar i stället för 4, med
+/// olika kortbaksbild för grundspelets respektive Gulderans egna högar.
+/// Den öppna ansikte-upp-högen visas inte längre här (flyttad till
+/// [TopStatusBar]/[HandDock], se face_up_expansion_split_test.dart).
 void main() {
   int imageCount(WidgetTester tester, String assetName) {
     return tester
@@ -24,7 +22,8 @@ void main() {
   int backEraGoldImageCount(WidgetTester tester) =>
       imageCount(tester, CatanAssets.backEraGold);
 
-  testWidgets('utan tema: 4 draghögar', (tester) async {
+  testWidgets('utan tema: 4 draghögar, alla med grundspelets kortbaksbild',
+      (tester) async {
     await tester.pumpWidget(const MaterialApp(
       home: Scaffold(
         body: CenterStacksStrip(
@@ -43,20 +42,16 @@ void main() {
     ));
 
     expect(backBasicSetImageCount(tester), 4);
-    expect(find.byType(ExpansionCardView), findsNothing);
+    expect(backEraGoldImageCount(tester), 0);
   });
 
-  testWidgets('med Gulderan: 5 draghögar och den öppna ansikte-upp-högen',
+  testWidgets(
+      'med Gulderan: 5 draghögar, olika kortbaksbild för grundspel/Gulderan',
       (tester) async {
-    final faceUp = [
-      EraOfGoldCards.merchantGuild.copyWith(id: 'city-expansion-merchant-guild-faceup-0'),
-      EraOfGoldCards.merchantGuild.copyWith(id: 'city-expansion-merchant-guild-faceup-1'),
-    ];
-
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(const MaterialApp(
       home: Scaffold(
         body: CenterStacksStrip(
-          stackCounts: const {
+          stackCounts: {
             'roads': 5,
             'settlements': 3,
             'cities': 2,
@@ -67,8 +62,7 @@ void main() {
             'draw5': 11,
             'event': 12,
           },
-          initialStackSizes: const [12, 12, 12, 11, 11],
-          faceUpExpansionCards: faceUp,
+          initialStackSizes: [12, 12, 12, 11, 11],
         ),
       ),
     ));
@@ -79,41 +73,5 @@ void main() {
     // se skillnad på högarna när man ska slänga ett kort tillbaka.
     expect(backBasicSetImageCount(tester), 3);
     expect(backEraGoldImageCount(tester), 2);
-    expect(find.byType(ExpansionCardView), findsNWidgets(2));
-  });
-
-  testWidgets('ansikte-upp-kort är dragbara när canBuild är true, inte annars',
-      (tester) async {
-    final faceUp = [
-      EraOfGoldCards.merchantGuild.copyWith(id: 'city-expansion-merchant-guild-faceup-0'),
-    ];
-
-    Future<void> pump(bool canBuild) => tester.pumpWidget(MaterialApp(
-          home: Scaffold(
-            body: CenterStacksStrip(
-              stackCounts: const {
-                'roads': 5,
-                'settlements': 3,
-                'cities': 2,
-                'draw1': 9,
-                'draw2': 9,
-                'draw3': 9,
-                'draw4': 9,
-                'event': 9,
-              },
-              faceUpExpansionCards: faceUp,
-              canBuild: canBuild,
-            ),
-          ),
-        ));
-
-    await pump(true);
-    // 3 (väg/by/stad) + 1 ansikte-upp-kort.
-    expect(find.byType(LongPressDraggable<GameCard>), findsNWidgets(4));
-
-    await pump(false);
-    expect(find.byType(LongPressDraggable<GameCard>), findsNothing);
-    // Kortet ska fortfarande synas, bara inte dragbart.
-    expect(find.byType(ExpansionCardView), findsOneWidget);
   });
 }

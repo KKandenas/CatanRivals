@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/models.dart';
 import '../theme/catan_colors.dart';
+import 'face_up_expansion_pile.dart';
 import 'score_summary.dart';
 
 /// Smal remsa längst upp: motståndarens namn, VP och handkortsantal.
@@ -11,13 +12,32 @@ import 'score_summary.dart';
 /// övergripande totalställningen ([TotalScoreBoard]) svävar i stället
 /// ovanpå den här remsan och DIN TUR-pillen tillsammans (se
 /// game_board_screen.dart) – den här remsan behöver därför inte göra
-/// plats för den.
+/// plats för den, förutom att lämna kvar lite marginal längst till
+/// höger (se [_scoreBoardClearance]) så inte [faceUpExpansionCard]
+/// hamnar under den.
 class TopStatusBar extends StatelessWidget {
   final Player opponent;
   final bool opponentIsRed;
   final int totalVictoryPoints;
   final bool hasHeroToken;
   final bool hasTradeToken;
+
+  /// Ett av de (högst 2) korten i den delade ansikte-upp-högen (se
+  /// [GameState.faceUpExpansionCards], t.ex. Gulderans Köpmansgille) –
+  /// visas längst till höger i den här remsan (det andra kortet, om
+  /// något, visas i stället vid [HandDock]) så det känns tillgängligt
+  /// för båda spelarna, i stället för en klump mitt i mittremsan.
+  /// Fortfarande samma delade pool – vem som helst bygger det på sin
+  /// egen tur oavsett var det visas, se
+  /// [GameNotifier.buyFaceUpExpansion].
+  final GameCard? faceUpExpansionCard;
+  final void Function(GameCard card)? onFaceUpDragStarted;
+  final VoidCallback? onFaceUpDragEnd;
+
+  /// Om [faceUpExpansionCard] går att dra ut just nu (se
+  /// [GameState.canBuildRightNow]) – annars bara tryckbart för att
+  /// förstora, som vanligt.
+  final bool canBuild;
 
   const TopStatusBar({
     super.key,
@@ -26,7 +46,15 @@ class TopStatusBar extends StatelessWidget {
     required this.totalVictoryPoints,
     this.hasHeroToken = false,
     this.hasTradeToken = false,
+    this.faceUpExpansionCard,
+    this.onFaceUpDragStarted,
+    this.onFaceUpDragEnd,
+    this.canBuild = true,
   });
+
+  /// Ungefärlig bredd att lämna fritt längst till höger – [TotalScoreBoard]
+  /// svävar ovanpå den här remsan där, se klassdoc.
+  static const double _scoreBoardClearance = 108;
 
   @override
   Widget build(BuildContext context) {
@@ -71,6 +99,19 @@ class TopStatusBar extends StatelessWidget {
               const SizedBox(width: 6),
               _StatChip(
                   icon: Icons.style, label: '${opponent.hand.length} kort'),
+              if (faceUpExpansionCard != null) ...[
+                const Spacer(),
+                Padding(
+                  padding:
+                      const EdgeInsets.only(right: _scoreBoardClearance),
+                  child: FaceUpExpansionPile(
+                    cards: [faceUpExpansionCard!],
+                    onDragStarted: onFaceUpDragStarted,
+                    onDragEnd: onFaceUpDragEnd,
+                    canBuild: canBuild,
+                  ),
+                ),
+              ],
             ],
           ),
         ),

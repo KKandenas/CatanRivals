@@ -363,6 +363,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                         totalVictoryPoints: opponentTotalVictoryPoints,
                         hasHeroToken: opponentHasHeroToken,
                         hasTradeToken: opponentHasTradeToken,
+                        faceUpExpansionCard:
+                            state.faceUpExpansionCards.isNotEmpty
+                                ? state.faceUpExpansionCards[0]
+                                : null,
+                        onFaceUpDragStarted: notifier.startDrag,
+                        onFaceUpDragEnd: notifier.endDrag,
+                        canBuild: canBuildRightNow,
                       ),
                     ],
                   ),
@@ -697,7 +704,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
               CenterStacksStrip(
                 stackCounts: state.centerStacks,
                 initialStackSizes: state.initialDrawStackSizes,
-                faceUpExpansionCards: state.faceUpExpansionCards,
                 onDragStarted: notifier.startDrag,
                 onDragEnd: notifier.endDrag,
                 canBuild: canBuildRightNow,
@@ -861,6 +867,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   totalVictoryPoints: youTotalVictoryPoints,
                   hasHeroToken: youHaveHeroToken,
                   hasTradeToken: youHaveTradeToken,
+                  faceUpExpansionCard: state.faceUpExpansionCards.length > 1
+                      ? state.faceUpExpansionCards[1]
+                      : null,
+                  onFaceUpDragStarted: notifier.startDrag,
+                  onFaceUpDragEnd: notifier.endDrag,
                 ),
               ),
             ],

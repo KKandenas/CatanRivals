@@ -6,7 +6,6 @@ import '../../state/game_state.dart';
 import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
 import 'card_detail_dialog.dart';
-import 'face_up_expansion_pile.dart';
 
 /// Mittremsan mellan de två rikena: dragstaplarna (vägar/byar/städer)
 /// och händelsekortsstapeln – precis som i det fysiska spelets
@@ -46,9 +45,6 @@ class CenterStacksStrip extends StatelessWidget {
   /// värdena här, i stället för att anta exakt 4 högar à 9 kort.
   final List<int> initialStackSizes;
 
-  /// Den öppna ansikte-upp-högen (se [FaceUpExpansionPile]) – tom lista
-  /// utan tema.
-  final List<GameCard> faceUpExpansionCards;
   final void Function(GameCard card)? onDragStarted;
   final VoidCallback? onDragEnd;
 
@@ -119,7 +115,6 @@ class CenterStacksStrip extends StatelessWidget {
     super.key,
     required this.stackCounts,
     this.initialStackSizes = const [9, 9, 9, 9],
-    this.faceUpExpansionCards = const [],
     this.onDragStarted,
     this.onDragEnd,
     this.canBuild = true,
@@ -179,13 +174,6 @@ class CenterStacksStrip extends StatelessWidget {
             canBuild: canBuild,
             width: 48,
           ),
-          if (faceUpExpansionCards.isNotEmpty)
-            FaceUpExpansionPile(
-              cards: faceUpExpansionCards,
-              onDragStarted: onDragStarted,
-              onDragEnd: onDragEnd,
-              canBuild: canBuild,
-            ),
           for (var i = 0; i < initialStackSizes.length; i++) _drawStackPile(i),
           _StackPile(
             asset: CatanAssets.backEvent,

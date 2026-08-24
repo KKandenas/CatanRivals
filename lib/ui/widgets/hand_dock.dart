@@ -5,6 +5,7 @@ import '../../models/models.dart';
 import '../theme/catan_colors.dart';
 import 'card_detail_dialog.dart';
 import 'expansion_card_view.dart';
+import 'face_up_expansion_pile.dart';
 import 'pop_in.dart';
 import 'score_summary.dart';
 
@@ -95,6 +96,16 @@ class HandDock extends StatelessWidget {
   final bool hasHeroToken;
   final bool hasTradeToken;
 
+  /// Ett av de (högst 2) korten i den delade ansikte-upp-högen (se
+  /// [GameState.faceUpExpansionCards]) – visas mellan handkorten och
+  /// [ScoreSummary] (det andra kortet, om något, visas i stället vid
+  /// [TopStatusBar]) så det känns tillgängligt nära den egna handen.
+  /// Fortfarande samma delade pool – se
+  /// [GameNotifier.buyFaceUpExpansion].
+  final GameCard? faceUpExpansionCard;
+  final void Function(GameCard card)? onFaceUpDragStarted;
+  final VoidCallback? onFaceUpDragEnd;
+
   const HandDock({
     super.key,
     required this.player,
@@ -109,6 +120,9 @@ class HandDock extends StatelessWidget {
     required this.totalVictoryPoints,
     this.hasHeroToken = false,
     this.hasTradeToken = false,
+    this.faceUpExpansionCard,
+    this.onFaceUpDragStarted,
+    this.onFaceUpDragEnd,
   });
 
   /// Exponerad så TotalScoreBoard kan placera sig ovanför dockan i
@@ -163,6 +177,15 @@ class HandDock extends StatelessWidget {
                       ),
               ),
               const SizedBox(width: 12),
+              if (faceUpExpansionCard != null) ...[
+                FaceUpExpansionPile(
+                  cards: [faceUpExpansionCard!],
+                  onDragStarted: onFaceUpDragStarted,
+                  onDragEnd: onFaceUpDragEnd,
+                  canBuild: canBuild,
+                ),
+                const SizedBox(width: 12),
+              ],
               ScoreSummary(
                 player: player,
                 totalVictoryPoints: totalVictoryPoints,
