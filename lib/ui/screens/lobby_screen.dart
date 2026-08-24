@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../models/models.dart';
 import '../../services/session_storage.dart';
 import '../../state/game_notifier.dart';
 import '../theme/catan_assets.dart';
@@ -23,6 +24,16 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   final _codeController = TextEditingController();
   bool _busy = false;
   String? _error;
+
+  /// Vilka temaset som ska vara aktiva i nästa match (se
+  /// [GameState.activeExpansions]) – bara Gulderan går att välja så
+  /// länge (Utvecklingens tid/Oroligheternas tid är inte kopplade till
+  /// spelmotorn än). Bara relevant för "Skapa nytt rum"/"Spela lokalt" –
+  /// den som går med i ett befintligt rum ärver hostens val i stället.
+  bool _eraOfGold = false;
+
+  Set<ExpansionSet> get _selectedExpansions =>
+      _eraOfGold ? {ExpansionSet.eraOfGold} : {};
 
   /// Om appen just nu kollar efter en sparad, pågående match att
   /// återuppta (se [SessionStorage]) – sant tills kollen är klar, så att
@@ -100,7 +111,9 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
       _error = null;
     });
     try {
-      await ref.read(gameProvider.notifier).hostRoom(_nameController.text.trim());
+      await ref
+          .read(gameProvider.notifier)
+          .hostRoom(_nameController.text.trim(), expansions: _selectedExpansions);
       if (mounted) _goToBoard();
     } catch (e) {
       setState(() => _error = 'Kunde inte skapa rum: $e');
@@ -134,7 +147,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   }
 
   void _playLocally() {
-    ref.read(gameProvider.notifier).playLocally();
+    ref.read(gameProvider.notifier).playLocally(expansions: _selectedExpansions);
     _goToBoard();
   }
 
@@ -197,7 +210,35 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                           controller: _nameController,
                           decoration: const InputDecoration(labelText: 'Ditt namn', border: OutlineInputBorder()),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 12),
+                        // Gäller "Skapa nytt rum" och "Spela lokalt" – den
+                        // som går med i ett befintligt rum ärver i stället
+                        // hostens val (se GameState.activeExpansions). Ren
+                        // Checkbox+Text i stället för CheckboxListTile –
+                        // ListTile vill måla sin bakgrund/ink-splash på
+                        // närmaste Material-anfader, vilket den parkament-
+                        // färgade Container:n ovanför (som INTE är en
+                        // Material) döljer, vilket Flutter varnar högljutt
+                        // om (kastar rent av under test).
+                        GestureDetector(
+                          onTap: _busy
+                              ? null
+                              : () => setState(() => _eraOfGold = !_eraOfGold),
+                          child: Row(
+                            children: [
+                              Checkbox(
+                                value: _eraOfGold,
+                                onChanged: _busy
+                                    ? null
+                                    : (checked) => setState(
+                                        () => _eraOfGold = checked ?? false),
+                              ),
+                              const Expanded(
+                                  child: Text('Spela med Gulderan-expansionen')),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         FilledButton(
                           onPressed: _busy ? null : _hostRoom,
                           child: const Text('Skapa nytt rum'),

@@ -57,6 +57,14 @@ class GameState {
   final Map<String, int> centerStacks;
   final GameCard? draggingCard;
 
+  /// Vilka temaset (utöver grundspelet) som är aktiva i den här matchen –
+  /// satt en gång vid `hostRoom`/`playLocally` (gästen ärver hostens val
+  /// via `joinRoom`/rummets state, se [GameNotifier]) och sedan oförändrat
+  /// resten av matchen. Tom mängd = rent grundspel (allt beteende som
+  /// idag). Styr bl.a. segervillkoret ([victoryPointTarget]) och hur
+  /// draghögarna byggs upp vid start.
+  final Set<ExpansionSet> activeExpansions;
+
   final SessionMode mode;
   final String? roomCode;
   final String myPlayerId;
@@ -179,6 +187,7 @@ class GameState {
     required this.opponent,
     required this.centerStacks,
     this.draggingCard,
+    this.activeExpansions = const {},
     this.mode = SessionMode.local,
     this.roomCode,
     this.myPlayerId = 'you',
@@ -283,6 +292,12 @@ class GameState {
   /// s. 9): 3 som grund, plus 1 per framstegspoäng du har i spel.
   int get handLimit => you.principality.totalProgressPoints + 3;
 
+  /// Hur många segerpoäng som krävs för att vinna (regelhäftet: 7 i
+  /// grundspelet, men 12 så fort minst ett temaset är aktivt – fler
+  /// byggmöjligheter gör 7 poäng för lätt uppnått). Enda stället det här
+  /// jämförs är [GameNotifier._advanceToNextPlayer].
+  int get victoryPointTarget => activeExpansions.isEmpty ? 7 : 12;
+
   /// [player]s totala segerpoäng: poängen från riket plus 1 vardera om
   /// spelaren just nu har Hero Token/Trade Token (se
   /// [GameNotifier.recomputeTokenHolders]).
@@ -299,6 +314,7 @@ class GameState {
     Map<String, int>? centerStacks,
     GameCard? draggingCard,
     bool clearDraggingCard = false,
+    Set<ExpansionSet>? activeExpansions,
     SessionMode? mode,
     String? roomCode,
     String? myPlayerId,
@@ -349,6 +365,7 @@ class GameState {
       centerStacks: centerStacks ?? this.centerStacks,
       draggingCard:
           clearDraggingCard ? null : (draggingCard ?? this.draggingCard),
+      activeExpansions: activeExpansions ?? this.activeExpansions,
       mode: mode ?? this.mode,
       roomCode: roomCode ?? this.roomCode,
       myPlayerId: myPlayerId ?? this.myPlayerId,

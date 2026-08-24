@@ -84,6 +84,56 @@ void main() {
     expect(state.activePlayerId, 'opponent');
   });
 
+  test(
+      'med Gulderan aktivt krävs 12 poäng, inte 7 (GameState.victoryPointTarget)',
+      () {
+    final container = ProviderContainer(
+      overrides: [gameSyncServiceProvider.overrideWithValue(FakeGameSyncService())],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(gameProvider.notifier);
+    notifier.playLocally(expansions: {ExpansionSet.eraOfGold});
+    expect(container.read(gameProvider).victoryPointTarget, 12);
+
+    // 2 (startbyarna) + 5 = 7 – hade räckt i grundspelet, men inte här.
+    giveVictoryPoints(container.read(gameProvider).you, 5);
+    notifier.rollProductionDie();
+    expect(notifier.endActionPhase(), isNull);
+    expect(notifier.skipTrade(), isNull);
+    expect(container.read(gameProvider).winnerId, isNull,
+        reason: '7 poäng ska inte räcka när Gulderan är aktivt (mål: 12)');
+  });
+
+  test('med Gulderan aktivt: 12 poäng räcker för vinst', () {
+    final container = ProviderContainer(
+      overrides: [gameSyncServiceProvider.overrideWithValue(FakeGameSyncService())],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(gameProvider.notifier);
+    notifier.playLocally(expansions: {ExpansionSet.eraOfGold});
+
+    // 2 (startbyarna) + 10 = 12.
+    giveVictoryPoints(container.read(gameProvider).you, 10);
+    notifier.rollProductionDie();
+    expect(notifier.endActionPhase(), isNull);
+    expect(notifier.skipTrade(), isNull);
+
+    final state = container.read(gameProvider);
+    expect(state.winnerId, 'you');
+    expect(state.activePlayerId, 'you');
+  });
+
+  test('utan aktiv expansion är segervillkoret fortfarande 7 (oförändrat)',
+      () {
+    final container = ProviderContainer(
+      overrides: [gameSyncServiceProvider.overrideWithValue(FakeGameSyncService())],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(gameProvider.notifier);
+    notifier.playLocally();
+    expect(container.read(gameProvider).victoryPointTarget, 7);
+  });
+
   test('online: vinsten synkas till motståndarens klient', () async {
     final fake = FakeGameSyncService();
     final host =

@@ -114,8 +114,11 @@ class GameNotifier extends Notifier<GameState> {
 
   /// Startar om till lokalt läge (mock-data, ingen synk) – "spela
   /// lokalt"-genvägen i lobbyn, och det man hamnar i om man lämnar ett
-  /// rum.
-  void playLocally() {
+  /// rum. [expansions] är de temaset spelaren valt i lobbyn (tom mängd =
+  /// rent grundspel) – styr just nu bara segervillkoret
+  /// ([GameState.victoryPointTarget]); själva draghögs-/uppstarts-
+  /// ombyggnaden för temaseten kommer i ett senare steg.
+  void playLocally({Set<ExpansionSet> expansions = const {}}) {
     _playersSub?.cancel();
     _centerStacksSub?.cancel();
     _turnStateSub?.cancel();
@@ -140,14 +143,19 @@ class GameNotifier extends Notifier<GameState> {
       centerStacks: Map.of(MockGame.centerStackCounts())
         ..update('draw1', (v) => v - 3)
         ..update('draw2', (v) => v - 3),
+      activeExpansions: expansions,
       // Röd ("du") går alltid först – samma förenkling som starthandsvalet.
       activePlayerId: 'you',
     );
   }
 
   /// Skapar ett nytt rum, blir "host" och väntar på att en motståndare
-  /// ska gå med. Returnerar den genererade rumskoden.
-  Future<String> hostRoom(String myName) async {
+  /// ska gå med. Returnerar den genererade rumskoden. [expansions] är
+  /// hostens val i lobbyn (tom mängd = rent grundspel) – styr just nu
+  /// bara segervillkoret hos host själv; gästen känner ännu inte till
+  /// valet (synkas i ett senare steg, se [GameState.activeExpansions]).
+  Future<String> hostRoom(String myName,
+      {Set<ExpansionSet> expansions = const {}}) async {
     final roomCode = MockGame.generateRoomCode();
     final hostPlayer =
         MockGame.buildStartingPlayer('host', myName, isRed: true);
@@ -173,6 +181,7 @@ class GameNotifier extends Notifier<GameState> {
       you: hostPlayer,
       opponent: waitingOpponent,
       centerStacks: centerStacks,
+      activeExpansions: expansions,
       mode: SessionMode.host,
       roomCode: roomCode,
       myPlayerId: 'host',
@@ -387,6 +396,9 @@ class GameNotifier extends Notifier<GameState> {
         'you': state.you.toJson(),
         'opponent': state.opponent.toJson(),
         'centerStacks': state.centerStacks,
+        if (state.activeExpansions.isNotEmpty)
+          'activeExpansions':
+              state.activeExpansions.map((e) => e.name).toList(),
         'activePlayerId': state.activePlayerId,
         'diceRolled': state.diceRolled,
         if (state.productionRoll != null)
@@ -423,6 +435,11 @@ class GameNotifier extends Notifier<GameState> {
       opponent:
           Player.fromJson(Map<String, dynamic>.from(json['opponent'] as Map)),
       centerStacks: Map<String, int>.from(json['centerStacks'] as Map),
+      activeExpansions: json['activeExpansions'] == null
+          ? const {}
+          : (json['activeExpansions'] as List)
+              .map((e) => ExpansionSet.values.byName(e as String))
+              .toSet(),
       activePlayerId: json['activePlayerId'] as String,
       diceRolled: json['diceRolled'] as bool? ?? false,
       productionRoll: json['productionRoll'] as int?,
@@ -962,14 +979,16 @@ class GameNotifier extends Notifier<GameState> {
   /// tillbaka till en tom platshållare mellan omgångar; den skrivs
   /// bara över av nästa [rollProductionDie].
   ///
-  /// Kollar också vinstvillkoret (regelhäftet: 7 eller fler segerpoäng
-  /// vid slutet av sin egen runda, se [GameState.totalVictoryPointsFor])
-  /// – bara här, eftersom det här är enda stället en runda faktiskt tar
-  /// slut (se [skipTrade]/[exchangeDraw]/[peekTakeCard]). Om du vann
-  /// lämnas turen INTE över – [GameState.winnerId] sätts i stället och
-  /// spelet fryser i din slutställning (se [GameOverOverlay]).
+  /// Kollar också vinstvillkoret (regelhäftet: [GameState.victoryPointTarget]
+  /// eller fler segerpoäng vid slutet av sin egen runda, se
+  /// [GameState.totalVictoryPointsFor]) – bara här, eftersom det här är
+  /// enda stället en runda faktiskt tar slut (se
+  /// [skipTrade]/[exchangeDraw]/[peekTakeCard]). Om du vann lämnas turen
+  /// INTE över – [GameState.winnerId] sätts i stället och spelet fryser
+  /// i din slutställning (se [GameOverOverlay]).
   void _advanceToNextPlayer() {
-    final youWon = state.totalVictoryPointsFor(state.you) >= 7;
+    final youWon =
+        state.totalVictoryPointsFor(state.you) >= state.victoryPointTarget;
     final next = youWon
         ? state.activePlayerId
         : (state.activePlayerId == state.myPlayerId

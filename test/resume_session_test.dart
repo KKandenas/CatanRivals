@@ -188,6 +188,24 @@ void main() {
             beforeDrawStacks[i].map((c) => c.id).toList());
       }
     });
+
+    test('bevarar aktiva expansioner (GameState.activeExpansions)', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final notifier = container.read(gameProvider.notifier);
+      notifier.playLocally(expansions: {ExpansionSet.eraOfGold});
+
+      final json = notifier.buildLocalSnapshotJson();
+
+      final resumedContainer = ProviderContainer();
+      addTearDown(resumedContainer.dispose);
+      final resumedNotifier = resumedContainer.read(gameProvider.notifier);
+      resumedNotifier.resumeLocalSnapshot(json);
+
+      expect(resumedContainer.read(gameProvider).activeExpansions,
+          {ExpansionSet.eraOfGold});
+      expect(resumedContainer.read(gameProvider).victoryPointTarget, 12);
+    });
   });
 
   group('leaveGame', () {

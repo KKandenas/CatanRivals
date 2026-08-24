@@ -1,3 +1,4 @@
+import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/services/session_storage.dart';
 import 'package:catan_rivals/state/game_notifier.dart';
 import 'package:catan_rivals/ui/screens/game_board_screen.dart';
@@ -30,6 +31,28 @@ void main() {
 
     expect(find.text('Skapa nytt rum'), findsOneWidget);
     expect(find.text('Spela lokalt (utan synk)'), findsOneWidget);
+  });
+
+  testWidgets(
+      'kryssrutan "Spela med Gulderan-expansionen" skickas med till playLocally',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpLobby(tester);
+    final container =
+        ProviderScope.containerOf(tester.element(find.byType(LobbyScreen)));
+
+    await tester.tap(find.text('Spela med Gulderan-expansionen'));
+    await tester.pump();
+    await tester.tap(find.text('Spela lokalt (utan synk)'));
+    await tester.pumpAndSettle();
+
+    expect(container.read(gameProvider).activeExpansions,
+        {ExpansionSet.eraOfGold});
+    expect(container.read(gameProvider).victoryPointTarget, 12);
   });
 
   testWidgets('"?"-knappen öppnar regelsidan', (tester) async {
