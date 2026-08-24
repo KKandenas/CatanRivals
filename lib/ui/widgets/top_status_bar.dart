@@ -40,7 +40,14 @@ class TopStatusBar extends StatelessWidget {
         border:
             const Border(bottom: BorderSide(color: Colors.black26, width: 1)),
       ),
+      // Toppens säkra insats hanteras redan av regel-/lämna-raden
+      // ovanför (se game_board_screen.dart) – bara vänster/höger
+      // (t.ex. rundade hörn i landskapsläge) behövs här. `top: false`
+      // undviker att samma insats läggs på dubbelt, vilket annars
+      // knuffade ner (och krympte utrymmet för) TotalScoreBoard som
+      // svävar delvis över den här remsan.
       child: SafeArea(
+        top: false,
         bottom: false,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),

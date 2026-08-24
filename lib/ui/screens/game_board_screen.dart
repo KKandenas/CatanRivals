@@ -329,7 +329,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                      // Fyller hela bredden (i stället för
+                      // MainAxisSize.min) så Regler/Lämna verkligen
+                      // hamnar längst till vänster – med `min` krympte
+                      // hela raden till sitt innehåll, och Column
+                      // centrerade den då som ett block mitt på skärmen
+                      // i stället (rapporterad bugg).
                       children: [
                         RulesButton(onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
@@ -337,35 +342,55 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                         const SizedBox(width: 8),
                         _ExitButton(
                             onTap: () => _confirmLeaveGame(context, notifier)),
-                        if (showTurnEmphasis) ...[
-                          const SizedBox(width: 8),
-                          _TurnIndicatorChip(
-                            activePlayerIsMe: state.activePlayerIsMe,
-                            label: state.activePlayerIsMe
-                                ? 'DIN TUR – ${turnPhaseLabel()}'
-                                : '${state.opponent.name}s TUR',
+                        if (showTurnEmphasis)
+                          Expanded(
+                            child: Center(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _TurnIndicatorChip(
+                                    activePlayerIsMe: state.activePlayerIsMe,
+                                    label: state.activePlayerIsMe
+                                        ? 'DIN TUR – ${turnPhaseLabel()}'
+                                        : '${state.opponent.name}s TUR',
+                                  ),
+                                  const SizedBox(width: 8),
+                                  TurnActionPill(
+                                    isYourTurn: state.isMyTurn,
+                                    diceRolled: state.diceRolled,
+                                    isChoosingHand: false,
+                                    handAdjustmentPhase:
+                                        state.handAdjustmentPhase,
+                                    tradePhase: state.tradePhase,
+                                    handCount: state.you.hand.length,
+                                    handLimit: state.handLimit,
+                                    onEndTurn: () => _handleResult(context,
+                                        notifier.endActionPhase()),
+                                    peekingStackIndex: state.isMyTurn
+                                        ? null
+                                        : state.peekingStackIndex,
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          TurnActionPill(
-                            isYourTurn: state.isMyTurn,
-                            diceRolled: state.diceRolled,
-                            isChoosingHand: false,
-                            handAdjustmentPhase: state.handAdjustmentPhase,
-                            tradePhase: state.tradePhase,
-                            handCount: state.you.hand.length,
-                            handLimit: state.handLimit,
-                            onEndTurn: () => _handleResult(
-                                context, notifier.endActionPhase()),
-                            peekingStackIndex: state.isMyTurn
-                                ? null
-                                : state.peekingStackIndex,
-                          ),
-                        ],
+                        // Reserverar plats så det centrerade blocket ovan
+                        // aldrig hamnar bakom TotalScoreBoard, som svävar
+                        // längst till höger (se dess doc).
+                        const SizedBox(width: 108),
                       ],
                     ),
                   ),
                 ),
               Stack(
+                // TotalScoreBoard nedan är AVSIKTLIGT lite högre än
+                // TopStatusBar (svävar delvis över den, se dess doc) –
+                // utan clipBehavior: none skulle Stack (som annars
+                // klipper vid sina egna, snäva bounds – bara så hög som
+                // TopStatusBar) klippa av botten av den (rapporterad
+                // bugg: syntes först sedan "DIN TUR"-bannern flyttades ut
+                // härifrån och gjorde den här Stacken kortare).
+                clipBehavior: Clip.none,
                 children: [
                   Column(
                     children: [

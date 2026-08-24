@@ -4,6 +4,7 @@ import 'package:catan_rivals/ui/screens/game_board_screen.dart';
 import 'package:catan_rivals/ui/screens/lobby_screen.dart';
 import 'package:catan_rivals/ui/screens/rules_screen.dart';
 import 'package:catan_rivals/ui/widgets/top_status_bar.dart';
+import 'package:catan_rivals/ui/widgets/total_score_board.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -94,13 +95,20 @@ void main() {
     expect(find.text('Avsluta action-fas'), findsOneWidget);
 
     // Regler, Lämna, "DIN TUR"-etiketten och "Avsluta action-fas" ska
-    // alla ligga i EN OCH SAMMA Row – annars riskerar de överlappa
-    // varandra igen (rapporterad bugg: "Avsluta action-fas" hamnade
-    // dolt bakom Regler-/Lämna-knapparna, se commit-doc).
-    final row = tester.widget<Row>(find.ancestor(
-      of: find.text('Avsluta action-fas'),
-      matching: find.byType(Row),
-    ).first);
+    // alla ligga i SAMMA toppradsblock (den yttre Row:en – "DIN
+    // TUR"/knappen sitter i en egen, inre, centrerad Row därinuti, se
+    // game_board_screen.dart) – annars riskerar de överlappa varandra
+    // igen (rapporterad bugg: "Avsluta action-fas" hamnade dolt bakom
+    // Regler-/Lämna-knapparna, se commit-doc). Väljer den YTTRE av de
+    // Row-förfäder som hittas (den som också innehåller "?").
+    final rowCandidates = find
+        .ancestor(of: find.text('Avsluta action-fas'), matching: find.byType(Row))
+        .evaluate()
+        .map((e) => e.widget as Row);
+    final row = rowCandidates.firstWhere((r) =>
+        find.descendant(of: find.byWidget(r), matching: find.text('?'))
+            .evaluate()
+            .isNotEmpty);
     expect(find.descendant(of: find.byWidget(row), matching: find.text('?')),
         findsOneWidget);
     expect(
@@ -131,5 +139,37 @@ void main() {
             state.tradePhase != TradePhase.none,
         isTrue,
         reason: 'action-fasen ska ha avslutats');
+  });
+
+  testWidgets(
+      'Regler/Lämna sitter längst till vänster, "DIN TUR"/knappen är centrerade i det som blir kvar',
+      (tester) async {
+    await pumpBoard(tester);
+
+    // "?" och Lämna ska sitta nära vänsterkanten – inte centrerade som
+    // ett block mitt på skärmen tillsammans med "DIN TUR"/knappen
+    // (rapporterad bugg: hela toppraden centrerades eftersom Row:en
+    // använde mainAxisSize.min).
+    final rulesLeft = tester.getTopLeft(find.text('?')).dx;
+    final turIndicatorLeft =
+        tester.getTopLeft(find.textContaining('DIN TUR')).dx;
+    expect(rulesLeft, lessThan(50));
+    expect(turIndicatorLeft, greaterThan(rulesLeft + 50));
+  });
+
+  testWidgets(
+      'TotalScoreBoard klipps inte (Stacken som håller den använder Clip.none)',
+      (tester) async {
+    await pumpBoard(tester);
+
+    // TotalScoreBoard är AVSIKTLIGT lite högre än TopStatusBar (svävar
+    // delvis över den, se dess doc) – Stacken som håller båda måste
+    // därför INTE klippa vid sina egna bounds (rapporterad bugg: botten
+    // av TotalScoreBoard klipptes bort sedan "DIN TUR"-bannern som
+    // tidigare gav Stacken extra höjd flyttades ut).
+    final stackFinder = find.ancestor(
+        of: find.byType(TotalScoreBoard), matching: find.byType(Stack));
+    final stack = tester.widget<Stack>(stackFinder.first);
+    expect(stack.clipBehavior, Clip.none);
   });
 }
