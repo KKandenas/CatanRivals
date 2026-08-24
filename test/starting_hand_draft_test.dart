@@ -97,7 +97,11 @@ void main() {
 
     final state = host.read(gameProvider);
     expect(state.you.hand, picks);
-    expect(state.you.hasDrawnStartingHand, isTrue);
+    // hasDrawnStartingHand sätts INTE här - se
+    // starting_region_rearrangement_test.dart: regionomflyttningsfasen
+    // börjar i stället, och flaggan väntar tills spelaren trycker Klar.
+    expect(state.you.hasDrawnStartingHand, isFalse);
+    expect(state.startingRegionRearrangementActive, isTrue);
     expect(state.centerStacks['draw1'], 9);
     expect(state.startingHandDraftStackIndex, isNull);
     expect(state.startingHandDraftPool, isNull);
@@ -139,6 +143,10 @@ void main() {
     hostNotifier.pickHandDraftCard(pool[0]);
     hostNotifier.pickHandDraftCard(pool[1]);
     hostNotifier.pickHandDraftCard(pool[2]);
+    // Hela sekvensen (inte bara tredje kortvalet, se
+    // starting_region_rearrangement_test.dart) måste slutföras innan
+    // det blir gästens tur.
+    hostNotifier.finishRegionRearrangement();
     await pump();
 
     final error = guest.read(gameProvider.notifier).startHandDraft(0);

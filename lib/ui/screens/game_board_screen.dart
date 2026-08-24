@@ -32,6 +32,7 @@ import '../widgets/scout_prompt_card.dart';
 import '../widgets/scout_region_picker.dart';
 import '../widgets/stack_choice_overlay.dart';
 import '../widgets/starting_hand_draft_picker.dart';
+import '../widgets/starting_region_rearrangement_bar.dart';
 import '../widgets/top_status_bar.dart';
 import '../widgets/total_score_board.dart';
 import '../widgets/trade_phase_card.dart';
@@ -426,9 +427,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                                 ? 'Väntar på att ${state.opponent.name} väljer en draghög …'
                                 : state.activeExpansions.isEmpty
                                     ? 'Din tur: tryck på en draghög för att ta dina 3 starthandkort'
-                                    : state.startingHandDraftPool != null
-                                        ? 'Din tur: välj 3 kort ur högen'
-                                        : 'Din tur: tryck på en av grundspelshögarna för att kika i den',
+                                    : state.startingRegionRearrangementActive
+                                        ? 'Din tur: flytta om dina regioner fritt, tryck sedan Klar'
+                                        : state.startingHandDraftPool != null
+                                            ? 'Din tur: välj 3 kort ur högen'
+                                            : 'Din tur: tryck på en av grundspelshögarna för att kika i den',
                             textAlign: TextAlign.center,
                           ),
                         ),
@@ -805,7 +808,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 canBuild: canBuildRightNow,
                 isChoosingHand: state.isOnline &&
                     !state.handsReady &&
-                    state.startingHandDraftPool == null,
+                    state.startingHandDraftPool == null &&
+                    !state.startingRegionRearrangementActive,
                 isMyTurnToChooseHand: state.isMyTurnToChooseHand,
                 onChooseStack: (index) => _handleResult(
                     context,
@@ -880,6 +884,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   onCancel: () =>
                       _handleResult(context, notifier.cancelFeudBuildingPick()),
                 ),
+              if (state.startingRegionRearrangementActive)
+                StartingRegionRearrangementBar(
+                  hasFirstSelection:
+                      state.startingRegionRearrangementFirst != null,
+                  onFinish: () => _handleResult(
+                      context, notifier.finishRegionRearrangement()),
+                ),
               Expanded(
                 flex: 5,
                 child: AnimatedContainer(
@@ -943,6 +954,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                         onSelectFeudBuilding: (column, row, slot) =>
                             _handleResult(context,
                                 notifier.selectFeudBuilding(column, row, slot)),
+                        startingRegionRearrangementActive:
+                            state.startingRegionRearrangementActive,
+                        startingRegionRearrangementFirst:
+                            state.startingRegionRearrangementFirst,
+                        onSelectStartingRegionRearrangementTarget:
+                            (column, row) => _handleResult(
+                                context,
+                                notifier.selectRegionRearrangementTarget(
+                                    column, row)),
                       ),
                     ),
                   ),

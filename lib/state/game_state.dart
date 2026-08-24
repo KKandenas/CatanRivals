@@ -214,6 +214,21 @@ class GameState {
   final List<GameCard>? startingHandDraftPool;
   final List<GameCard> startingHandDraftPicked;
 
+  /// Fri regionomflyttning direkt efter starthandsutdelningen med ett
+  /// tema aktivt (bekräftad regel: "Fri omflyttning av egna 6
+  /// regioner") – ett tredje, parallellt väljarläge till
+  /// [relocationActive]/[feudBuildingPickActive] (se
+  /// [GameNotifier.selectRegionRearrangementTarget]/
+  /// [GameNotifier.finishRegionRearrangement]), medvetet INTE
+  /// samma fält som Omlokaliseringen eftersom den är knuten till ett
+  /// fysiskt kort och till [GameNotifier._checkCanBuild]s tur-/
+  /// tärningsspärrar, som inte gäller före första tärningsslaget.
+  /// [Player.hasDrawnStartingHand] sätts först när fasen avslutas
+  /// explicit (se [GameNotifier.finishRegionRearrangement]), inte
+  /// redan vid tredje kortvalet – se pickHandDraftCards doc.
+  final bool startingRegionRearrangementActive;
+  final RelocationSelection? startingRegionRearrangementFirst;
+
   const GameState({
     required this.you,
     required this.opponent,
@@ -255,6 +270,8 @@ class GameState {
     this.startingHandDraftStackIndex,
     this.startingHandDraftPool,
     this.startingHandDraftPicked = const [],
+    this.startingRegionRearrangementActive = false,
+    this.startingRegionRearrangementFirst,
   });
 
   bool get isOnline => mode != SessionMode.local;
@@ -416,6 +433,9 @@ class GameState {
     List<GameCard>? startingHandDraftPool,
     bool clearStartingHandDraftPool = false,
     List<GameCard>? startingHandDraftPicked,
+    bool? startingRegionRearrangementActive,
+    RelocationSelection? startingRegionRearrangementFirst,
+    bool clearStartingRegionRearrangementFirst = false,
   }) {
     return GameState(
       you: you ?? this.you,
@@ -489,6 +509,12 @@ class GameState {
           : (startingHandDraftPool ?? this.startingHandDraftPool),
       startingHandDraftPicked:
           startingHandDraftPicked ?? this.startingHandDraftPicked,
+      startingRegionRearrangementActive: startingRegionRearrangementActive ??
+          this.startingRegionRearrangementActive,
+      startingRegionRearrangementFirst: clearStartingRegionRearrangementFirst
+          ? null
+          : (startingRegionRearrangementFirst ??
+              this.startingRegionRearrangementFirst),
     );
   }
 }

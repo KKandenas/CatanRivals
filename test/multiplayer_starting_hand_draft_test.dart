@@ -6,12 +6,15 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fake_game_sync_service.dart';
 
-/// Testar starthandsutdelningen med ett tema aktivt (se
-/// starting_hand_draft_test.dart för notifier-nivå-testerna) över två
-/// riktiga klienter, delar en [FakeGameSyncService] – motsvarande
-/// mönster som multiplayer_fraternal_feuds_test.dart. Fokus här: att
+/// Testar starthandsutdelningen (kika-och-välj-3) OCH den fria
+/// regionomflyttningen som följer direkt efter, med ett tema aktivt
+/// (se starting_hand_draft_test.dart/starting_region_rearrangement_test.dart
+/// för notifier-nivå-testerna var för sig) över två riktiga klienter,
+/// delar en [FakeGameSyncService] – motsvarande mönster som
+/// multiplayer_fraternal_feuds_test.dart. Fokus här: att
 /// centerStacks/handsReady/isMyTurnToChooseHand hos BÅDA klienterna
-/// bara ändras EFTER det tredje kortvalet, aldrig stegvis.
+/// bara ändras efter HELA sekvensen (kortval -> ev. regionbyten ->
+/// "Klar"), aldrig stegvis och aldrig redan vid tredje kortvalet.
 void main() {
   Future<void> pump() => Future<void>.delayed(Duration.zero);
 
@@ -33,7 +36,7 @@ void main() {
   }
 
   test(
-      'host drar sin starthand: gästen ser ingen ändring förrän tredje kortet är valt, sedan blir det gästens tur',
+      'host drar sin starthand och flyttar om regioner: gästens tur väntar genom HELA sekvensen, ända till "Klar"',
       () async {
     final (host, guest) = await connectedRoom();
     addTearDown(host.dispose);
@@ -63,26 +66,49 @@ void main() {
     expect(guest.read(gameProvider).centerStacks['draw1'], 12);
     expect(guest.read(gameProvider).isMyTurnToChooseHand, isFalse);
 
-    // Tredje kortet: allt synkas i ett svep.
+    // Tredje kortet: handen/centerStacks synkas i ett svep, men
+    // hasDrawnStartingHand sätts INTE än – regionomflyttningen börjar.
     expect(hostNotifier.pickHandDraftCard(pool[2]), isNull);
     await pump();
 
-    final guestState = guest.read(gameProvider);
+    var guestState = guest.read(gameProvider);
     expect(guestState.centerStacks['draw1'], 9);
     expect(guestState.opponent.hand, hasLength(3));
-    expect(guestState.isMyTurnToChooseHand, isTrue,
-        reason:
-            'hasDrawnStartingHand sätts först vid tredje kortvalet (5a har '
-            'ingen regionomflyttningsfas ännu), så gästens tur ska starta '
-            'direkt');
+    expect(host.read(gameProvider).startingRegionRearrangementActive, isTrue);
+    expect(guestState.isMyTurnToChooseHand, isFalse,
+        reason: 'regionomflyttningen pågår fortfarande hos host, gästens '
+            'tur ska inte börja förrän host trycker Klar');
 
-    // Nu tar gästen sin egen starthand via en av de andra grundspelshögarna.
+    // Några regionbyten – fortfarande inte gästens tur.
+    expect(
+        hostNotifier.selectRegionRearrangementTarget(-1, BuildingRow.above),
+        isNull);
+    expect(
+        hostNotifier.selectRegionRearrangementTarget(1, BuildingRow.above),
+        isNull);
+    await pump();
+    expect(guest.read(gameProvider).isMyTurnToChooseHand, isFalse);
+
+    // "Klar": nu, och först nu, släpps gästens tur fram.
+    expect(hostNotifier.finishRegionRearrangement(), isNull);
+    await pump();
+
+    guestState = guest.read(gameProvider);
+    expect(guestState.isMyTurnToChooseHand, isTrue);
+    expect(host.read(gameProvider).startingRegionRearrangementActive, isFalse);
+
+    // Gästen tar sin egen starthand och flyttar om, precis som host.
     final guestNotifier = guest.read(gameProvider.notifier);
     expect(guestNotifier.startHandDraft(1), isNull);
     final guestPool = guest.read(gameProvider).startingHandDraftPool!;
     guestNotifier.pickHandDraftCard(guestPool[0]);
     guestNotifier.pickHandDraftCard(guestPool[1]);
     guestNotifier.pickHandDraftCard(guestPool[2]);
+    await pump();
+
+    expect(host.read(gameProvider).handsReady, isFalse,
+        reason: 'gästens regionomflyttning pågår fortfarande');
+    expect(guestNotifier.finishRegionRearrangement(), isNull);
     await pump();
 
     expect(host.read(gameProvider).handsReady, isTrue);
@@ -102,6 +128,7 @@ void main() {
     hostNotifier.pickHandDraftCard(pool[0]);
     hostNotifier.pickHandDraftCard(pool[1]);
     hostNotifier.pickHandDraftCard(pool[2]);
+    hostNotifier.finishRegionRearrangement();
     await pump();
 
     final guestNotifier = guest.read(gameProvider.notifier);

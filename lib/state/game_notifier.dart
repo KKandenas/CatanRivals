@@ -392,6 +392,23 @@ class GameNotifier extends Notifier<GameState> {
         winnerId: turnState.winnerId,
         discardPile: discardPile,
       );
+
+      // En sidladdning EFTER tredje kortvalet i starthandsutdelningen
+      // (se pickHandDraftCard) men FÖRE "Klar" på regionomflyttningen
+      // skulle annars fastna för alltid: hand/centerStacks är redan
+      // synkade, men hasDrawnStartingHand sätts aldrig (den väntar på
+      // finishRegionRearrangement) och startingRegionRearrangementActive
+      // är rent lokalt UI-state som nollställs vid ombygget här ovan –
+      // motståndaren skulle då aldrig få sin tur. Innan handsReady kan
+      // inget annat i appen lägga kort i en odragen hand, så "egen hand
+      // icke-tom men egen flagga false" pekar entydigt på det här
+      // fallet.
+      if (expansions.isNotEmpty &&
+          !you.hasDrawnStartingHand &&
+          you.hand.isNotEmpty) {
+        state = state.copyWith(startingRegionRearrangementActive: true);
+      }
+
       _subscribeToRoom(roomCode);
 
       // En Brödrafejd-förfrågan (se FraternalFeudsRequest) kan ha
@@ -1544,10 +1561,13 @@ class GameNotifier extends Notifier<GameState> {
   /// kopia av den ursprungliga högen, aldrig blandats om), handen/
   /// centerStacks uppdateras i ett enda svep och synkas.
   ///
-  /// Sätter [Player.hasDrawnStartingHand] direkt här – till skillnad
-  /// från när ett tema är aktivt (se planen för Steg 5b, "fri
-  /// regionomflyttning"), där flaggan i stället väntar tills
-  /// omflyttningsfasen avslutas explicit.
+  /// Går sedan direkt in i den fria regionomflyttningsfasen (bekräftad
+  /// regel: "Fri omflyttning av egna 6 regioner", se
+  /// [selectRegionRearrangementTarget]/[finishRegionRearrangement]) i
+  /// stället för att sätta [Player.hasDrawnStartingHand] direkt – den
+  /// flaggan väntar tills spelaren uttryckligen trycker "Klar" där, så
+  /// att motståndarens klient automatiskt väntar genom HELA sekvensen
+  /// (se [GameState.pendingHandChooserId]).
   String? pickHandDraftCard(GameCard card) {
     final pool = state.startingHandDraftPool;
     if (pool == null || !pool.contains(card)) return null;
@@ -1563,16 +1583,73 @@ class GameNotifier extends Notifier<GameState> {
     final stackIndex = state.startingHandDraftStackIndex!;
     _drawStacks[stackIndex] = newPool;
     state = state.copyWith(
-      you: state.you.copyWith(
-          hand: [...state.you.hand, ...picked], hasDrawnStartingHand: true),
+      you: state.you.copyWith(hand: [...state.you.hand, ...picked]),
       centerStacks: Map.of(state.centerStacks)
         ..update('draw${stackIndex + 1}', (v) => v - 3),
       clearStartingHandDraftStackIndex: true,
       clearStartingHandDraftPool: true,
       startingHandDraftPicked: const [],
+      startingRegionRearrangementActive: true,
+      clearStartingRegionRearrangementFirst: true,
     );
     _syncMyPlayer();
     _syncCenterStacks();
+    return null;
+  }
+
+  // ---------------------------------------------------------------------
+  // Fri regionomflyttning direkt efter starthandsutdelningen med tema
+  // ---------------------------------------------------------------------
+
+  /// Väljer en region i ditt eget rike under den fria
+  /// regionomflyttningen (se [pickHandDraftCard]) – samma "första
+  /// tryck lagras, andra tryck genomför bytet"-mönster som
+  /// [selectRelocationTarget], men BARA regioner, inget kort inblandat
+  /// och ingen [_checkCanBuild]-spärr (fasen sker före första
+  /// tärningsslaget). Obegränsat antal byten, inget kostar något – se
+  /// [finishRegionRearrangement] för det uttryckliga slutsteget.
+  String? selectRegionRearrangementTarget(int column, BuildingRow row) {
+    if (!state.startingRegionRearrangementActive) return null;
+
+    final selection =
+        RelocationSelection(kind: RelocationTargetKind.region, column: column, row: row);
+    final first = state.startingRegionRearrangementFirst;
+
+    if (first == null) {
+      if (state.you.principality.regionAt(column, row) == null) return null;
+      state = state.copyWith(startingRegionRearrangementFirst: selection);
+      return null;
+    }
+    if (first == selection) {
+      state = state.copyWith(clearStartingRegionRearrangementFirst: true);
+      return null;
+    }
+
+    try {
+      state.you.principality.swapRegions(first.column, first.row, column, row);
+    } on StateError catch (e) {
+      return e.message;
+    }
+    state = state.copyWith(
+        you: state.you, clearStartingRegionRearrangementFirst: true);
+    _syncMyPlayer();
+    return null;
+  }
+
+  /// Avslutar den fria regionomflyttningen explicit (obligatoriskt
+  /// steg, eftersom fri/obegränsad omflyttning annars saknar ett
+  /// naturligt slut) – sätter [Player.hasDrawnStartingHand], som är
+  /// det som faktiskt släpper fram motståndarens tur (se
+  /// [GameState.pendingHandChooserId]). En kvarhängande första-
+  /// markering (tryckt men inte bytt) släpps tyst.
+  String? finishRegionRearrangement() {
+    if (!state.startingRegionRearrangementActive) return null;
+    state = state.copyWith(
+      startingRegionRearrangementActive: false,
+      clearStartingRegionRearrangementFirst: true,
+      you: state.you.copyWith(hasDrawnStartingHand: true),
+    );
+    _syncMyPlayer();
     return null;
   }
 

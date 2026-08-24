@@ -114,6 +114,15 @@ class PrincipalityGrid extends StatelessWidget {
   final void Function(int column, BuildingRow row, int slotIndex)?
       onSelectFeudBuilding;
 
+  /// Fri regionomflyttning direkt efter starthandsutdelningen med ett
+  /// tema aktivt (se [GameNotifier.selectRegionRearrangementTarget]) –
+  /// ett tredje, parallellt väljarläge till [relocationActive]/
+  /// [feudBuildingPickActive]: BARA regioner, aldrig byggkort.
+  final bool startingRegionRearrangementActive;
+  final RelocationSelection? startingRegionRearrangementFirst;
+  final void Function(int column, BuildingRow row)?
+      onSelectStartingRegionRearrangementTarget;
+
   const PrincipalityGrid({
     super.key,
     required this.board,
@@ -136,6 +145,9 @@ class PrincipalityGrid extends StatelessWidget {
     this.feudBuildingPickActive = false,
     this.feudPickedBuilding,
     this.onSelectFeudBuilding,
+    this.startingRegionRearrangementActive = false,
+    this.startingRegionRearrangementFirst,
+    this.onSelectStartingRegionRearrangementTarget,
   });
 
   bool get _draggingRoad => draggingCard?.category == CardCategory.road;
@@ -471,28 +483,40 @@ class PrincipalityGrid extends StatelessWidget {
   Widget _region(PlacedCard placed, int column, BuildingRow row) {
     final canSelect =
         relocationActive && interactive && onSelectRelocationTarget != null;
+    final canSelectForRearrangement = startingRegionRearrangementActive &&
+        interactive &&
+        onSelectStartingRegionRearrangementTarget != null;
     // Se kommentaren i _roadSlot – en ny region på en tidigare tom
     // knutpunkt byter widget-typ här och toppas därför korrekt in.
     final view = PopIn(
       child: RegionCardView(
         card: placed.card,
         stored: placed.storedResources,
-        // +/- knapparna stängs av under Omlokalisering: annars skulle ett
-        // tryck på kortets bakgrund (för att välja det till bytet) och
-        // ett tryck på en +/- knapp konkurrera om samma yta.
-        onAdjust: interactive && onAdjustRegion != null && !relocationActive
+        // +/- knapparna stängs av under Omlokalisering/regionomflyttning:
+        // annars skulle ett tryck på kortets bakgrund (för att välja det
+        // till bytet) och ett tryck på en +/- knapp konkurrera om samma
+        // yta.
+        onAdjust: interactive &&
+                onAdjustRegion != null &&
+                !relocationActive &&
+                !startingRegionRearrangementActive
             ? (delta) => onAdjustRegion!(column, row, delta)
             : null,
         onTap: canSelect
             ? () => onSelectRelocationTarget!(
                 RelocationTargetKind.region, column, row, 0)
-            : null,
+            : canSelectForRearrangement
+                ? () => onSelectStartingRegionRearrangementTarget!(column, row)
+                : null,
       ),
     );
-    final selected = relocationActive &&
-        relocationFirst?.kind == RelocationTargetKind.region &&
-        relocationFirst?.column == column &&
-        relocationFirst?.row == row;
+    final selected = (relocationActive &&
+            relocationFirst?.kind == RelocationTargetKind.region &&
+            relocationFirst?.column == column &&
+            relocationFirst?.row == row) ||
+        (startingRegionRearrangementActive &&
+            startingRegionRearrangementFirst?.column == column &&
+            startingRegionRearrangementFirst?.row == row);
     return selected ? _withSelectionRing(view) : view;
   }
 
