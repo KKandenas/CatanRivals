@@ -93,6 +93,37 @@ void main() {
     });
   });
 
+  group('RealmBoard.expansionAt', () {
+    test('returnerar kortet på en upptagen byggplats utan att ta bort det', () {
+      final board = RealmBoard(ownerId: 'test');
+      board.placeSettlement(
+          0, const PlacedCard(card: BasicSetCards.settlement));
+      board.placeExpansion(0, BuildingRow.above, 0,
+          const PlacedCard(card: BasicSetCards.abbey));
+
+      expect(board.expansionAt(0, BuildingRow.above, 0)?.card.id,
+          BasicSetCards.abbey.id);
+      // Peek – ska INTE ta bort kortet (till skillnad från removeExpansion).
+      expect(board.settlementAt(0)!.aboveSites[0]?.card.id,
+          BasicSetCards.abbey.id);
+    });
+
+    test('null för en tom byggplats', () {
+      final board = RealmBoard(ownerId: 'test');
+      board.placeSettlement(
+          0, const PlacedCard(card: BasicSetCards.settlement));
+
+      expect(board.expansionAt(0, BuildingRow.above, 0), isNull);
+    });
+
+    test('null (inte StateError) om det inte finns någon by/stad i kolumnen',
+        () {
+      final board = RealmBoard(ownerId: 'test');
+
+      expect(board.expansionAt(0, BuildingRow.above, 0), isNull);
+    });
+  });
+
   group('RealmBoard.placedExpansionCards', () {
     test('tom för ett rike utan några utbyggnadskort alls', () {
       final board = RealmBoard(ownerId: 'test');

@@ -14,8 +14,8 @@ class CatanAssets {
   static const String _ui = 'assets/images/ui';
   static const String _dice = 'assets/images/dice';
 
-  static const String lobbyBackground = '$_ui/lobby_background.png';
-  static const String boardBackground = '$_ui/board_background.png';
+  static const String lobbyBackground = '$_ui/lobby_background.webp';
+  static const String boardBackground = '$_ui/board_background.webp';
 
   /// Händelsetärningens sex sidor (se [EventDieFace]) – de fem
   /// symbolerna från regelhäftets referenskort.
@@ -27,41 +27,41 @@ class CatanAssets {
       '$_dice/event_plentiful_harvest.jpg';
   static const String eventDieEventCard = '$_dice/event_card.jpg';
 
-  /// Landskapsfoto för en resurstyp, t.ex. ResourceType.wool -> wool.png.
+  /// Landskapsfoto för en resurstyp, t.ex. ResourceType.wool -> wool.webp.
   static String resourcePhoto(ResourceType type) =>
-      '$_resources/${type.name}.png';
+      '$_resources/${type.name}.webp';
 
-  static const String road = '$_locations/road_forest_path.png';
-  static const String settlement = '$_locations/settlement_village.png';
-  static const String city = '$_locations/city_walled_river.png';
+  static const String road = '$_locations/road_forest_path.webp';
+  static const String settlement = '$_locations/settlement_village.webp';
+  static const String city = '$_locations/city_walled_river.webp';
 
-  static const String backSettlements = '$_backs/settlements.png';
-  static const String backCities = '$_backs/cities.png';
-  static const String backRegions = '$_backs/regions.png';
-  static const String backEvent = '$_backs/event.png';
-  static const String backBasicSet = '$_backs/basic_set.png';
-  static const String backEraGold = '$_backs/era_gold.png';
-  static const String backEraTurmoil = '$_backs/era_turmoil.png';
-  static const String backEraProgress = '$_backs/era_progress.png';
+  static const String backSettlements = '$_backs/settlements.webp';
+  static const String backCities = '$_backs/cities.webp';
+  static const String backRegions = '$_backs/regions.webp';
+  static const String backEvent = '$_backs/event.webp';
+  static const String backBasicSet = '$_backs/basic_set.webp';
+  static const String backEraGold = '$_backs/era_gold.webp';
+  static const String backEraTurmoil = '$_backs/era_turmoil.webp';
+  static const String backEraProgress = '$_backs/era_progress.webp';
 
   /// Liten kostnadsikon (hexagon) för en resurstyp – för att visa
   /// byggkostnad kompakt på hand-/stapelkort.
   static String resourceCostIcon(ResourceType type) =>
-      '$_icons/icon_${type.name}.png';
+      '$_icons/icon_${type.name}.webp';
 
-  static const String pointStrength = '$_icons/icon_strength.png';
-  static const String pointCommerce = '$_icons/icon_commerce.png';
-  static const String pointSkill = '$_icons/icon_skill.png';
-  static const String pointProgress = '$_icons/icon_progress.png';
-  static const String pointVictory = '$_icons/icon_victory.png';
+  static const String pointStrength = '$_icons/icon_strength.webp';
+  static const String pointCommerce = '$_icons/icon_commerce.webp';
+  static const String pointSkill = '$_icons/icon_skill.webp';
+  static const String pointProgress = '$_icons/icon_progress.webp';
+  static const String pointVictory = '$_icons/icon_victory.webp';
 
   /// Symboliserar "Hero Token"/"Trade Token" – de fysiska brickorna som
   /// visar vem som just nu har flest styrke- respektive handelspoäng
   /// (minst 3, och fler än motståndaren, se
   /// [GameNotifier.recomputeTokenHolders]). Ligger inte hos någon
   /// ("banken") när ingen uppfyller kravet.
-  static const String heroToken = '$_icons/icon_hero_token.png';
-  static const String tradeToken = '$_icons/icon_trade_token.png';
+  static const String heroToken = '$_icons/icon_hero_token.webp';
+  static const String tradeToken = '$_icons/icon_trade_token.webp';
 
   /// Rätt bild för ett kort oavsett kategori. Regionkort och by/stad/
   /// väg-korten visas med en annan bild än [GameCard.imageAsset] (som

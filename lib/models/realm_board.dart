@@ -301,6 +301,21 @@ class RealmBoard {
     sitesB[slotB] = cardA;
   }
 
+  /// Kortet som ligger på en byggplats just nu (peek, muterar inget) –
+  /// till skillnad från [removeExpansion] kastas inget fel om det inte
+  /// finns någon by/stad i kolumnen eller `slotIndex` är utanför
+  /// byggplatserna; `null` returneras helt enkelt då (samma som en tom
+  /// plats). Används för att avgöra om ett drop/bygge på en plats
+  /// räknas som "byt ut" (se [GameNotifier.dropExpansion]) utan att
+  /// behöva ta bort kortet först.
+  PlacedCard? expansionAt(int column, BuildingRow row, int slotIndex) {
+    final node = _settlements[column];
+    if (node == null) return null;
+    final sites = row == BuildingRow.above ? node.aboveSites : node.belowSites;
+    if (slotIndex < 0 || slotIndex >= sites.length) return null;
+    return sites[slotIndex];
+  }
+
   /// Tar bort och returnerar bygg-/enhetskortet på en byggplats (Fejd,
   /// regelhäftet: "the opponent must remove one of them"). `null` om
   /// platsen redan var tom. Kastar [StateError] om det inte finns

@@ -27,7 +27,7 @@ class EraOfProgressCards {
     effectText:
         'Du får på nytt resursen från varje region vars tal du slog '
         'i början av din tur.',
-    imageAsset: 'assets/images/cards/action_benjamin.png',
+    imageAsset: 'assets/images/cards/action_benjamin.webp',
   );
 
   static const doctor = GameCard(
@@ -40,7 +40,7 @@ class EraOfProgressCards {
     effectText:
         'Varje region som gränsar till ditt Badhus får 1 resurs. Har '
         'du flera Badhus får du bara använda ett av dem.',
-    imageAsset: 'assets/images/cards/action_doctor.png',
+    imageAsset: 'assets/images/cards/action_doctor.webp',
   );
 
   static const guidoTheAmbassador = GameCard(
@@ -51,7 +51,7 @@ class EraOfProgressCards {
     expansionSet: ExpansionSet.eraOfProgress,
     requirement: 'Rådhus, eller färre segerpoäng än motståndaren',
     effectText: 'Du får välja 1 kort från kasserade kort (turneringsspel: från motståndarens kasserade kort).',
-    imageAsset: 'assets/images/cards/action_guido.png',
+    imageAsset: 'assets/images/cards/action_guido.webp',
   );
 
   static const gustavTheLibrarian = GameCard(
@@ -62,7 +62,7 @@ class EraOfProgressCards {
     expansionSet: ExpansionSet.eraOfProgress,
     requirement: 'Bibliotek, eller färre segerpoäng än motståndaren',
     effectText: 'Du får välja 1 kort från kasserade kort (turneringsspel: från dina egna kasserade kort).',
-    imageAsset: 'assets/images/cards/action_gustav.png',
+    imageAsset: 'assets/images/cards/action_gustav.webp',
   );
 
   static const mineralMining = GameCard(
@@ -73,7 +73,7 @@ class EraOfProgressCards {
     expansionSet: ExpansionSet.eraOfProgress,
     requirement: 'Universitet',
     effectText: 'Du får upp till 2 malm.',
-    imageAsset: 'assets/images/cards/action_mineral_mining.png',
+    imageAsset: 'assets/images/cards/action_mineral_mining.webp',
   );
 
   static const threeFieldSystem = GameCard(
@@ -84,7 +84,7 @@ class EraOfProgressCards {
     expansionSet: ExpansionSet.eraOfProgress,
     requirement: 'Universitet',
     effectText: 'Du får upp till 2 säd.',
-    imageAsset: 'assets/images/cards/action_three_field_system.png',
+    imageAsset: 'assets/images/cards/action_three_field_system.webp',
   );
 
   // ---------------------------------------------------------------------
@@ -105,7 +105,7 @@ class EraOfProgressCards {
         'en enhet men ingen hjälte – du får ha 2 Kanonmästare i ditt '
         'rike. Kort som gäller hjältar gäller inte den, men kort som '
         'gäller enheter gör det.',
-    imageAsset: 'assets/images/cards/unit_chief_cannoneer.png',
+    imageAsset: 'assets/images/cards/unit_chief_cannoneer.webp',
   );
 
   // ---------------------------------------------------------------------
@@ -120,7 +120,7 @@ class EraOfProgressCards {
     buildingCost: {ResourceType.brick: 2, ResourceType.wool: 1, ResourceType.ore: 1},
     victoryPoints: 1,
     effectText: 'Skyddar alla 4 regioner som gränsar till den här staden från effekterna av händelsen Pest.',
-    imageAsset: 'assets/images/cards/city_expansion_bath_house.png',
+    imageAsset: 'assets/images/cards/city_expansion_bath_house.webp',
   );
 
   static const buildingCrane = GameCard(
@@ -131,7 +131,7 @@ class EraOfProgressCards {
     requirement: 'Universitet',
     buildingCost: {ResourceType.lumber: 1},
     effectText: 'Varje stadsutbyggnad du bygger som kostar mer än 4 resurser kostar 1 resurs mindre.',
-    imageAsset: 'assets/images/cards/city_expansion_building_crane.png',
+    imageAsset: 'assets/images/cards/city_expansion_building_crane.webp',
   );
 
   static const library = GameCard(
@@ -142,7 +142,7 @@ class EraOfProgressCards {
     buildingCost: {ResourceType.lumber: 2, ResourceType.brick: 1, ResourceType.ore: 1},
     victoryPoints: 1,
     effectText: 'När du bygger Biblioteket får du omedelbart välja ett kort från en draghög (turneringsspel: från din egen hög).',
-    imageAsset: 'assets/images/cards/city_expansion_library.png',
+    imageAsset: 'assets/images/cards/city_expansion_library.webp',
   );
 
   static const parliament = GameCard(
@@ -154,7 +154,7 @@ class EraOfProgressCards {
     buildingCost: {ResourceType.lumber: 3, ResourceType.brick: 2, ResourceType.wool: 2},
     victoryPoints: 2,
     effectText: 'Till folkets fromma, och särskilt deras företrädares.',
-    imageAsset: 'assets/images/cards/city_expansion_parliament.png',
+    imageAsset: 'assets/images/cards/city_expansion_parliament.webp',
   );
 
   static const pharmacy = GameCard(
@@ -167,7 +167,7 @@ class EraOfProgressCards {
     effectText:
         'När händelsen Pest inträffar får du 1 valfri resurs. Du får '
         'den oavsett om du tidigare förlorat resurser eller inte.',
-    imageAsset: 'assets/images/cards/city_expansion_pharmacy.png',
+    imageAsset: 'assets/images/cards/city_expansion_pharmacy.webp',
   );
 
   static const townHall = GameCard(
@@ -181,7 +181,7 @@ class EraOfProgressCards {
     effectText:
         'Placera Rådhuset på ditt Församlingshus. I slutet av din tur '
         'betalar du inte längre för att välja ett kort.',
-    imageAsset: 'assets/images/cards/city_expansion_town_hall.png',
+    imageAsset: 'assets/images/cards/city_expansion_town_hall.webp',
   );
 
   static const university = GameCard(
@@ -195,7 +195,7 @@ class EraOfProgressCards {
     progressPoints: 1,
     victoryPoints: 1,
     effectText: 'Här låg tidigare ett värdshus. Nu finns det två stycken alldeles intill.',
-    imageAsset: 'assets/images/cards/city_expansion_university.png',
+    imageAsset: 'assets/images/cards/city_expansion_university.webp',
   );
 
   // ---------------------------------------------------------------------
@@ -208,7 +208,7 @@ class EraOfProgressCards {
     category: CardCategory.event,
     expansionSet: ExpansionSet.eraOfProgress,
     effectText: 'Varje region som gränsar till en stad förlorar 1 resurs.',
-    imageAsset: 'assets/images/cards/event_plague.png',
+    imageAsset: 'assets/images/cards/event_plague.webp',
   );
 
   /// Samtliga korttyper som är nya för det här setet (dvs. exklusive de

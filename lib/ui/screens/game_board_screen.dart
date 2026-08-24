@@ -824,6 +824,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                       child: PrincipalityGrid(
                         board: state.you.principality,
                         interactive: true,
+                        allowReplaceExpansion: state.activeExpansions.isNotEmpty,
                         draggingCard: state.draggingCard,
                         onDropExpansion: (column, row, slotIndex, card) =>
                             _handleResult(

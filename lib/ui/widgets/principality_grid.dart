@@ -82,6 +82,15 @@ class PrincipalityGrid extends StatelessWidget {
   final RegionAdjustCallback? onAdjustRegion;
   final BuildConfirmRequest? onRequestBuildConfirm;
 
+  /// Om en redan bebyggd byggplats går att släppa ett nytt kort på för
+  /// att byta ut det gamla (se [_buildingSite]) – den mekaniken finns
+  /// bara med minst ett tema aktivt (regelhäftet har ingen sådan regel
+  /// för grundspelet), se [GameState.activeExpansions]/
+  /// [GameNotifier.dropExpansion]. `false` som standard: en upptagen
+  /// plats är då inte ett giltigt drop-mål alls, precis som innan
+  /// byt-ut-mekaniken fanns.
+  final bool allowReplaceExpansion;
+
   /// Knutpunkten (om någon) som just nu väntar på att få sina 2
   /// regionkort placerade (se [PendingRegionDropCallback]).
   final int? pendingRegionJunction;
@@ -118,6 +127,7 @@ class PrincipalityGrid extends StatelessWidget {
     this.onDropCityUpgrade,
     this.onAdjustRegion,
     this.onRequestBuildConfirm,
+    this.allowReplaceExpansion = false,
     this.pendingRegionJunction,
     this.onDropPendingRegion,
     this.relocationActive = false,
@@ -425,8 +435,10 @@ class PrincipalityGrid extends StatelessWidget {
       // du får då byta ut det gamla mot det nya (kostar det nya kortets
       // fulla pris, det gamla hamnar i slänghögen, se
       // GameNotifier.dropExpansion) – precis som en tom platshållare,
-      // bara med kortet ovanpå i stället för BuildingSiteView.
-      if (!interactive) return card;
+      // bara med kortet ovanpå i stället för BuildingSiteView. Bara när
+      // [allowReplaceExpansion] är sant (minst ett tema aktivt) – annars
+      // är en upptagen plats inte ett giltigt drop-mål alls.
+      if (!interactive || !allowReplaceExpansion) return card;
       return DragTarget<GameCard>(
         onWillAcceptWithDetails: (details) =>
             details.data.category == CardCategory.expansion,

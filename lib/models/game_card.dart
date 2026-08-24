@@ -86,7 +86,7 @@ class GameCard {
   /// `null` om kortet saknar krav.
   final String? requirement;
 
-  /// Sökväg till bild/ikon-asset, t.ex. 'assets/images/cards/hills.png'.
+  /// Sökväg till bild/ikon-asset, t.ex. 'assets/images/cards/hills.webp'.
   final String imageAsset;
 
   const GameCard({

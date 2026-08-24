@@ -27,7 +27,7 @@ class BasicSetCards {
     name: 'Skog',
     category: CardCategory.region,
     resource: ResourceType.lumber,
-    imageAsset: 'assets/images/cards/region_forest.png',
+    imageAsset: 'assets/images/cards/region_forest.webp',
   );
 
   static const pasture = GameCard(
@@ -35,7 +35,7 @@ class BasicSetCards {
     name: 'Betesmark',
     category: CardCategory.region,
     resource: ResourceType.wool,
-    imageAsset: 'assets/images/cards/region_pasture.png',
+    imageAsset: 'assets/images/cards/region_pasture.webp',
   );
 
   static const fields = GameCard(
@@ -43,7 +43,7 @@ class BasicSetCards {
     name: 'Åker',
     category: CardCategory.region,
     resource: ResourceType.grain,
-    imageAsset: 'assets/images/cards/region_fields.png',
+    imageAsset: 'assets/images/cards/region_fields.webp',
   );
 
   static const hills = GameCard(
@@ -51,7 +51,7 @@ class BasicSetCards {
     name: 'Kulle',
     category: CardCategory.region,
     resource: ResourceType.brick,
-    imageAsset: 'assets/images/cards/region_hills.png',
+    imageAsset: 'assets/images/cards/region_hills.webp',
   );
 
   static const mountains = GameCard(
@@ -59,7 +59,7 @@ class BasicSetCards {
     name: 'Berg',
     category: CardCategory.region,
     resource: ResourceType.ore,
-    imageAsset: 'assets/images/cards/region_mountains.png',
+    imageAsset: 'assets/images/cards/region_mountains.webp',
   );
 
   static const goldField = GameCard(
@@ -67,7 +67,7 @@ class BasicSetCards {
     name: 'Guldfält',
     category: CardCategory.region,
     resource: ResourceType.gold,
-    imageAsset: 'assets/images/cards/region_gold_field.png',
+    imageAsset: 'assets/images/cards/region_gold_field.webp',
   );
 
   static const settlement = GameCard(
@@ -81,7 +81,7 @@ class BasicSetCards {
       ResourceType.wool: 1,
       ResourceType.lumber: 1
     },
-    imageAsset: 'assets/images/cards/settlement.png',
+    imageAsset: 'assets/images/cards/settlement.webp',
   );
 
   static const city = GameCard(
@@ -90,7 +90,7 @@ class BasicSetCards {
     category: CardCategory.city,
     victoryPoints: 2,
     buildingCost: {ResourceType.ore: 3, ResourceType.grain: 2},
-    imageAsset: 'assets/images/cards/city.png',
+    imageAsset: 'assets/images/cards/city.webp',
   );
 
   static const road = GameCard(
@@ -98,7 +98,7 @@ class BasicSetCards {
     name: 'Väg',
     category: CardCategory.road,
     buildingCost: {ResourceType.brick: 2, ResourceType.lumber: 1},
-    imageAsset: 'assets/images/cards/road.png',
+    imageAsset: 'assets/images/cards/road.webp',
   );
 
   // ---------------------------------------------------------------------
@@ -113,7 +113,7 @@ class BasicSetCards {
     effectText:
         'Spela detta kort innan du slår tärningen. Välj resultatet på '
         'produktionstärningens slag.',
-    imageAsset: 'assets/images/cards/actions/action_fortune_teller_cards.png',
+    imageAsset: 'assets/images/cards/actions/action_fortune_teller_cards.webp',
   );
 
   static const relocation = GameCard(
@@ -124,7 +124,7 @@ class BasicSetCards {
         'Du får byta plats på 2 av dina egna regioner eller 2 av dina egna '
         'byggkort. Lagrade resurser på regioner får inte ändras, och de '
         'vanliga placeringsreglerna måste följas.',
-    imageAsset: 'assets/images/cards/actions/action_packing_tent.png',
+    imageAsset: 'assets/images/cards/actions/action_packing_tent.webp',
   );
 
   static const scout = GameCard(
@@ -134,7 +134,7 @@ class BasicSetCards {
     effectText:
         'Spela detta kort när du bygger en by. Ta 2 valfria kort från '
         'regionkortsstapeln. Blanda sedan om regionkortsstapeln.',
-    imageAsset: 'assets/images/cards/actions/action_telescope_scout.png',
+    imageAsset: 'assets/images/cards/actions/action_telescope_scout.webp',
   );
 
   static const merchantCaravan = GameCard(
@@ -143,7 +143,7 @@ class BasicSetCards {
     category: CardCategory.action,
     effectText:
         'Släng exakt 2 av dina resurser och ta 2 valfria resurser i utbyte.',
-    imageAsset: 'assets/images/cards/actions/action_horse_wagons.png',
+    imageAsset: 'assets/images/cards/actions/action_horse_wagons.webp',
   );
 
   static const goldsmith = GameCard(
@@ -152,7 +152,7 @@ class BasicSetCards {
     category: CardCategory.action,
     effectText:
         'Släng 3 guld och ta 2 valfria resurser i utbyte.',
-    imageAsset: 'assets/images/cards/actions/action_blacksmith_forge.png',
+    imageAsset: 'assets/images/cards/actions/action_blacksmith_forge.webp',
   );
 
   // ---------------------------------------------------------------------
@@ -174,7 +174,7 @@ class BasicSetCards {
     effectText:
         'Här handlar det inte bara om framsteg – det bjuds även på rödvin '
         'och gott om mörk öl.',
-    imageAsset: 'assets/images/cards/dioramas/diorama_church_building.png',
+    imageAsset: 'assets/images/cards/dioramas/diorama_church_building.webp',
   );
 
   static const marketplace = GameCard(
@@ -189,7 +189,7 @@ class BasicSetCards {
         'Om ett produktionstal slås som förekommer oftare på motståndarens '
         'regioner än på dina egna, får du 1 resurs. Välj en resurs som '
         'motståndaren normalt skulle fått.',
-    imageAsset: 'assets/images/cards/dioramas/diorama_busy_market.png',
+    imageAsset: 'assets/images/cards/dioramas/diorama_busy_market.webp',
   );
 
   static const parishHall = GameCard(
@@ -201,7 +201,7 @@ class BasicSetCards {
     buildingCost: {ResourceType.brick: 1, ResourceType.grain: 1},
     effectText:
         'Du betalar bara 1 resurs för att välja ett kort från en draghög.',
-    imageAsset: 'assets/images/cards/dioramas/diorama_village_market_2.png',
+    imageAsset: 'assets/images/cards/dioramas/diorama_village_market_2.webp',
   );
 
   static const storehouse = GameCard(
@@ -214,7 +214,7 @@ class BasicSetCards {
     effectText:
         'Räkna inte resurserna på de 2 grannregionerna när händelsen '
         'Brigadanfall slås.',
-    imageAsset: 'assets/images/cards/buildings/storehouse.png',
+    imageAsset: 'assets/images/cards/buildings/storehouse.webp',
   );
 
   static const tollBridge = GameCard(
@@ -225,7 +225,7 @@ class BasicSetCards {
     buildingCost: {ResourceType.lumber: 1, ResourceType.brick: 1},
     commercePoints: 1,
     effectText: 'Riklig skörd: Du får 2 guld.',
-    imageAsset: 'assets/images/cards/buildings/toll_bridge.png',
+    imageAsset: 'assets/images/cards/buildings/toll_bridge.webp',
   );
 
   static const brickFactory = GameCard(
@@ -238,7 +238,7 @@ class BasicSetCards {
     affectsBothNeighboringRegions: true,
     doublesNeighborProduction: true,
     effectText: 'Dubblar tegelproduktionen på de angränsande kullarna.',
-    imageAsset: 'assets/images/cards/buildings/forge_1.png',
+    imageAsset: 'assets/images/cards/buildings/forge_1.webp',
   );
 
   static const grainMill = GameCard(
@@ -251,7 +251,7 @@ class BasicSetCards {
     affectsBothNeighboringRegions: true,
     doublesNeighborProduction: true,
     effectText: 'Dubblar sädesproduktionen på de angränsande åkrarna.',
-    imageAsset: 'assets/images/cards/buildings/water_mill_1.png',
+    imageAsset: 'assets/images/cards/buildings/water_mill_1.webp',
   );
 
   static const ironFoundry = GameCard(
@@ -264,7 +264,7 @@ class BasicSetCards {
     affectsBothNeighboringRegions: true,
     doublesNeighborProduction: true,
     effectText: 'Dubblar malmproduktionen på de angränsande bergen.',
-    imageAsset: 'assets/images/cards/buildings/forge_2_active.png',
+    imageAsset: 'assets/images/cards/buildings/forge_2_active.webp',
   );
 
   static const lumberCamp = GameCard(
@@ -277,7 +277,7 @@ class BasicSetCards {
     affectsBothNeighboringRegions: true,
     doublesNeighborProduction: true,
     effectText: 'Dubblar timmerproduktionen på de angränsande skogarna.',
-    imageAsset: 'assets/images/cards/buildings/lumber_camp.png',
+    imageAsset: 'assets/images/cards/buildings/lumber_camp.webp',
   );
 
   static const weaversShop = GameCard(
@@ -290,7 +290,7 @@ class BasicSetCards {
     affectsBothNeighboringRegions: true,
     doublesNeighborProduction: true,
     effectText: 'Dubblar ullproduktionen på de angränsande betesmarkerna.',
-    imageAsset: 'assets/images/cards/buildings/storage_shed_2.png',
+    imageAsset: 'assets/images/cards/buildings/storage_shed_2.webp',
   );
 
   // ---------------------------------------------------------------------
@@ -308,7 +308,7 @@ class BasicSetCards {
     effectText:
         'Du får byta 2 resurser från vänster eller höger grannregion mot '
         '1 valfri annan resurs.',
-    imageAsset: 'assets/images/cards/heroes/trade_ship_dock_1.png',
+    imageAsset: 'assets/images/cards/heroes/trade_ship_dock_1.webp',
   );
 
   static GameCard _tradeShip(String resourceName, ResourceType resource) =>
@@ -323,7 +323,7 @@ class BasicSetCards {
         effectText:
             'Under din tur får du byta 2 ${_swedishResourceName(resource).toLowerCase()} '
             'mot 1 valfri annan resurs, så ofta du vill.',
-        imageAsset: 'assets/images/cards/heroes/trade_ship_dock_2.png',
+        imageAsset: 'assets/images/cards/heroes/trade_ship_dock_2.webp',
       );
 
   static final grainShip = _tradeShip('grain', ResourceType.grain);
@@ -347,7 +347,7 @@ class BasicSetCards {
     skillPoints: 2,
     effectText:
         'Slår du mig på ena kinden hinner du aldrig vända fram den andra.',
-    imageAsset: 'assets/images/cards/heroes/hero_plain_man_1.png',
+    imageAsset: 'assets/images/cards/heroes/hero_plain_man_1.webp',
   );
 
   static const harald = GameCard(
@@ -361,7 +361,7 @@ class BasicSetCards {
     effectText:
         'Jag slår ner dig snabbare än du hinner rista ordet "strategi" i '
         'den där stenen.',
-    imageAsset: 'assets/images/cards/heroes/hero_plain_man_2.png',
+    imageAsset: 'assets/images/cards/heroes/hero_plain_man_2.webp',
   );
 
   static const inga = GameCard(
@@ -398,7 +398,7 @@ class BasicSetCards {
         'När det gäller guld och kvinnor tar vänskapen slut. Det gör den '
         'även när det gäller makt. Sanningen är att vänskap sällan varar '
         'särskilt länge.',
-    imageAsset: 'assets/images/cards/heroes/hero_man_with_lamb.png',
+    imageAsset: 'assets/images/cards/heroes/hero_man_with_lamb.webp',
   );
 
   static const candamir = GameCard(
@@ -434,7 +434,7 @@ class BasicSetCards {
     effectText:
         'Att göra vem som helst till hjälte förringar vad det egentligen '
         'innebär att vara en.',
-    imageAsset: 'assets/images/cards/heroes/hero_pair_woman_man.png',
+    imageAsset: 'assets/images/cards/heroes/hero_pair_woman_man.webp',
   );
 
   // ---------------------------------------------------------------------

@@ -78,9 +78,13 @@ void main() {
     });
 
     test(
-        'discardActionCard tar bort kortet från handen utan att röra resurser, och lägger det i slänghögen',
+        'discardActionCard tar bort kortet från handen utan att röra resurser, och lägger det i slänghögen (med ett tema aktivt)',
         () {
       final notifier = container.read(gameProvider.notifier);
+      // Slänghögen är bara synlig/aktiv med minst ett tema aktivt (se
+      // GameNotifier._discardToPile-doc) – utan tema försvinner kortet
+      // i stället spårlöst, precis som innan mekaniken fanns.
+      notifier.state = notifier.state.copyWith(activeExpansions: {ExpansionSet.eraOfGold});
       final before = container.read(gameProvider);
       final card =
           before.you.hand.firstWhere((c) => c.id == BasicSetCards.merchantCaravan.id);
@@ -94,6 +98,22 @@ void main() {
       expect(after.you.resourceCount(ResourceType.lumber), lumberBefore);
       expect(after.discardPile, hasLength(1));
       expect(after.discardPile.last.id, card.id);
+    });
+
+    test(
+        'utan tema aktivt: kortet försvinner spårlöst, ingen slänghög',
+        () {
+      final notifier = container.read(gameProvider.notifier);
+      final before = container.read(gameProvider);
+      final card =
+          before.you.hand.firstWhere((c) => c.id == BasicSetCards.merchantCaravan.id);
+
+      final error = notifier.discardActionCard(card);
+
+      expect(error, isNull);
+      final after = container.read(gameProvider);
+      expect(after.you.hand.contains(card), isFalse);
+      expect(after.discardPile, isEmpty);
     });
 
     test('no-op om kortet inte finns på handen', () {

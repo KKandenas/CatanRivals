@@ -22,7 +22,11 @@ void main() {
     final guest = ProviderContainer(
         overrides: [gameSyncServiceProvider.overrideWithValue(fake)]);
 
-    final roomCode = await host.read(gameProvider.notifier).hostRoom('Astrid');
+    // Slänghögen/byt-ut-mekaniken är bara aktiv med minst ett tema (se
+    // GameNotifier._discardToPile/_checkReplaceAllowed-doc).
+    final roomCode = await host
+        .read(gameProvider.notifier)
+        .hostRoom('Astrid', expansions: {ExpansionSet.eraOfGold});
     await pump();
     await guest.read(gameProvider.notifier).joinRoom(roomCode, 'Björn');
     await pump();

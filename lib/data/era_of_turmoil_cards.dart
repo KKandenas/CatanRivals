@@ -27,7 +27,7 @@ class EraOfTurmoilCards {
     effectText:
         'Motståndaren måste lägga en av sina egna enheter med minst '
         '1 styrkepoäng underst i motsvarande draghög.',
-    imageAsset: 'assets/images/cards/action_archer.png',
+    imageAsset: 'assets/images/cards/action_archer.webp',
   );
 
   static const arsonist = GameCard(
@@ -40,7 +40,7 @@ class EraOfTurmoilCards {
     effectText:
         'Välj 1 av motståndarens byggnader intill en by/stad. '
         'Motståndaren måste lägga den underst i valfri draghög.',
-    imageAsset: 'assets/images/cards/action_arsonist.png',
+    imageAsset: 'assets/images/cards/action_arsonist.webp',
   );
 
   static const sebastianTheItinerantPreacher = GameCard(
@@ -52,7 +52,7 @@ class EraOfTurmoilCards {
     effectText:
         'Spelar du detta kort när händelserna Upplopp, Fejd eller '
         'Brödrafejd inträffar gäller inte dessa händelser dig.',
-    imageAsset: 'assets/images/cards/action_sebastian.png',
+    imageAsset: 'assets/images/cards/action_sebastian.webp',
   );
 
   static const traitor = GameCard(
@@ -66,7 +66,7 @@ class EraOfTurmoilCards {
         'Motståndaren måste visa dig alla korten på sin hand. Du får '
         'lägga 1 av dem till din egen hand (i turneringsspelet bara '
         'enhets- och handlingskort).',
-    imageAsset: 'assets/images/cards/action_traitor.png',
+    imageAsset: 'assets/images/cards/action_traitor.webp',
   );
 
   static const voyageOfPlunder = GameCard(
@@ -79,7 +79,7 @@ class EraOfTurmoilCards {
     effectText:
         'Har motståndaren fler segerpoäng måste hen ge dig 2 valfria '
         'resurser. Ligger hen inte i ledningen får du bara 1 resurs.',
-    imageAsset: 'assets/images/cards/action_voyage_of_plunder.png',
+    imageAsset: 'assets/images/cards/action_voyage_of_plunder.webp',
   );
 
   // ---------------------------------------------------------------------
@@ -96,7 +96,7 @@ class EraOfTurmoilCards {
     buildingCost: {ResourceType.brick: 1, ResourceType.ore: 1},
     strengthPoints: 1,
     effectText: 'Varje hjälte du bygger i ditt rike kostar 1 valfri resurs mindre.',
-    imageAsset: 'assets/images/cards/building_drill_ground.png',
+    imageAsset: 'assets/images/cards/building_drill_ground.webp',
   );
 
   static const lookoutTower = GameCard(
@@ -110,7 +110,7 @@ class EraOfTurmoilCards {
     effectText:
         'När motståndaren spelar Bågskytt, Pyroman eller Förrädare, slå '
         'tärningen. Slår du 1 eller 2 har kortet ingen effekt.',
-    imageAsset: 'assets/images/cards/building_lookout_tower.png',
+    imageAsset: 'assets/images/cards/building_lookout_tower.webp',
   );
 
   // ---------------------------------------------------------------------
@@ -126,7 +126,7 @@ class EraOfTurmoilCards {
     buildingCost: {ResourceType.wool: 2, ResourceType.grain: 1, ResourceType.ore: 1},
     strengthPoints: 5,
     effectText: 'Vilken vacker ö! Den tar jag.',
-    imageAsset: 'assets/images/cards/hero_carl_forkbeard.png',
+    imageAsset: 'assets/images/cards/hero_carl_forkbeard.webp',
   );
 
   static const heinrichTheSentinel = GameCard(
@@ -142,7 +142,7 @@ class EraOfTurmoilCards {
         'särskild effekt. Har du även ett Vakttorn i ditt rike är du '
         'skyddad när 1, 2, 3, 4 eller 5 slås. Kombineras Heinrich med '
         'Vakttornet slås tärningen ändå bara en gång.',
-    imageAsset: 'assets/images/cards/hero_heinrich_the_sentinel.png',
+    imageAsset: 'assets/images/cards/hero_heinrich_the_sentinel.webp',
   );
 
   static const irmgardKeeperOfTheLight = GameCard(
@@ -156,7 +156,7 @@ class EraOfTurmoilCards {
     effectText:
         'Förlorar du ett kort ur ditt rike på grund av en händelse '
         'eller ett handlingskort får du 1 valfri resurs.',
-    imageAsset: 'assets/images/cards/hero_irmgard.png',
+    imageAsset: 'assets/images/cards/hero_irmgard.webp',
   );
 
   // ---------------------------------------------------------------------
@@ -171,7 +171,7 @@ class EraOfTurmoilCards {
     buildingCost: {ResourceType.ore: 2, ResourceType.brick: 1, ResourceType.grain: 1},
     victoryPoints: 1,
     effectText: 'Slås 1, 2 eller 3 på produktionstärningen gäller inte händelsen Upplopp dig.',
-    imageAsset: 'assets/images/cards/city_expansion_chapel_low.png',
+    imageAsset: 'assets/images/cards/city_expansion_chapel_low.webp',
   );
 
   static const chapelHighRoll = GameCard(
@@ -182,7 +182,7 @@ class EraOfTurmoilCards {
     buildingCost: {ResourceType.ore: 2, ResourceType.brick: 1, ResourceType.grain: 1},
     victoryPoints: 1,
     effectText: 'Slås 4, 5 eller 6 på produktionstärningen gäller inte händelsen Upplopp dig.',
-    imageAsset: 'assets/images/cards/city_expansion_chapel_high.png',
+    imageAsset: 'assets/images/cards/city_expansion_chapel_high.webp',
   );
 
   static const fairgrounds = GameCard(
@@ -195,7 +195,7 @@ class EraOfTurmoilCards {
     effectText:
         'Har du fler kunskapspoäng än motståndaren får du omedelbart '
         '2 valfria resurser efter att ha byggt Marknadsfältet.',
-    imageAsset: 'assets/images/cards/city_expansion_fairgrounds.png',
+    imageAsset: 'assets/images/cards/city_expansion_fairgrounds.webp',
   );
 
   static const fireBrigade = GameCard(
@@ -210,7 +210,7 @@ class EraOfTurmoilCards {
         'stadsutbyggnader) i den stad där Brandkåren är placerad, '
         'inklusive Brandkåren själv. Den stadens byggnader är skyddade '
         'mot Pyromanen.',
-    imageAsset: 'assets/images/cards/city_expansion_fire_brigade.png',
+    imageAsset: 'assets/images/cards/city_expansion_fire_brigade.webp',
   );
 
   static const hedgeTavern = GameCard(
@@ -224,7 +224,7 @@ class EraOfTurmoilCards {
     effectText:
         'Grannarna viskar om att fler har setts gå in än komma ut. '
         'Krävs för många attack-handlingskort.',
-    imageAsset: 'assets/images/cards/city_expansion_hedge_tavern.png',
+    imageAsset: 'assets/images/cards/city_expansion_hedge_tavern.webp',
   );
 
   static const titheBarn = GameCard(
@@ -238,7 +238,7 @@ class EraOfTurmoilCards {
         'När du bygger Tiondeladan väljer du en resurstyp – antingen '
         'ull eller säd. För varje egen hjälte får du 1 resurs av den '
         'valda typen.',
-    imageAsset: 'assets/images/cards/city_expansion_tithe_barn.png',
+    imageAsset: 'assets/images/cards/city_expansion_tithe_barn.webp',
   );
 
   static const largeFestivalHall = GameCard(
@@ -249,7 +249,7 @@ class EraOfTurmoilCards {
     buildingCost: {ResourceType.grain: 3, ResourceType.ore: 3, ResourceType.brick: 2},
     victoryPoints: 2,
     effectText: 'Detta kort är värt 2 segerpoäng.',
-    imageAsset: 'assets/images/cards/city_expansion_large_festival_hall.png',
+    imageAsset: 'assets/images/cards/city_expansion_large_festival_hall.webp',
   );
 
   // ---------------------------------------------------------------------
@@ -267,7 +267,7 @@ class EraOfTurmoilCards {
         'enheter betalar hen 2 guld. Betalar spelaren inte måste hen '
         'ta bort en av dessa enheter och lägga den underst i '
         'motsvarande draghög.',
-    imageAsset: 'assets/images/cards/event_riots.png',
+    imageAsset: 'assets/images/cards/event_riots.webp',
   );
 
   /// Samtliga korttyper som är nya för det här setet (dvs. exklusive de

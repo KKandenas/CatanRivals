@@ -27,7 +27,7 @@ class EraOfGoldCards {
     effectText:
         'Du får ta lika många resurser av samma sort från motståndaren '
         'som en av dina regioner har plats för.',
-    imageAsset: 'assets/images/cards/action_brigands.png',
+    imageAsset: 'assets/images/cards/action_brigands.webp',
   );
 
   static const gudrunTerrorOfTheSeas = GameCard(
@@ -37,7 +37,7 @@ class EraOfGoldCards {
     actionKind: ActionKind.attack,
     expansionSet: ExpansionSet.eraOfGold,
     effectText: 'För varje eget piratskepp måste motståndaren ge dig upp till 2 guld.',
-    imageAsset: 'assets/images/cards/action_gudrun.png',
+    imageAsset: 'assets/images/cards/action_gudrun.webp',
   );
 
   static const merchant = GameCard(
@@ -50,7 +50,7 @@ class EraOfGoldCards {
     effectText:
         'Ta upp till 2 valfria resurser från motståndaren och ge tillbaka '
         '1 valfri resurs.',
-    imageAsset: 'assets/images/cards/action_merchant.png',
+    imageAsset: 'assets/images/cards/action_merchant.webp',
   );
 
   static const reinerTheHerald = GameCard(
@@ -62,7 +62,7 @@ class EraOfGoldCards {
     effectText:
         'Spela detta kort innan du slår tärningen och bestäm att '
         'händelsen blir Fest. Du får 1 extra resurs för Festen.',
-    imageAsset: 'assets/images/cards/actions/action_elder_with_bird.png',
+    imageAsset: 'assets/images/cards/actions/action_elder_with_bird.webp',
   );
 
   static const tradeMaster = GameCard(
@@ -73,7 +73,7 @@ class EraOfGoldCards {
     expansionSet: ExpansionSet.eraOfGold,
     requirement: 'Köpmansgille',
     effectText: 'Du får omedelbart 2 valfria resurser från motståndaren.',
-    imageAsset: 'assets/images/cards/action_trade_master.png',
+    imageAsset: 'assets/images/cards/action_trade_master.webp',
   );
 
   // ---------------------------------------------------------------------
@@ -90,7 +90,7 @@ class EraOfGoldCards {
         'Guldgömman kan även användas för att lagra guld du fått. När '
         'händelsen Brigadanfall slås räknas inte guldet i gömman, och '
         'det kan inte stjälas.',
-    imageAsset: 'assets/images/cards/region_expansion_gold_cache.png',
+    imageAsset: 'assets/images/cards/region_expansion_gold_cache.webp',
   );
 
   // ---------------------------------------------------------------------
@@ -108,7 +108,7 @@ class EraOfGoldCards {
         'Motståndaren måste ta bort 1 valfritt handelsskepp från sitt '
         'rike och lägga det bland kasserade kort. Riklig skörd: Du får '
         '1 guld.',
-    imageAsset: 'assets/images/cards/dioramas/diorama_two_ships.png',
+    imageAsset: 'assets/images/cards/dioramas/diorama_two_ships.webp',
   );
 
   // ---------------------------------------------------------------------
@@ -127,7 +127,7 @@ class EraOfGoldCards {
     effectText:
         'Pengar köper ingen lycka. Men att ta dem från andra gör det. '
         'Krävs för vissa andra bygg- och handlingskort.',
-    imageAsset: 'assets/images/cards/city_expansion_merchant_guild.png',
+    imageAsset: 'assets/images/cards/city_expansion_merchant_guild.webp',
   );
 
   static const moneylender = GameCard(
@@ -142,7 +142,7 @@ class EraOfGoldCards {
         'Om du har handelsövertaget och händelsen Handel slås på '
         'händelsetärningen får du ta 2 valfria resurser från '
         'motståndaren.',
-    imageAsset: 'assets/images/cards/city_expansion_moneylender.png',
+    imageAsset: 'assets/images/cards/city_expansion_moneylender.webp',
   );
 
   static const harbor = GameCard(
@@ -155,7 +155,7 @@ class EraOfGoldCards {
     effectText:
         'Så länge du har minst 3 handelsskepp i ditt rike är Hamnen '
         'värd 1 segerpoäng.',
-    imageAsset: 'assets/images/cards/city_expansion_harbor.png',
+    imageAsset: 'assets/images/cards/city_expansion_harbor.webp',
   );
 
   static const tradingBase = GameCard(
@@ -167,7 +167,7 @@ class EraOfGoldCards {
     commercePoints: 1,
     victoryPoints: 1,
     effectText: 'Marknadsplatsen och Hamnen får ytterligare 1 handelspoäng.',
-    imageAsset: 'assets/images/cards/dioramas/diorama_small_shop.png',
+    imageAsset: 'assets/images/cards/dioramas/diorama_small_shop.webp',
   );
 
   static const mint = GameCard(
@@ -178,7 +178,7 @@ class EraOfGoldCards {
     buildingCost: {ResourceType.lumber: 2, ResourceType.ore: 2, ResourceType.brick: 1},
     victoryPoints: 1,
     effectText: 'En gång per egen tur får du använda Myntverket för att byta 1 guld mot 1 valfri annan resurs.',
-    imageAsset: 'assets/images/cards/city_expansion_mint.png',
+    imageAsset: 'assets/images/cards/city_expansion_mint.webp',
   );
 
   static const stapleHouse = GameCard(
@@ -190,7 +190,7 @@ class EraOfGoldCards {
     victoryPoints: 1,
     requirement: 'Köpmansgille',
     effectText: 'Bygger du Stapelhuset får du omedelbart 2 valfria resurser.',
-    imageAsset: 'assets/images/cards/city_expansion_staple_house.png',
+    imageAsset: 'assets/images/cards/city_expansion_staple_house.webp',
   );
 
   static const saltSilo = GameCard(
@@ -201,7 +201,7 @@ class EraOfGoldCards {
     buildingCost: {ResourceType.wool: 2, ResourceType.gold: 2, ResourceType.brick: 1},
     victoryPoints: 1,
     effectText: 'Vart och ett av dina handelsskepp är värt 1 handelspoäng till.',
-    imageAsset: 'assets/images/cards/city_expansion_salt_silo.png',
+    imageAsset: 'assets/images/cards/city_expansion_salt_silo.webp',
   );
 
   // ---------------------------------------------------------------------
@@ -214,7 +214,7 @@ class EraOfGoldCards {
     category: CardCategory.event,
     expansionSet: ExpansionSet.eraOfGold,
     effectText: 'Varje spelare får 1 guld för varje enhet med minst 1 styrkepoäng.',
-    imageAsset: 'assets/images/cards/event_gift_for_the_prince.png',
+    imageAsset: 'assets/images/cards/event_gift_for_the_prince.webp',
   );
 
   /// Samtliga korttyper som är nya för det här setet (dvs. exklusive de

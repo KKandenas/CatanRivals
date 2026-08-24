@@ -738,7 +738,14 @@ class GameNotifier extends Notifier<GameState> {
   /// ett kort längst ner i en draghög (Fejd/Brödrafejd/handjustering/
   /// kika-fasen) – de mekanikerna är oförändrade och rör aldrig
   /// slänghögen.
+  ///
+  /// Bara relevant med minst ett tema aktivt (se
+  /// [GameState.activeExpansions]) – grundspelet har ingen synlig
+  /// slänghög (regelhäftet nämner ingen sådan), så utan tema försvinner
+  /// kortet i stället spårlöst, precis som innan den här mekaniken
+  /// fanns.
   void _discardToPile(GameCard card) {
+    if (state.activeExpansions.isEmpty) return;
     state = state.copyWith(discardPile: [...state.discardPile, card]);
     _syncDiscardPile();
   }
@@ -1493,6 +1500,20 @@ class GameNotifier extends Notifier<GameState> {
     return null;
   }
 
+  /// Kollar om [column]/[row]/[slotIndex] redan har ett bygg-/enhets-/
+  /// skeppskort MEN inget tema är aktivt – "byt ut byggnad" finns bara
+  /// med minst ett tema aktivt (regelhäftet har ingen sådan regel för
+  /// grundspelet, se [_discardToPile]-doc), så utan tema ska platsen
+  /// avvisas precis som innan mekaniken fanns, i stället för att tyst
+  /// byta ut det befintliga kortet. `null` om det går bra att bygga.
+  String? _checkReplaceAllowed(int column, BuildingRow row, int slotIndex) {
+    if (state.activeExpansions.isNotEmpty) return null;
+    if (state.you.principality.expansionAt(column, row, slotIndex) != null) {
+      return 'Den platsen är redan bebyggd.';
+    }
+    return null;
+  }
+
   /// Delad kärna för [dropExpansion]/[buyFaceUpExpansion]: placerar
   /// [card] på byggplatsen (byter ut ett eventuellt redan liggande
   /// kort mot slänghögen, se [_discardToPile] – eventuella poäng det
@@ -1527,6 +1548,8 @@ class GameNotifier extends Notifier<GameState> {
         state.you.principality.hasExpansionCard(card.baseId)) {
       return 'Du kan bara ha en ${card.name} i ditt rike.';
     }
+    final replaceError = _checkReplaceAllowed(column, row, slotIndex);
+    if (replaceError != null) return replaceError;
 
     state = state.copyWith(
         you: state.you.copyWith(hand: List.of(state.you.hand)..remove(card)));
@@ -1548,6 +1571,8 @@ class GameNotifier extends Notifier<GameState> {
         state.you.principality.hasExpansionCard(card.baseId)) {
       return 'Du kan bara ha en ${card.name} i ditt rike.';
     }
+    final replaceError = _checkReplaceAllowed(column, row, slotIndex);
+    if (replaceError != null) return replaceError;
 
     state = state.copyWith(
         faceUpExpansionCards: List.of(state.faceUpExpansionCards)

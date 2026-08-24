@@ -109,9 +109,32 @@ void main() {
     });
 
     test(
-        'dropExpansion på en redan bebyggd plats byter ut det gamla kortet mot det nya i stället för att avvisas',
+        'utan tema aktivt: dropExpansion på en redan bebyggd plats avvisas i stället för att byta ut',
         () {
       final notifier = container.read(gameProvider.notifier);
+      final before = container.read(gameProvider);
+      final storehouse = before.you.hand.firstWhere((c) => c.id == 'building-storehouse');
+      final siglind = before.you.hand.firstWhere((c) => c.id == 'hero-siglind');
+      expect(notifier.dropExpansion(0, BuildingRow.above, 0, storehouse), isNull);
+
+      final error = notifier.dropExpansion(0, BuildingRow.above, 0, siglind);
+
+      expect(error, isNotNull);
+      final after = container.read(gameProvider);
+      expect(after.you.principality.settlementAt(0)!.aboveSites[0]!.card.id,
+          storehouse.id,
+          reason: 'det gamla kortet ska ligga kvar');
+      expect(after.you.hand.contains(siglind), isTrue, reason: 'slängdes inte');
+      expect(after.discardPile, isEmpty);
+    });
+
+    test(
+        'med ett tema aktivt: dropExpansion på en redan bebyggd plats byter ut det gamla kortet mot det nya i stället för att avvisas',
+        () {
+      final notifier = container.read(gameProvider.notifier);
+      // "Byt ut byggnad" finns bara med minst ett tema aktivt (se
+      // GameNotifier._checkReplaceAllowed-doc).
+      notifier.state = notifier.state.copyWith(activeExpansions: {ExpansionSet.eraOfGold});
       final before = container.read(gameProvider);
       final storehouse = before.you.hand.firstWhere((c) => c.id == 'building-storehouse');
       final siglind = before.you.hand.firstWhere((c) => c.id == 'hero-siglind');
@@ -136,6 +159,7 @@ void main() {
         'byt-ut-mekaniken tar bort det gamla kortets poäng (räknas inte längre in i riket)',
         () {
       final notifier = container.read(gameProvider.notifier);
+      notifier.state = notifier.state.copyWith(activeExpansions: {ExpansionSet.eraOfGold});
       final before = container.read(gameProvider);
       // Ett byggkort med segerpoäng (skiljer sig från den fasta
       // mock-handen, som normalt inte har något på hand med VP) – samma
