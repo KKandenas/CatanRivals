@@ -34,6 +34,7 @@ import '../widgets/stack_choice_overlay.dart';
 import '../widgets/top_status_bar.dart';
 import '../widgets/total_score_board.dart';
 import '../widgets/trade_phase_card.dart';
+import '../widgets/turn_action_pill.dart';
 import 'lobby_screen.dart';
 import 'rules_screen.dart';
 
@@ -403,6 +404,29 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                         opponentHasTradeToken: opponentHasTradeToken,
                       ),
                     ),
+                  // "Avsluta action-fas"/handjusteringens läge/kikande-
+                  // etiketten – flyttad hit från mittremsan (se
+                  // TurnActionPill-doc) för att lämna mer plats åt
+                  // draghögarna där. Vänstra hörnet speglar
+                  // TotalScoreBoard i det högra.
+                  if (showTurnEmphasis)
+                    Positioned(
+                      top: 4,
+                      left: 10,
+                      child: TurnActionPill(
+                        isYourTurn: state.isMyTurn,
+                        diceRolled: state.diceRolled,
+                        isChoosingHand: false,
+                        handAdjustmentPhase: state.handAdjustmentPhase,
+                        tradePhase: state.tradePhase,
+                        handCount: state.you.hand.length,
+                        handLimit: state.handLimit,
+                        onEndTurn: () =>
+                            _handleResult(context, notifier.endActionPhase()),
+                        peekingStackIndex:
+                            state.isMyTurn ? null : state.peekingStackIndex,
+                      ),
+                    ),
                 ],
               ),
               // Kortbytesfasen (regelhäftet s. 9), sist i omgången efter
@@ -476,6 +500,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                                 rollable: diceRollable,
                                 onTap: rollDice,
                               ),
+                              // Slänghögen (se DiscardPileView-doc) –
+                              // under tärningarna i stället för i
+                              // mittremsan, så draghögarna där får mer
+                              // plats (särskilt med fler högar när ett
+                              // temaset är aktivt).
+                              if (state.discardPile.isNotEmpty) ...[
+                                const SizedBox(height: 6),
+                                DiscardPileView(discardPile: state.discardPile),
+                              ],
                             ],
                           ),
                         ),
@@ -691,13 +724,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 isMyTurnToChooseHand: state.isMyTurnToChooseHand,
                 onChooseStack: (index) =>
                     _handleResult(context, notifier.chooseStartingStack(index)),
-                isYourTurn: state.isMyTurn,
-                diceRolled: state.diceRolled,
-                onEndTurn: () =>
-                    _handleResult(context, notifier.endActionPhase()),
                 handAdjustmentPhase: state.handAdjustmentPhase,
-                handCount: state.you.hand.length,
-                handLimit: state.handLimit,
                 onDrawStack: (index) =>
                     _handleResult(context, notifier.drawHandCard(index)),
                 hasSelectedDiscardCard: state.handAdjustmentPhase ==
@@ -746,7 +773,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 peekingStackIndex:
                     state.isMyTurn ? null : state.peekingStackIndex,
               ),
-              DiscardPileView(discardPile: state.discardPile),
               if (state.pendingRegions.isNotEmpty)
                 PendingRegionsBar(
                   cards: state.pendingRegions,

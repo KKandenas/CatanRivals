@@ -24,7 +24,6 @@ void main() {
             'draw4': 9,
             'event': 9,
           },
-          diceRolled: true,
           canBuild: canBuild,
         ),
       ),

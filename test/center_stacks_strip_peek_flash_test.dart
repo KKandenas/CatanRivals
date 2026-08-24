@@ -2,20 +2,19 @@ import 'package:catan_rivals/ui/widgets/center_stacks_strip.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Testar den nya visuella feedbacken för att motståndaren ska se
-/// vilka handlingar man gör (regelhäftet ger ingen digital motsvarighet,
-/// se designdiskussionen i game_board_screen.dart): draghögarna
-/// blinkar till i olika färger beroende på om antalet kort i högen
-/// ökade (släng, rött) eller minskade (dra, grönt), och en gyllene
-/// etikett visas när motståndaren kikar i en hög (se
-/// [CenterStacksStrip.peekingStackIndex]) – bara VILKEN hög, aldrig
-/// vilka kort.
+/// Testar den visuella feedbacken för att motståndaren ska se vilka
+/// handlingar man gör (regelhäftet ger ingen digital motsvarighet, se
+/// designdiskussionen i game_board_screen.dart): draghögarna blinkar
+/// till i olika färger beroende på om antalet kort i högen ökade
+/// (släng, rött) eller minskade (dra, grönt). Den gyllene
+/// "Kikar i hög"-etiketten (styrd av samma [CenterStacksStrip.
+/// peekingStackIndex]) testas i stället i turn_action_pill_test.dart,
+/// sedan den flyttades dit från mittremsan (se TurnActionPill-doc).
 void main() {
   const baseCounts = {
     'roads': 5,
     'settlements': 3,
     'cities': 2,
-    'regions': 8,
     'draw1': 5,
     'draw2': 5,
     'draw3': 5,
@@ -26,14 +25,11 @@ void main() {
   Widget buildStrip({
     required Map<String, int> stackCounts,
     int? peekingStackIndex,
-    bool isYourTurn = false,
   }) {
     return MaterialApp(
       home: Scaffold(
         body: CenterStacksStrip(
           stackCounts: stackCounts,
-          diceRolled: true,
-          isYourTurn: isYourTurn,
           peekingStackIndex: peekingStackIndex,
         ),
       ),
@@ -79,28 +75,5 @@ void main() {
 
     expect(hasFlashBorderColor(tester, const Color(0xFF7CBF6A)), isTrue);
     expect(hasFlashBorderColor(tester, Colors.redAccent), isFalse);
-  });
-
-  testWidgets(
-      'peekingStackIndex visar en etikett med rätt högnummer (1-indexerat) och ingen etikett när null',
-      (tester) async {
-    await tester.pumpWidget(buildStrip(stackCounts: baseCounts));
-    await tester.pump();
-    expect(find.textContaining('Kikar i hög'), findsNothing);
-
-    await tester.pumpWidget(
-        buildStrip(stackCounts: baseCounts, peekingStackIndex: 2));
-    await tester.pump();
-
-    expect(find.text('Kikar i hög 3'), findsOneWidget);
-  });
-
-  testWidgets('peekingStackIndex syns inte när det är din egen tur (du kikar redan i overlay)',
-      (tester) async {
-    await tester.pumpWidget(buildStrip(
-        stackCounts: baseCounts, peekingStackIndex: 1, isYourTurn: true));
-    await tester.pump();
-
-    expect(find.textContaining('Kikar i hög'), findsNothing);
   });
 }

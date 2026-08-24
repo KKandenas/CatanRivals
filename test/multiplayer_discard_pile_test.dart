@@ -48,7 +48,7 @@ void main() {
     // skillnad från game_notifier_test.dart:s fasta mock-hand), så
     // kortet vi vill spela läggs till direkt i stället för att antas
     // finnas där redan.
-    final card = BasicSetCards.merchantCaravan;
+    const card = BasicSetCards.merchantCaravan;
     host.read(gameProvider).you.hand.add(card);
 
     expect(hostNotifier.discardActionCard(card), isNull);
@@ -69,8 +69,8 @@ void main() {
 
     final hostNotifier = host.read(gameProvider.notifier);
     expect(hostNotifier.rollProductionDie(), isNull);
-    final storehouse = BasicSetCards.storehouse;
-    final siglind = BasicSetCards.siglind;
+    const storehouse = BasicSetCards.storehouse;
+    const siglind = BasicSetCards.siglind;
     host.read(gameProvider).you.hand.addAll([storehouse, siglind]);
 
     expect(

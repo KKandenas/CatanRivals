@@ -7,12 +7,18 @@ import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
 import 'card_detail_dialog.dart';
 
-/// Mittremsan mellan de två rikena: dragstaplarna (vägar/byar/städer/
-/// regioner), händelsekortsstapeln, och "Avsluta action-fas"-knappen –
-/// precis som i det fysiska spelets uppställning, där dessa ligger
-/// mellan de två furstendömena (se regelhäftet s. 5). Vems tur det är
-/// visas bara i den breda bannern högst upp (se game_board_screen.dart)
-/// – ingen egen turindikator här. Produktionstärningen sitter inte här
+/// Mittremsan mellan de två rikena: dragstaplarna (vägar/byar/städer)
+/// och händelsekortsstapeln – precis som i det fysiska spelets
+/// uppställning, där dessa ligger mellan de två furstendömena (se
+/// regelhäftet s. 5). Vems tur det är, och åtgärdsknappen "Avsluta
+/// action-fas"/handjusteringens läge/kikande-etiketten, visas i
+/// stället uppe vid "DIN TUR"-bannern (se [TurnActionPill] i
+/// game_board_screen.dart) – flyttades dit för att lämna mer plats åt
+/// själva korten här, särskilt med fler draghögar när ett temaset är
+/// aktivt (se [ExpansionSet]). Regionstapeln visas inte alls längre –
+/// den är inte tryckbar/dragbar (regioner delas ut automatiskt när en
+/// ny by byggs) så antalet var bara informativt, och tog upp plats som
+/// behövs bättre av draghögarna. Produktionstärningen sitter inte här
 /// längre – den står till höger om motståndarens rike (se
 /// [DiceRollButton] i game_board_screen.dart) för att lämna så mycket
 /// höjd som möjligt åt själva korten.
@@ -20,18 +26,17 @@ import 'card_detail_dialog.dart';
 /// Vägar/byar/städer går att långtrycka-och-dra ut på det egna riket
 /// för att bygga direkt från stapeln, precis som i det fysiska spelet
 /// (regelhäftet s. 8: "you can build any available road or settlement
-/// center card directly by paying the building costs"). Region- och
-/// händelsestaplarna är inte dragbara – regioner delas ut automatiskt
-/// när en ny by byggs, och händelsekort dras vid tärningsslag. De fyra
-/// vanliga draghögarna (`draw1`–`draw4`) används både för starthands-
-/// valet och för handjusteringen i slutet av varje action-fas (se
-/// [HandAdjustmentPhase]): dra-läget gör dem tryckbara för att dra ett
-/// kort, släng-läget för att slänga det valda handkortet till botten
-/// av högen. `stackCounts` är mock-data tills en riktig
+/// center card directly by paying the building costs"). Händelse-
+/// stapeln är inte dragbar – händelsekort dras vid tärningsslag. De
+/// fyra vanliga draghögarna (`draw1`–`draw4`) används både för
+/// starthands-valet och för handjusteringen i slutet av varje
+/// action-fas (se [HandAdjustmentPhase]): dra-läget gör dem tryckbara
+/// för att dra ett kort, släng-läget för att slänga det valda
+/// handkortet till botten av högen. `stackCounts` är mock-data tills en
+/// riktig
 /// dragstapel-modell finns.
 class CenterStacksStrip extends StatelessWidget {
   final Map<String, int> stackCounts;
-  final bool isYourTurn;
   final void Function(GameCard card)? onDragStarted;
   final VoidCallback? onDragEnd;
 
@@ -49,11 +54,6 @@ class CenterStacksStrip extends StatelessWidget {
   final bool isMyTurnToChooseHand;
   final void Function(int stackIndex)? onChooseStack;
 
-  /// Om tärningen redan är slagen den här omgången – styr om
-  /// "Avsluta action-fas" visas.
-  final bool diceRolled;
-  final VoidCallback? onEndTurn;
-
   /// Handjustering i slutet av action-fasen (regelhäftet s. 9) – se
   /// [HandAdjustmentPhase]. Under [HandAdjustmentPhase.drawing] går var
   /// och en av de fyra draghögarna att trycka på för att dra ett kort
@@ -61,8 +61,6 @@ class CenterStacksStrip extends StatelessWidget {
   /// trycka på för att slänga det just valda handkortet dit
   /// ([onDiscardToStack], bara aktiv när [hasSelectedDiscardCard]).
   final HandAdjustmentPhase handAdjustmentPhase;
-  final int handCount;
-  final int handLimit;
   final void Function(int stackIndex)? onDrawStack;
   final void Function(int stackIndex)? onDiscardToStack;
   final bool hasSelectedDiscardCard;
@@ -98,18 +96,13 @@ class CenterStacksStrip extends StatelessWidget {
   const CenterStacksStrip({
     super.key,
     required this.stackCounts,
-    this.isYourTurn = true,
     this.onDragStarted,
     this.onDragEnd,
     this.canBuild = true,
     this.isChoosingHand = false,
     this.isMyTurnToChooseHand = false,
     this.onChooseStack,
-    this.diceRolled = false,
-    this.onEndTurn,
     this.handAdjustmentPhase = HandAdjustmentPhase.none,
-    this.handCount = 0,
-    this.handLimit = 3,
     this.onDrawStack,
     this.onDiscardToStack,
     this.hasSelectedDiscardCard = false,
@@ -132,70 +125,43 @@ class CenterStacksStrip extends StatelessWidget {
       color: CatanColors.woodFrameDark.withValues(alpha: 0.75),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _StackPile(
-                  asset: CatanAssets.road,
-                  count: stackCounts['roads'] ?? 0,
-                  card: BasicSetCards.road,
-                  onDragStarted: onDragStarted,
-                  onDragEnd: onDragEnd,
-                  canBuild: canBuild,
-                  width: 48,
-                ),
-                _StackPile(
-                  asset: CatanAssets.backSettlements,
-                  count: stackCounts['settlements'] ?? 0,
-                  card: BasicSetCards.settlement,
-                  onDragStarted: onDragStarted,
-                  onDragEnd: onDragEnd,
-                  canBuild: canBuild,
-                  width: 48,
-                ),
-                _StackPile(
-                  asset: CatanAssets.backCities,
-                  count: stackCounts['cities'] ?? 0,
-                  card: BasicSetCards.city,
-                  onDragStarted: onDragStarted,
-                  onDragEnd: onDragEnd,
-                  canBuild: canBuild,
-                  width: 48,
-                ),
-                _StackPile(
-                    asset: CatanAssets.backRegions,
-                    count: stackCounts['regions'] ?? 0,
-                    width: 48),
-                for (var i = 0; i < 4; i++) _drawStackPile(i),
-                _StackPile(
-                  asset: CatanAssets.backEvent,
-                  count: stackCounts['event'] ?? 0,
-                  width: 48,
-                  highlighted: canDrawEventCard,
-                  onTap: canDrawEventCard ? onDrawEventCard : null,
-                ),
-              ],
-            ),
+          _StackPile(
+            asset: CatanAssets.road,
+            count: stackCounts['roads'] ?? 0,
+            card: BasicSetCards.road,
+            onDragStarted: onDragStarted,
+            onDragEnd: onDragEnd,
+            canBuild: canBuild,
+            width: 48,
           ),
-          if (isYourTurn && diceRolled && !isChoosingHand) ...[
-            const SizedBox(width: 8),
-            if (handAdjustmentPhase == HandAdjustmentPhase.none &&
-                tradePhase == TradePhase.none)
-              _EndTurnButton(onTap: onEndTurn)
-            else if (handAdjustmentPhase != HandAdjustmentPhase.none)
-              _HandAdjustmentLabel(
-                  phase: handAdjustmentPhase,
-                  count: handCount,
-                  limit: handLimit),
-            // Under kortbytesfasen visas instruktionerna i stället i
-            // TradePhaseCard (se game_board_screen.dart) – ingen egen
-            // etikett här, bara högarna som tänds till.
-          ] else if (!isYourTurn && peekingStackIndex != null) ...[
-            const SizedBox(width: 8),
-            _PeekingLabel(stackIndex: peekingStackIndex!),
-          ],
+          _StackPile(
+            asset: CatanAssets.backSettlements,
+            count: stackCounts['settlements'] ?? 0,
+            card: BasicSetCards.settlement,
+            onDragStarted: onDragStarted,
+            onDragEnd: onDragEnd,
+            canBuild: canBuild,
+            width: 48,
+          ),
+          _StackPile(
+            asset: CatanAssets.backCities,
+            count: stackCounts['cities'] ?? 0,
+            card: BasicSetCards.city,
+            onDragStarted: onDragStarted,
+            onDragEnd: onDragEnd,
+            canBuild: canBuild,
+            width: 48,
+          ),
+          for (var i = 0; i < 4; i++) _drawStackPile(i),
+          _StackPile(
+            asset: CatanAssets.backEvent,
+            count: stackCounts['event'] ?? 0,
+            width: 48,
+            highlighted: canDrawEventCard,
+            onTap: canDrawEventCard ? onDrawEventCard : null,
+          ),
         ],
       ),
     );
@@ -521,88 +487,6 @@ class _CountBadge extends StatelessWidget {
         '$count',
         style: const TextStyle(
             color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-}
-
-class _EndTurnButton extends StatelessWidget {
-  final VoidCallback? onTap;
-
-  const _EndTurnButton({this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        decoration: BoxDecoration(
-          color: const Color(0xFF7CBF6A),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: const Text(
-          'Avsluta action-fas',
-          style: TextStyle(
-              color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
-        ),
-      ),
-    );
-  }
-}
-
-/// Visas för motståndaren när den aktiva spelaren kikar i en draghög
-/// (regelhäftet s. 9) – bara VILKEN hög, aldrig vilka kort som ligger
-/// där (se [CenterStacksStrip.peekingStackIndex]). Guldfärgad, samma
-/// accent som den gyllene glöden på själva högen (se [_StackPile]).
-class _PeekingLabel extends StatelessWidget {
-  final int stackIndex;
-
-  const _PeekingLabel({required this.stackIndex});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: const Color(0xFFC9A227),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        'Kikar i hög ${stackIndex + 1}',
-        style: const TextStyle(
-            color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
-      ),
-    );
-  }
-}
-
-/// Visas i stället för "Avsluta action-fas" medan handjusteringen
-/// pågår – talar om vad spelaren ska göra och hur långt kvar det är
-/// (t.ex. "Dra kort: 2/4" eller "Släng kort: 5/4").
-class _HandAdjustmentLabel extends StatelessWidget {
-  final HandAdjustmentPhase phase;
-  final int count;
-  final int limit;
-
-  const _HandAdjustmentLabel(
-      {required this.phase, required this.count, required this.limit});
-
-  @override
-  Widget build(BuildContext context) {
-    final label = phase == HandAdjustmentPhase.drawing
-        ? 'Dra kort: $count/$limit'
-        : 'Släng kort: $count/$limit';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: const Color(0xFF7CBF6A),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-            color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }

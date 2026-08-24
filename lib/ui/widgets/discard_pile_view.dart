@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../models/models.dart';
-import '../theme/catan_colors.dart';
 import 'card_detail_dialog.dart';
 import 'expansion_card_view.dart';
 
@@ -12,6 +11,12 @@ import 'expansion_card_view.dart';
 /// princip för en slänghög – ett tryck förstorar det precis som andra
 /// kort ([showCardDetail]). Visas inte alls när högen är tom, i stället
 /// för en tom platshållare – det finns inget att titta på än.
+///
+/// Sitter under tärningarna (se game_board_screen.dart) i en smal
+/// 76-punkters kolumn, precis som [EventDieIcon] där ovanför – därför
+/// bara själva korttumnageln utan någon "Slänghög:"-etikett bredvid
+/// (skulle inte få plats), samma ikon-utan-text-stil som resten av den
+/// kolumnen redan använder.
 class DiscardPileView extends StatelessWidget {
   final List<GameCard> discardPile;
 
@@ -22,27 +27,15 @@ class DiscardPileView extends StatelessWidget {
     if (discardPile.isEmpty) return const SizedBox.shrink();
     final topCard = discardPile.last;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: Row(
-        children: [
-          const Text('Slänghög:',
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: CatanColors.ink)),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 48,
-            height: 48,
-            child: ExpansionCardView(
-              card: topCard,
-              showCost: false,
-              onTap: () => showCardDetail(context, topCard),
-            ),
-          ),
-        ],
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: ExpansionCardView(
+        card: topCard,
+        showCost: false,
+        onTap: () => showCardDetail(context, topCard),
       ),
     );
   }
 }
+
