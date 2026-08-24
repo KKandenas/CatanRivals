@@ -93,7 +93,8 @@ class EraOfTurmoilCards {
     expansionKind: ExpansionKind.building,
     expansionSet: ExpansionSet.eraOfTurmoil,
     isUnique: true,
-    buildingCost: {ResourceType.brick: 1, ResourceType.grain: 1},
+    buildingCost: {ResourceType.brick: 1, ResourceType.ore: 1},
+    strengthPoints: 1,
     effectText: 'Varje hjälte du bygger i ditt rike kostar 1 valfri resurs mindre.',
     imageAsset: 'assets/images/cards/building_drill_ground.png',
   );
@@ -105,6 +106,7 @@ class EraOfTurmoilCards {
     expansionKind: ExpansionKind.building,
     expansionSet: ExpansionSet.eraOfTurmoil,
     buildingCost: {ResourceType.lumber: 1, ResourceType.grain: 1},
+    strengthPoints: 1,
     effectText:
         'När motståndaren spelar Bågskytt, Pyroman eller Förrädare, slå '
         'tärningen. Slår du 1 eller 2 har kortet ingen effekt.',
@@ -217,7 +219,8 @@ class EraOfTurmoilCards {
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfTurmoil,
     isUnique: true,
-    buildingCost: {ResourceType.ore: 1, ResourceType.grain: 1, ResourceType.wool: 1},
+    buildingCost: {ResourceType.gold: 2, ResourceType.grain: 1, ResourceType.wool: 1},
+    victoryPoints: 1,
     effectText:
         'Grannarna viskar om att fler har setts gå in än komma ut. '
         'Krävs för många attack-handlingskort.',
@@ -229,7 +232,8 @@ class EraOfTurmoilCards {
     name: 'Tiondelada',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfTurmoil,
-    buildingCost: {ResourceType.lumber: 1, ResourceType.grain: 1},
+    buildingCost: {ResourceType.lumber: 2, ResourceType.brick: 1, ResourceType.ore: 1},
+    victoryPoints: 1,
     effectText:
         'När du bygger Tiondeladan väljer du en resurstyp – antingen '
         'ull eller säd. För varje egen hjälte får du 1 resurs av den '
@@ -242,7 +246,7 @@ class EraOfTurmoilCards {
     name: 'Stora festsalen',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfTurmoil,
-    buildingCost: {ResourceType.grain: 1, ResourceType.ore: 1, ResourceType.wool: 1},
+    buildingCost: {ResourceType.grain: 3, ResourceType.ore: 3, ResourceType.brick: 2},
     victoryPoints: 2,
     effectText: 'Detta kort är värt 2 segerpoäng.',
     imageAsset: 'assets/images/cards/city_expansion_large_festival_hall.png',

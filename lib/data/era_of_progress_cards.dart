@@ -117,7 +117,8 @@ class EraOfProgressCards {
     name: 'Badhus',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfProgress,
-    buildingCost: {ResourceType.brick: 1, ResourceType.wool: 1, ResourceType.ore: 1},
+    buildingCost: {ResourceType.brick: 2, ResourceType.wool: 1, ResourceType.ore: 1},
+    victoryPoints: 1,
     effectText: 'Skyddar alla 4 regioner som gränsar till den här staden från effekterna av händelsen Pest.',
     imageAsset: 'assets/images/cards/city_expansion_bath_house.png',
   );
@@ -138,8 +139,8 @@ class EraOfProgressCards {
     name: 'Bibliotek',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfProgress,
-    buildingCost: {ResourceType.lumber: 1, ResourceType.grain: 2},
-    progressPoints: 1,
+    buildingCost: {ResourceType.lumber: 2, ResourceType.brick: 1, ResourceType.ore: 1},
+    victoryPoints: 1,
     effectText: 'När du bygger Biblioteket får du omedelbart välja ett kort från en draghög (turneringsspel: från din egen hög).',
     imageAsset: 'assets/images/cards/city_expansion_library.png',
   );
@@ -150,7 +151,8 @@ class EraOfProgressCards {
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfProgress,
     requirement: '2 framstegspoäng',
-    buildingCost: {ResourceType.lumber: 1, ResourceType.brick: 1, ResourceType.wool: 1},
+    buildingCost: {ResourceType.lumber: 3, ResourceType.brick: 2, ResourceType.wool: 2},
+    victoryPoints: 2,
     effectText: 'Till folkets fromma, och särskilt deras företrädares.',
     imageAsset: 'assets/images/cards/city_expansion_parliament.png',
   );
@@ -160,7 +162,8 @@ class EraOfProgressCards {
     name: 'Apotek',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfProgress,
-    buildingCost: {ResourceType.wool: 1, ResourceType.gold: 1},
+    buildingCost: {ResourceType.wool: 2, ResourceType.brick: 1, ResourceType.gold: 1},
+    victoryPoints: 1,
     effectText:
         'När händelsen Pest inträffar får du 1 valfri resurs. Du får '
         'den oavsett om du tidigare förlorat resurser eller inte.',
@@ -173,7 +176,8 @@ class EraOfProgressCards {
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfProgress,
     requirement: 'Församlingshus',
-    buildingCost: {ResourceType.wool: 1, ResourceType.ore: 1, ResourceType.brick: 1},
+    buildingCost: {ResourceType.wool: 2, ResourceType.ore: 2, ResourceType.brick: 1},
+    victoryPoints: 1,
     effectText:
         'Placera Rådhuset på ditt Församlingshus. I slutet av din tur '
         'betalar du inte längre för att välja ett kort.',
@@ -187,8 +191,9 @@ class EraOfProgressCards {
     expansionSet: ExpansionSet.eraOfProgress,
     isUnique: true,
     requirement: 'Kloster eller Bibliotek',
-    buildingCost: {ResourceType.lumber: 1, ResourceType.grain: 1, ResourceType.wool: 1},
+    buildingCost: {ResourceType.lumber: 2, ResourceType.grain: 2, ResourceType.brick: 1},
     progressPoints: 1,
+    victoryPoints: 1,
     effectText: 'Här låg tidigare ett värdshus. Nu finns det två stycken alldeles intill.',
     imageAsset: 'assets/images/cards/city_expansion_university.png',
   );
