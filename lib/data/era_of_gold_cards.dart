@@ -175,7 +175,8 @@ class EraOfGoldCards {
     name: 'Myntverk',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfGold,
-    buildingCost: {ResourceType.lumber: 1, ResourceType.ore: 1, ResourceType.brick: 1},
+    buildingCost: {ResourceType.lumber: 2, ResourceType.ore: 2, ResourceType.brick: 1},
+    victoryPoints: 1,
     effectText: 'En gång per egen tur får du använda Myntverket för att byta 1 guld mot 1 valfri annan resurs.',
     imageAsset: 'assets/images/cards/city_expansion_mint.png',
   );
