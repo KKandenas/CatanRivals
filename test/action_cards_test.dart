@@ -1,4 +1,5 @@
 import 'package:catan_rivals/data/basic_set_cards.dart';
+import 'package:catan_rivals/data/era_of_gold_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/state/game_notifier.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -59,6 +60,63 @@ void main() {
       // Mock-handen (MockGame.buildYou) saknar Brigitta.
 
       final error = notifier.useBrigitta(2);
+
+      expect(error, isNull);
+      expect(container.read(gameProvider).diceRolled, isFalse);
+    });
+  });
+
+  group('Reiner härolden', () {
+    late ProviderContainer container;
+
+    setUp(() {
+      container = ProviderContainer();
+      addTearDown(container.dispose);
+    });
+
+    test(
+        'tvingar händelsetärningen till Fest, slår produktionstalet som vanligt, tar bort kortet från handen',
+        () {
+      final notifier = container.read(gameProvider.notifier);
+      container.read(gameProvider).you.hand.add(EraOfGoldCards.reinerTheHerald);
+
+      final error = notifier.useReinerTheHerald();
+
+      expect(error, isNull);
+      final state = container.read(gameProvider);
+      expect(state.eventDieFace, EventDieFace.celebration);
+      expect(state.productionRoll, inInclusiveRange(1, 6));
+      expect(state.diceRolled, isTrue);
+      expect(
+          state.you.hand.any((c) => c.id == EraOfGoldCards.reinerTheHerald.id),
+          isFalse);
+    });
+
+    test('går inte att använda efter att tärningen redan slagits', () {
+      final notifier = container.read(gameProvider.notifier);
+      container.read(gameProvider).you.hand.add(EraOfGoldCards.reinerTheHerald);
+      notifier.rollProductionDie();
+      final faceAfterNormalRoll = container.read(gameProvider).eventDieFace;
+
+      final error = notifier.useReinerTheHerald();
+
+      expect(error, isNotNull);
+      expect(container.read(gameProvider).eventDieFace, faceAfterNormalRoll);
+      // Kortet ligger kvar – försöket avvisades helt.
+      expect(
+          container
+              .read(gameProvider)
+              .you
+              .hand
+              .any((c) => c.id == EraOfGoldCards.reinerTheHerald.id),
+          isTrue);
+    });
+
+    test('no-op utan kortet på hand', () {
+      final notifier = container.read(gameProvider.notifier);
+      // Mock-handen (MockGame.buildYou) saknar Reiner härolden.
+
+      final error = notifier.useReinerTheHerald();
 
       expect(error, isNull);
       expect(container.read(gameProvider).diceRolled, isFalse);

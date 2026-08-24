@@ -395,6 +395,10 @@ class RealmBoard {
     return false;
   }
 
+  /// Om riket har minst en stad (inte bara byar) – Köpmans krav ("3
+  /// handelspoäng eller stad", se hand_dock.dart).
+  bool get hasCity => _settlements.values.any((n) => n.isCity);
+
   /// Om ett kort av *typen* [cardId] (jämfört via [GameCard.baseId], inte
   /// [GameCard.id] – annars skulle två olika fysiska kopior av samma
   /// unika byggnad, t.ex. "building-marketplace-draw-0" och

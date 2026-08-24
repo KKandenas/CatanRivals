@@ -844,6 +844,43 @@ class GameNotifier extends Notifier<GameState> {
     return null;
   }
 
+  /// Spelar Reiner härolden (regelhäftet: spela innan tärningen slås,
+  /// bestäm att händelsen blir Fest) – tvärtom mot [useBrigitta], som
+  /// tvingar PRODUKTIONStalet men slår händelsetärningen som vanligt:
+  /// här slås produktionstalet som vanligt (slumpmässigt), men
+  /// HÄNDELSEtärningens utfall TVINGAS till [EventDieFace.celebration]
+  /// i stället för att slås. Den utlovade extra resursen står bara i
+  /// kortets egen `effectText` – spelaren lägger till den själv med
+  /// +/-, samma mönster som alla andra resurseffekter i appen (se
+  /// event_die_resolution.dart-docen: inget flyttas automatiskt).
+  /// Kortet tas bort från handen. Bara giltigt innan tärningen slagits
+  /// den här omgången.
+  String? useReinerTheHerald() {
+    if (!state.isMyTurn) return 'Inte din tur.';
+    if (state.diceRolled) {
+      return 'Reiner härolden måste spelas innan tärningen slås.';
+    }
+    GameCard? card;
+    for (final c in state.you.hand) {
+      if (c.baseId == EraOfGoldCards.reinerTheHerald.id) {
+        card = c;
+        break;
+      }
+    }
+    if (card == null) return null;
+
+    final roll = Random().nextInt(6) + 1;
+    state = state.copyWith(
+      you: state.you.copyWith(hand: List.of(state.you.hand)..remove(card)),
+      productionRoll: roll,
+      eventDieFace: EventDieFace.celebration,
+      diceRolled: true,
+    );
+    _syncMyPlayer();
+    _syncTurnState();
+    return null;
+  }
+
   /// Drar det översta händelsekortet när händelsetärningen visade "?"
   /// (regelhäftets referenskort: "The player who rolled the dice draws
   /// the topmost event card and reads the event aloud") – bara den som

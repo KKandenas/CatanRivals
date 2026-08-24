@@ -1,4 +1,5 @@
 import 'package:catan_rivals/data/basic_set_cards.dart';
+import 'package:catan_rivals/data/era_of_gold_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/ui/widgets/hand_dock.dart';
 import 'package:flutter/material.dart';
@@ -34,6 +35,7 @@ void main() {
     bool isMyTurn = true,
     bool diceRolled = false,
     bool canBuild = true,
+    bool hasStrengthAdvantage = false,
     RealmBoard? principality,
     Size viewSize = const Size(1200, 300),
   }) async {
@@ -54,6 +56,7 @@ void main() {
           isMyTurn: isMyTurn,
           diceRolled: diceRolled,
           canBuild: canBuild,
+          hasStrengthAdvantage: hasStrengthAdvantage,
         ),
       ),
     ));
@@ -104,6 +107,51 @@ void main() {
           isMyTurn: false);
 
       await tester.tap(find.text('Brigitta, den visa kvinnan'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Vill du använda kortet?'), findsNothing);
+      expect(used, isFalse);
+    });
+  });
+
+  group('Reiner härolden – samma tärningsfasens gräns som Brigitta', () {
+    testWidgets('innan tärningen slagits visar tryck "Vill du använda kortet?"',
+        (tester) async {
+      await pumpDock(tester,
+          hand: [EraOfGoldCards.reinerTheHerald], onUseActionCard: (_) {});
+
+      await tester.tap(find.text('Reiner härolden'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Vill du använda kortet?'), findsOneWidget);
+    });
+
+    testWidgets('efter att tärningen slagits visas bara vanlig kortförstoring',
+        (tester) async {
+      var used = false;
+      await pumpDock(tester,
+          hand: [EraOfGoldCards.reinerTheHerald],
+          onUseActionCard: (_) => used = true,
+          diceRolled: true);
+
+      await tester.tap(find.text('Reiner härolden'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Vill du använda kortet?'), findsNothing);
+      expect(used, isFalse);
+      expect(find.text('Reiner härolden'), findsWidgets);
+    });
+
+    testWidgets(
+        'på motståndarens tur visas bara vanlig kortförstoring, även innan tärningen slagits',
+        (tester) async {
+      var used = false;
+      await pumpDock(tester,
+          hand: [EraOfGoldCards.reinerTheHerald],
+          onUseActionCard: (_) => used = true,
+          isMyTurn: false);
+
+      await tester.tap(find.text('Reiner härolden'));
       await tester.pumpAndSettle();
 
       expect(find.text('Vill du använda kortet?'), findsNothing);
@@ -264,6 +312,151 @@ void main() {
           }));
 
       await tester.tap(find.text('Guldsmed'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Vill du använda kortet?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Använd kortet'));
+      await tester.pumpAndSettle();
+      expect(used, isTrue);
+    });
+  });
+
+  group('Rövare/Köpman/Handelsmästare – Gulderans kravspärrar', () {
+    testWidgets(
+        'Rövare: utan styrkeövertag visas en förklarande text i stället för "Använd kortet"',
+        (tester) async {
+      var used = false;
+      await pumpDock(tester,
+          hand: [EraOfGoldCards.brigands],
+          onUseActionCard: (_) => used = true,
+          hasStrengthAdvantage: false);
+
+      await tester.tap(find.text('Rövare'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Kräver styrkeövertag.'), findsOneWidget);
+      expect(find.text('Använd kortet'), findsNothing);
+      expect(used, isFalse);
+    });
+
+    testWidgets('Rövare: med styrkeövertag visas "Använd kortet" som vanligt',
+        (tester) async {
+      var used = false;
+      await pumpDock(tester,
+          hand: [EraOfGoldCards.brigands],
+          onUseActionCard: (_) => used = true,
+          hasStrengthAdvantage: true,
+          viewSize: const Size(1200, 1600));
+
+      await tester.tap(find.text('Rövare'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Vill du använda kortet?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Använd kortet'));
+      await tester.pumpAndSettle();
+      expect(used, isTrue);
+    });
+
+    testWidgets(
+        'Köpman: färre än 3 handelspoäng och ingen stad visar en förklarande text',
+        (tester) async {
+      var used = false;
+      await pumpDock(tester,
+          hand: [EraOfGoldCards.merchant],
+          onUseActionCard: (_) => used = true,
+          principality: RealmBoard(ownerId: 'you'));
+
+      await tester.tap(find.text('Köpman'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Kräver 3 handelspoäng eller en stad.'), findsOneWidget);
+      expect(used, isFalse);
+    });
+
+    testWidgets('Köpman: minst 3 handelspoäng räcker, även utan stad',
+        (tester) async {
+      var used = false;
+      final board = RealmBoard(ownerId: 'you');
+      board.placeSettlement(0, const PlacedCard(card: BasicSetCards.settlement));
+      board.placeExpansion(
+        0,
+        BuildingRow.above,
+        0,
+        const PlacedCard(
+          card: GameCard(
+            id: 'test-commerce-unit',
+            name: 'Testenhet',
+            category: CardCategory.expansion,
+            commercePoints: 3,
+            imageAsset: 'assets/images/cards/heroes/test.png',
+          ),
+        ),
+      );
+      await pumpDock(tester,
+          hand: [EraOfGoldCards.merchant],
+          onUseActionCard: (_) => used = true,
+          principality: board,
+          viewSize: const Size(1200, 1600));
+
+      await tester.tap(find.text('Köpman'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Vill du använda kortet?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Använd kortet'));
+      await tester.pumpAndSettle();
+      expect(used, isTrue);
+    });
+
+    testWidgets('Köpman: en stad räcker, även med färre än 3 handelspoäng',
+        (tester) async {
+      var used = false;
+      final board = RealmBoard(ownerId: 'you');
+      board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+      await pumpDock(tester,
+          hand: [EraOfGoldCards.merchant],
+          onUseActionCard: (_) => used = true,
+          principality: board,
+          viewSize: const Size(1200, 1600));
+
+      await tester.tap(find.text('Köpman'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Vill du använda kortet?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Använd kortet'));
+      await tester.pumpAndSettle();
+      expect(used, isTrue);
+    });
+
+    testWidgets(
+        'Handelsmästare: utan Köpmansgille visas en förklarande text i stället för "Använd kortet"',
+        (tester) async {
+      var used = false;
+      await pumpDock(tester,
+          hand: [EraOfGoldCards.tradeMaster],
+          onUseActionCard: (_) => used = true,
+          principality: RealmBoard(ownerId: 'you'));
+
+      await tester.tap(find.text('Handelsmästare'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Kräver Köpmansgille i ditt rike.'), findsOneWidget);
+      expect(used, isFalse);
+    });
+
+    testWidgets('Handelsmästare: med Köpmansgille utplacerat visas "Använd kortet"',
+        (tester) async {
+      var used = false;
+      final board = RealmBoard(ownerId: 'you');
+      board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+      board.placeExpansion(0, BuildingRow.above, 0,
+          const PlacedCard(card: EraOfGoldCards.merchantGuild));
+      await pumpDock(tester,
+          hand: [EraOfGoldCards.tradeMaster],
+          onUseActionCard: (_) => used = true,
+          principality: board,
+          viewSize: const Size(1200, 1600));
+
+      await tester.tap(find.text('Handelsmästare'));
       await tester.pumpAndSettle();
 
       expect(find.text('Vill du använda kortet?'), findsOneWidget);

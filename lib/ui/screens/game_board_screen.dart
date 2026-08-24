@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/basic_set_cards.dart';
+import '../../data/era_of_gold_cards.dart';
 import '../../models/models.dart';
 import '../../state/event_die_resolution.dart';
 import '../../state/game_notifier.dart';
@@ -117,6 +118,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     }
     if (card.baseId == BasicSetCards.relocation.id) {
       _handleResult(context, notifier.startRelocation());
+      return;
+    }
+    if (card.baseId == EraOfGoldCards.reinerTheHerald.id) {
+      _handleResult(context, notifier.useReinerTheHerald());
       return;
     }
     _handleResult(context, notifier.discardActionCard(card));
@@ -984,6 +989,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   isMyTurn: state.isMyTurn,
                   diceRolled: state.diceRolled,
                   canBuild: canBuildRightNow,
+                  hasStrengthAdvantage:
+                      state.strengthAdvantagePlayerId == state.myPlayerId,
                   selectedDiscardCard:
                       isDiscarding ? _selectedDiscardCard : null,
                   onSelectForDiscard: isDiscarding

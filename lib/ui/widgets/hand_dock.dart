@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/basic_set_cards.dart';
+import '../../data/era_of_gold_cards.dart';
 import '../../models/models.dart';
 import '../theme/catan_colors.dart';
 import 'card_detail_dialog.dart';
@@ -9,14 +10,22 @@ import 'face_up_expansion_pile.dart';
 import 'pop_in.dart';
 import 'score_summary.dart';
 
-/// Om [card] är ett handlingskort med ett resurskrav som [player] inte
+/// Om [card] är ett handlingskort med ett krav som [player] inte
 /// uppfyller just nu, returneras en förklarande text (visas i stället
 /// för "Använd kortet", se [showCardDetail]:blockedReason) – annars
 /// `null`. Handelskaravan ("Släng exakt 2 av dina resurser...") kräver
 /// minst 2 resurser av valfri typ totalt, Guldsmed ("Släng 3 guld...")
 /// kräver minst 3 guld – båda måste gå att betala för att kortet
-/// överhuvudtaget ska gå att spela.
-String? _actionCardBlockedReason(GameCard card, Player player) {
+/// överhuvudtaget ska gå att spela. Gulderans Rövare/Köpman/
+/// Handelsmästare har egna, tidigare okontrollerade krav (se
+/// [GameCard.requirement], som bara är visningstext – den här
+/// funktionen är den faktiska spärren): styrkeövertag, 3 handelspoäng
+/// eller stad, respektive ett utplacerat Köpmansgille.
+/// [hasStrengthAdvantage] måste skickas in separat eftersom den kräver
+/// att jämföra BÅDA spelarnas styrkepoäng ([GameState.strengthAdvantagePlayerId]),
+/// inte något som går att räkna ut från bara [player].
+String? _actionCardBlockedReason(GameCard card, Player player,
+    {required bool hasStrengthAdvantage}) {
   if (card.baseId == BasicSetCards.merchantCaravan.id) {
     if (player.totalResourceCount < 2) {
       return 'Du behöver minst 2 resurser för att kunna använda det här kortet.';
@@ -25,6 +34,20 @@ String? _actionCardBlockedReason(GameCard card, Player player) {
   if (card.baseId == BasicSetCards.goldsmith.id) {
     if (player.resourceCount(ResourceType.gold) < 3) {
       return 'Du behöver minst 3 guld för att kunna använda det här kortet.';
+    }
+  }
+  if (card.baseId == EraOfGoldCards.brigands.id) {
+    if (!hasStrengthAdvantage) return 'Kräver styrkeövertag.';
+  }
+  if (card.baseId == EraOfGoldCards.merchant.id) {
+    if (player.principality.totalCommercePoints < 3 &&
+        !player.principality.hasCity) {
+      return 'Kräver 3 handelspoäng eller en stad.';
+    }
+  }
+  if (card.baseId == EraOfGoldCards.tradeMaster.id) {
+    if (!player.principality.hasExpansionCard(EraOfGoldCards.merchantGuild.id)) {
+      return 'Kräver Köpmansgille i ditt rike.';
     }
   }
   return null;
@@ -83,6 +106,13 @@ class HandDock extends StatelessWidget {
   /// att öppna över huvud taget.
   final bool canBuild;
 
+  /// Om [player] just nu har styrkeövertaget (se
+  /// [GameState.strengthAdvantagePlayerId]) – Gulderans Rövare kräver
+  /// det (se [_actionCardBlockedReason]). Måste skickas in förberäknad
+  /// härifrån eftersom den kräver att jämföra BÅDA spelarnas
+  /// styrkepoäng, inte bara [player]s egna.
+  final bool hasStrengthAdvantage;
+
   /// Handjustering i slutet av action-fasen (se [HandAdjustmentPhase.
   /// discarding]): om satt går varje handkort (oavsett kategori) att
   /// trycka på för att välja det att slänga i stället för att förstora
@@ -117,6 +147,7 @@ class HandDock extends StatelessWidget {
     this.isMyTurn = true,
     this.diceRolled = false,
     this.canBuild = true,
+    this.hasStrengthAdvantage = false,
     this.selectedDiscardCard,
     this.onSelectForDiscard,
     required this.totalVictoryPoints,
@@ -170,6 +201,7 @@ class HandDock extends StatelessWidget {
                             isMyTurn: isMyTurn,
                             diceRolled: diceRolled,
                             canBuild: canBuild,
+                            hasStrengthAdvantage: hasStrengthAdvantage,
                             selected: player.hand[i] == selectedDiscardCard,
                             onSelectForDiscard: onSelectForDiscard == null
                                 ? null
@@ -212,6 +244,7 @@ class _HandCard extends StatelessWidget {
   final bool isMyTurn;
   final bool diceRolled;
   final bool canBuild;
+  final bool hasStrengthAdvantage;
   final bool selected;
   final VoidCallback? onSelectForDiscard;
 
@@ -224,6 +257,7 @@ class _HandCard extends StatelessWidget {
     this.isMyTurn = true,
     this.diceRolled = false,
     this.canBuild = true,
+    this.hasStrengthAdvantage = false,
     this.selected = false,
     this.onSelectForDiscard,
   });
@@ -234,17 +268,19 @@ class _HandCard extends StatelessWidget {
         card.category == CardCategory.regionExpansion;
     // Spejare undantas: den frågas automatiskt vid by-bygge i stället
     // (se klassdocen på [HandDock]), inte via ett tryck i handen.
-    // Brigitta går bara att spela på din egen tur, INNAN tärningen
-    // slås (regelhäftet) – övriga handlingskort delar i stället samma
-    // villkor som byggkort ([canBuild], se HandDock-doc), eftersom de
-    // spelas under action-fasen (efter tärningsslaget, ingen annan
-    // väljare aktiv) precis som ett bygge. Annars visas bara den
-    // vanliga kortförstoringen, utan "använd"-frågan, i stället för att
-    // gå att trycka och sedan mötas av ett felmeddelande.
+    // Brigitta och Reiner härolden går bara att spela på din egen tur,
+    // INNAN tärningen slås (regelhäftet) – övriga handlingskort delar i
+    // stället samma villkor som byggkort ([canBuild], se HandDock-doc),
+    // eftersom de spelas under action-fasen (efter tärningsslaget,
+    // ingen annan väljare aktiv) precis som ett bygge. Annars visas
+    // bara den vanliga kortförstoringen, utan "använd"-frågan, i
+    // stället för att gå att trycka och sedan mötas av ett
+    // felmeddelande.
     final isBrigitta = card.baseId == BasicSetCards.brigittaTheWiseWoman.id;
+    final isReiner = card.baseId == EraOfGoldCards.reinerTheHerald.id;
     final isUsableAction = card.category == CardCategory.action &&
         card.baseId != BasicSetCards.scout.id &&
-        (isBrigitta ? (isMyTurn && !diceRolled) : canBuild);
+        ((isBrigitta || isReiner) ? (isMyTurn && !diceRolled) : canBuild);
 
     // Under handjusteringen (slänga kort) går varje kort – oavsett
     // kategori – bara att trycka på för att välja det, ingen dra-för-
@@ -257,8 +293,10 @@ class _HandCard extends StatelessWidget {
           onTap: onSelectForDiscard);
     }
 
-    final blockedReason =
-        isUsableAction ? _actionCardBlockedReason(card, player) : null;
+    final blockedReason = isUsableAction
+        ? _actionCardBlockedReason(card, player,
+            hasStrengthAdvantage: hasStrengthAdvantage)
+        : null;
     final useActionTap = isUsableAction && onUseActionCard != null
         ? () => showCardDetail(context, card,
             onUseCard:
