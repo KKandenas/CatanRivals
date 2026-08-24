@@ -262,14 +262,21 @@ class RealmBoard {
   }
 
   /// Placerar ett landskapsutbyggnadskort (t.ex. Guldgömma) intill en
-  /// redan utplacerad region – se [regionExpansionAt]. Kastar
-  /// [StateError] om det inte finns någon region på platsen, eller om
-  /// platsen redan har en landskapsutbyggnad (regelhäftet: högst 1 per
-  /// region).
+  /// redan utplacerad region av MATCHANDE resurstyp – se
+  /// [regionExpansionAt] ([GameCard.resource] jämförs mellan kortet och
+  /// regionen, t.ex. Guldgömma får bara plats på Guldfält). Kastar
+  /// [StateError] om det inte finns någon region på platsen, om
+  /// regionens resurstyp inte stämmer, eller om platsen redan har en
+  /// landskapsutbyggnad (regelhäftet: högst 1 per region).
   void placeRegionExpansion(
       int junctionColumn, BuildingRow row, PlacedCard expansionCard) {
-    if (regionAt(junctionColumn, row) == null) {
+    final region = regionAt(junctionColumn, row);
+    if (region == null) {
       throw StateError('Ingen region i kolumn $junctionColumn ($row).');
+    }
+    if (region.card.resource != expansionCard.card.resource) {
+      throw StateError(
+          '${expansionCard.card.name} kan bara placeras på en region av rätt resurstyp.');
     }
     final target =
         row == BuildingRow.above ? _regionExpansionsAbove : _regionExpansionsBelow;

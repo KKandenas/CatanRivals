@@ -49,14 +49,14 @@ void main() {
     host.read(gameProvider).you.hand.add(EraOfGoldCards.goldCache);
 
     expect(
-        hostNotifier.dropRegionExpansion(-1, BuildingRow.above, EraOfGoldCards.goldCache),
+        hostNotifier.dropRegionExpansion(1, BuildingRow.above, EraOfGoldCards.goldCache),
         isNull);
-    hostNotifier.adjustRegionExpansionResource(-1, BuildingRow.above, 2);
+    hostNotifier.adjustRegionExpansionResource(1, BuildingRow.above, 2);
     await pump();
 
     final guestState = guest.read(gameProvider);
     final placed =
-        guestState.opponent.principality.regionExpansionAt(-1, BuildingRow.above);
+        guestState.opponent.principality.regionExpansionAt(1, BuildingRow.above);
     expect(placed, isNotNull);
     expect(placed!.card.id, EraOfGoldCards.goldCache.id);
     expect(placed.storedResources, 2);
@@ -73,7 +73,7 @@ void main() {
     expect(hostNotifier.rollProductionDie(), isNull);
     host.read(gameProvider).you.hand.add(EraOfGoldCards.goldCache);
     expect(
-        hostNotifier.dropRegionExpansion(-1, BuildingRow.above, EraOfGoldCards.goldCache),
+        hostNotifier.dropRegionExpansion(1, BuildingRow.above, EraOfGoldCards.goldCache),
         isNull);
     await pump();
 

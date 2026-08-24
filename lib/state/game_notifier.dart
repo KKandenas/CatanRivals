@@ -1767,18 +1767,22 @@ class GameNotifier extends Notifier<GameState> {
 
   /// Bygger ett landskapsutbyggnadskort (brun textruta, t.ex.
   /// Guldgömma) FRÅN HANDEN intill en av dina egna, redan utplacerade
-  /// regioner (regelhäftet: "Region Expansions are always placed
-  /// either above or below a region", högst 1 per region) – se
-  /// [RealmBoard.placeRegionExpansion]. Ingen "byt ut"-variant behövs
-  /// (bara 1 fysisk kopia av Guldgömma finns i hela spelet, kan aldrig
-  /// behöva ersättas), och ingen kostnad dras av – precis som övriga
-  /// bygg-/enhetskort visas kostnaden bara, den dras aldrig av
-  /// automatiskt (se [_placeExpansionCardAndSync]-doc).
+  /// regioner AV MATCHANDE RESURSTYP (Guldgömma får bara plats på
+  /// Guldfält, se [RealmBoard.placeRegionExpansion]), högst 1 per
+  /// region. Ingen "byt ut"-variant behövs (bara 1 fysisk kopia av
+  /// Guldgömma finns i hela spelet, kan aldrig behöva ersättas), och
+  /// ingen kostnad dras av – precis som övriga bygg-/enhetskort visas
+  /// kostnaden bara, den dras aldrig av automatiskt (se
+  /// [_placeExpansionCardAndSync]-doc).
   String? dropRegionExpansion(int column, BuildingRow row, GameCard card) {
     final turnError = _checkCanBuild();
     if (turnError != null) return turnError;
     if (!state.you.hand.contains(card)) return null;
-    if (state.you.principality.regionAt(column, row) == null) return null;
+    final region = state.you.principality.regionAt(column, row);
+    if (region == null) return null;
+    if (region.card.resource != card.resource) {
+      return '${card.name} kan bara placeras på en region av rätt resurstyp.';
+    }
     if (state.you.principality.regionExpansionAt(column, row) != null) {
       return 'Den regionen har redan en landskapsutbyggnad.';
     }

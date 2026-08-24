@@ -303,13 +303,16 @@ class PrincipalityGrid extends StatelessWidget {
     );
   }
 
-  /// Wrappar [_region] med ett litet hörn-märke för en eventuell
-  /// landskapsutbyggnad (t.ex. Guldgömma, se
+  /// Wrappar [_region] med ett litet hörn-märke (uppe till höger, så
+  /// varken +/- knapparna eller resurspärlorna längst ner skyms) för en
+  /// eventuell landskapsutbyggnad (t.ex. Guldgömma, se
   /// [RealmBoard.regionExpansionAt]). Till skillnad från de vanliga
   /// byggplatserna (som alltid visar en tom platshållare) visas den
   /// tomma drop-ytan bara MEDAN ett landskapsutbyggnadskort faktiskt
-  /// dras ([_draggingRegionExpansion]) – annars skulle varenda region
-  /// på brädet permanent få ett extra `DragTarget<GameCard>` i trädet,
+  /// dras ÖVER EN REGION AV MATCHANDE RESURSTYP ([_draggingRegionExpansion],
+  /// kortets [GameCard.resource] måste stämma med regionens – Guldgömma
+  /// får bara plats på Guldfält) – annars skulle varenda region på
+  /// brädet permanent få ett extra `DragTarget<GameCard>` i trädet,
   /// vilket bland annat stör tester/kod som räknar drop-mål generiskt
   /// (bara 1 fysisk kopia av Guldgömma finns i hela spelet, så den
   /// permanenta platshållaren gav väldigt lite värde ändå). En redan
@@ -318,8 +321,10 @@ class PrincipalityGrid extends StatelessWidget {
   Widget _regionWithExpansionSlot(PlacedCard region, int column, BuildingRow row) {
     final regionView = _region(region, column, row);
     final expansion = board.regionExpansionAt(column, row);
-    final showEmptySlot =
-        expansion == null && interactive && _draggingRegionExpansion;
+    final showEmptySlot = expansion == null &&
+        interactive &&
+        _draggingRegionExpansion &&
+        draggingCard!.resource == region.card.resource;
     if (expansion == null && !showEmptySlot) return regionView;
     return Stack(
       clipBehavior: Clip.none,
@@ -327,7 +332,7 @@ class PrincipalityGrid extends StatelessWidget {
         regionView,
         Positioned(
           right: -unit * 0.08,
-          bottom: -unit * 0.08,
+          top: -unit * 0.08,
           width: unit * 0.5,
           height: unit * 0.5,
           child: expansion != null
@@ -337,16 +342,18 @@ class PrincipalityGrid extends StatelessWidget {
                   onAdjust: interactive && onAdjustRegionExpansion != null
                       ? (delta) => onAdjustRegionExpansion!(column, row, delta)
                       : null)
-              : _regionExpansionDropTarget(column, row),
+              : _regionExpansionDropTarget(column, row, region.card.resource),
         ),
       ],
     );
   }
 
-  Widget _regionExpansionDropTarget(int column, BuildingRow row) {
+  Widget _regionExpansionDropTarget(
+      int column, BuildingRow row, ResourceType regionResource) {
     return DragTarget<GameCard>(
       onWillAcceptWithDetails: (details) =>
-          details.data.category == CardCategory.regionExpansion,
+          details.data.category == CardCategory.regionExpansion &&
+          details.data.resource == regionResource,
       onAcceptWithDetails: (details) => onRequestBuildConfirm?.call(
         details.data,
         () => onDropRegionExpansion?.call(column, row, details.data),

@@ -411,10 +411,13 @@ void main() {
           throwsStateError);
     });
 
-    test('placeRegionExpansion kastar om platsen redan är upptagen', () {
+    test(
+        'placeRegionExpansion kastar om regionens resurstyp inte matchar (Guldgömma kräver Guldfält)',
+        () {
       final board = StarterCards.buildStartingPrincipality('p1', isRed: true);
-      board.placeRegionExpansion(
-          -1, BuildingRow.above, const PlacedCard(card: EraOfGoldCards.goldCache));
+      // (-1, ovanför) är Skog (lumber) i startuppställningen, inte
+      // Guldfält (gold) – se StarterCards.
+      expect(board.regionAt(-1, BuildingRow.above)!.card.resource, ResourceType.lumber);
 
       expect(
           () => board.placeRegionExpansion(-1, BuildingRow.above,
@@ -422,16 +425,27 @@ void main() {
           throwsStateError);
     });
 
+    test('placeRegionExpansion kastar om platsen redan är upptagen', () {
+      final board = StarterCards.buildStartingPrincipality('p1', isRed: true);
+      board.placeRegionExpansion(
+          1, BuildingRow.above, const PlacedCard(card: EraOfGoldCards.goldCache));
+
+      expect(
+          () => board.placeRegionExpansion(1, BuildingRow.above,
+              const PlacedCard(card: EraOfGoldCards.goldCache)),
+          throwsStateError);
+    });
+
     test('addResourceToRegionExpansion klämmer 0-3', () {
       final board = StarterCards.buildStartingPrincipality('p1', isRed: true);
       board.placeRegionExpansion(
-          -1, BuildingRow.above, const PlacedCard(card: EraOfGoldCards.goldCache));
+          1, BuildingRow.above, const PlacedCard(card: EraOfGoldCards.goldCache));
 
-      board.addResourceToRegionExpansion(-1, BuildingRow.above, 10);
-      expect(board.regionExpansionAt(-1, BuildingRow.above)!.storedResources, 3);
+      board.addResourceToRegionExpansion(1, BuildingRow.above, 10);
+      expect(board.regionExpansionAt(1, BuildingRow.above)!.storedResources, 3);
 
-      board.addResourceToRegionExpansion(-1, BuildingRow.above, -10);
-      expect(board.regionExpansionAt(-1, BuildingRow.above)!.storedResources, 0);
+      board.addResourceToRegionExpansion(1, BuildingRow.above, -10);
+      expect(board.regionExpansionAt(1, BuildingRow.above)!.storedResources, 0);
     });
 
     test(
@@ -443,23 +457,24 @@ void main() {
       board.placeRegion(1, BuildingRow.above,
           const PlacedCard(card: BasicSetCards.goldField));
       board.placeRegionExpansion(
-          -1, BuildingRow.above, const PlacedCard(card: EraOfGoldCards.goldCache));
-      board.addResourceToRegionExpansion(-1, BuildingRow.above, 2);
+          1, BuildingRow.above, const PlacedCard(card: EraOfGoldCards.goldCache));
+      board.addResourceToRegionExpansion(1, BuildingRow.above, 2);
 
       expect(board.resourceTotal(ResourceType.gold), 2);
       expect(board.totalStoredResources, 2);
       expect(board.regionExpansionResourceTotal(ResourceType.gold), 2);
-      // En vanlig regions guld (om någon) ska INTE räknas här - bara
+      // Guldfältets EGNA guld (om något) ska ÄVEN räknas i resourceTotal,
+      // men inte i regionExpansionResourceTotal - bara
       // landskapsutbyggnadernas egna lager.
-      board.addResourceToRegion(1, BuildingRow.above, 2); // Guldfältet
+      board.addResourceToRegion(1, BuildingRow.above, 1); // Guldfältet
       expect(board.regionExpansionResourceTotal(ResourceType.gold), 2);
-      expect(board.resourceTotal(ResourceType.gold), 4);
+      expect(board.resourceTotal(ResourceType.gold), 3);
     });
 
     test('placedExpansionCards inkluderar en placerad Guldgömma', () {
       final board = StarterCards.buildStartingPrincipality('p1', isRed: true);
       board.placeRegionExpansion(
-          -1, BuildingRow.above, const PlacedCard(card: EraOfGoldCards.goldCache));
+          1, BuildingRow.above, const PlacedCard(card: EraOfGoldCards.goldCache));
 
       expect(
           board.placedExpansionCards.any((c) => c.id == EraOfGoldCards.goldCache.id),
@@ -469,15 +484,15 @@ void main() {
     test('JSON round-trip bevarar regionExpansionsAbove/regionExpansionsBelow', () {
       final board = StarterCards.buildStartingPrincipality('p1', isRed: true);
       board.placeRegionExpansion(
-          -1, BuildingRow.above, const PlacedCard(card: EraOfGoldCards.goldCache));
-      board.addResourceToRegionExpansion(-1, BuildingRow.above, 1);
+          1, BuildingRow.above, const PlacedCard(card: EraOfGoldCards.goldCache));
+      board.addResourceToRegionExpansion(1, BuildingRow.above, 1);
 
       final restored = RealmBoard.fromJson(board.toJson());
 
-      expect(restored.regionExpansionAt(-1, BuildingRow.above)!.card.id,
+      expect(restored.regionExpansionAt(1, BuildingRow.above)!.card.id,
           EraOfGoldCards.goldCache.id);
       expect(
-          restored.regionExpansionAt(-1, BuildingRow.above)!.storedResources, 1);
+          restored.regionExpansionAt(1, BuildingRow.above)!.storedResources, 1);
     });
   });
 }

@@ -135,8 +135,12 @@ void main() {
           0, const PlacedCard(card: BasicSetCards.settlement));
       board.placeRegion(-1, BuildingRow.above,
           PlacedCard(card: BasicSetCards.forest, storedResources: youLumber));
+      // Guldgömma kräver en region av matchande resurstyp (gold) - ett
+      // eget Guldfält, skilt från timmer-regionen ovan.
+      board.placeRegion(
+          1, BuildingRow.above, const PlacedCard(card: BasicSetCards.goldField));
       board.placeRegionExpansion(
-          -1,
+          1,
           BuildingRow.above,
           PlacedCard(
               card: EraOfGoldCards.goldCache, storedResources: goldCacheGold));
