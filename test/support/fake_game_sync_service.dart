@@ -14,12 +14,18 @@ class FakeGameSyncService implements GameSyncService {
   final Map<String, TurnState> _turnStates = {};
   final Map<String, FraternalFeudsRequest?> _fraternalFeudsRequests = {};
   final Map<String, List<GameCard>> _discardPiles = {};
+  final Map<String, Set<ExpansionSet>> _activeExpansions = {};
+  final Map<String, List<GameCard>> _faceUpExpansionCards = {};
   final Map<String, StreamController<Map<String, Player>>> _playerControllers = {};
   final Map<String, StreamController<Map<String, int>>> _centerStackControllers = {};
   final Map<String, StreamController<TurnState>> _turnStateControllers = {};
   final Map<String, StreamController<FraternalFeudsRequest?>>
       _fraternalFeudsRequestControllers = {};
   final Map<String, StreamController<List<GameCard>>> _discardPileControllers = {};
+  final Map<String, StreamController<Set<ExpansionSet>>>
+      _activeExpansionsControllers = {};
+  final Map<String, StreamController<List<GameCard>>>
+      _faceUpExpansionCardsControllers = {};
 
   StreamController<Map<String, Player>> _playersController(String roomCode) =>
       _playerControllers.putIfAbsent(roomCode, () => StreamController.broadcast());
@@ -39,22 +45,39 @@ class FakeGameSyncService implements GameSyncService {
       _discardPileControllers.putIfAbsent(
           roomCode, () => StreamController.broadcast());
 
+  StreamController<Set<ExpansionSet>> _activeExpansionsController(
+          String roomCode) =>
+      _activeExpansionsControllers.putIfAbsent(
+          roomCode, () => StreamController.broadcast());
+
+  StreamController<List<GameCard>> _faceUpExpansionCardsController(
+          String roomCode) =>
+      _faceUpExpansionCardsControllers.putIfAbsent(
+          roomCode, () => StreamController.broadcast());
+
   @override
   Future<void> createRoom(
     String roomCode,
     String hostId,
     Player hostPlayer,
     Map<String, int> centerStacks,
-    TurnState turnState,
-  ) async {
+    TurnState turnState, {
+    Set<ExpansionSet> activeExpansions = const {},
+    List<GameCard> faceUpExpansionCards = const [],
+  }) async {
     _players[roomCode] = {hostId: hostPlayer};
     _centerStacks[roomCode] = Map.of(centerStacks);
     _turnStates[roomCode] = turnState;
     _discardPiles[roomCode] = const [];
+    _activeExpansions[roomCode] = Set.of(activeExpansions);
+    _faceUpExpansionCards[roomCode] = List.of(faceUpExpansionCards);
     _playersController(roomCode).add(Map.of(_players[roomCode]!));
     _centerStacksController(roomCode).add(Map.of(_centerStacks[roomCode]!));
     _turnStateController(roomCode).add(turnState);
     _discardPileController(roomCode).add(const []);
+    _activeExpansionsController(roomCode).add(Set.of(activeExpansions));
+    _faceUpExpansionCardsController(roomCode)
+        .add(List.of(faceUpExpansionCards));
   }
 
   @override
@@ -153,5 +176,33 @@ class FakeGameSyncService implements GameSyncService {
   Future<void> writeDiscardPile(String roomCode, List<GameCard> discardPile) async {
     _discardPiles[roomCode] = List.of(discardPile);
     _discardPileController(roomCode).add(List.of(discardPile));
+  }
+
+  @override
+  Stream<Set<ExpansionSet>> watchActiveExpansions(String roomCode) {
+    final existing = _activeExpansions[roomCode];
+    final controller = _activeExpansionsController(roomCode);
+    if (existing != null) {
+      return controller.stream.transform(_replayLatest(Set.of(existing)));
+    }
+    return controller.stream;
+  }
+
+  @override
+  Stream<List<GameCard>> watchFaceUpExpansionCards(String roomCode) {
+    final existing = _faceUpExpansionCards[roomCode];
+    final controller = _faceUpExpansionCardsController(roomCode);
+    if (existing != null) {
+      return controller.stream.transform(_replayLatest(List.of(existing)));
+    }
+    return controller.stream;
+  }
+
+  @override
+  Future<void> writeFaceUpExpansionCards(
+      String roomCode, List<GameCard> faceUpExpansionCards) async {
+    _faceUpExpansionCards[roomCode] = List.of(faceUpExpansionCards);
+    _faceUpExpansionCardsController(roomCode)
+        .add(List.of(faceUpExpansionCards));
   }
 }

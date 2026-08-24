@@ -17,13 +17,20 @@ class FirebaseGameSyncService implements GameSyncService {
     String hostId,
     Player hostPlayer,
     Map<String, int> centerStacks,
-    TurnState turnState,
-  ) async {
+    TurnState turnState, {
+    Set<ExpansionSet> activeExpansions = const {},
+    List<GameCard> faceUpExpansionCards = const [],
+  }) async {
     await _roomRef(roomCode).set({
       'createdAt': ServerValue.timestamp,
       'players': {hostId: hostPlayer.toJson()},
       'centerStacks': centerStacks,
       'turnState': turnState.toJson(),
+      if (activeExpansions.isNotEmpty)
+        'activeExpansions': activeExpansions.map((e) => e.name).toList(),
+      if (faceUpExpansionCards.isNotEmpty)
+        'faceUpExpansionCards':
+            faceUpExpansionCards.map((c) => c.toJson()).toList(),
     });
   }
 
@@ -127,5 +134,37 @@ class FirebaseGameSyncService implements GameSyncService {
     return _roomRef(roomCode)
         .child('discardPile')
         .set(discardPile.map((c) => c.toJson()).toList());
+  }
+
+  @override
+  Stream<Set<ExpansionSet>> watchActiveExpansions(String roomCode) {
+    return _roomRef(roomCode).child('activeExpansions').onValue.map((event) {
+      final raw = event.snapshot.value;
+      if (raw is! List) return const <ExpansionSet>{};
+      return raw
+          .whereType<Object>()
+          .map((e) => ExpansionSet.values.byName(e as String))
+          .toSet();
+    });
+  }
+
+  @override
+  Stream<List<GameCard>> watchFaceUpExpansionCards(String roomCode) {
+    return _roomRef(roomCode).child('faceUpExpansionCards').onValue.map((event) {
+      final raw = event.snapshot.value;
+      if (raw is! List) return const <GameCard>[];
+      return raw
+          .whereType<Object>()
+          .map((c) => GameCard.fromJson(Map<String, dynamic>.from(c as Map)))
+          .toList();
+    });
+  }
+
+  @override
+  Future<void> writeFaceUpExpansionCards(
+      String roomCode, List<GameCard> faceUpExpansionCards) {
+    return _roomRef(roomCode)
+        .child('faceUpExpansionCards')
+        .set(faceUpExpansionCards.map((c) => c.toJson()).toList());
   }
 }

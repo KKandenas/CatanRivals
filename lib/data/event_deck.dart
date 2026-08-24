@@ -3,12 +3,15 @@ import 'dart:math';
 import '../models/models.dart';
 import 'basic_set_cards.dart';
 
-/// Grundspelets händelsekortsstapel (regelhäftet s. 5, steg 4–5): de 9
-/// händelsekorten som hör till Basic Set. Julkortet (Yule) hålls
-/// separat, de andra 8 blandas, och stapeln byggs underifrån: 3
-/// slumpade kort längst ner, sedan Yule, sedan de återstående 5
-/// slumpade korten överst. Det gör att Yule alltid är det 4:e kortet
-/// räknat från botten/slutet av stapeln.
+/// Händelsekortsstapeln (regelhäftet s. 5, steg 4–5): grundspelets 9
+/// händelsekort, plus – när ett temaset är aktivt – det setets egna
+/// händelsekort (se [extraCards], t.ex. Gulderans Gåva till fursten,
+/// se [EraOfGoldDrawDeck.eventCards]). Julkortet (Yule) hålls separat,
+/// resten blandas, och stapeln byggs underifrån: 3 slumpade kort
+/// längst ner, sedan Yule, sedan resten (oavsett hur många det är)
+/// överst. Det gör att Yule alltid är det 4:e kortet räknat från
+/// botten/slutet av stapeln, oavsett om ett temaset lagt till fler
+/// kort.
 ///
 /// Listan här har index 0 = högst upp (dras först).
 class EventDeck {
@@ -25,9 +28,10 @@ class EventDeck {
 
   static final Map<String, GameCard> _byId = {for (final c in BasicSetCards.all) c.id: c};
 
-  static List<GameCard> shuffledWithYuleFourthFromBottom({Random? random}) {
+  static List<GameCard> shuffledWithYuleFourthFromBottom(
+      {Random? random, List<GameCard> extraCards = const []}) {
     final rng = random ?? Random();
-    final others = <GameCard>[];
+    final others = <GameCard>[...extraCards];
     _basicEventIds.forEach((id, count) {
       final template = _byId[id]!;
       for (var i = 0; i < count; i++) {
@@ -36,10 +40,10 @@ class EventDeck {
     });
     others.shuffle(rng);
 
-    final bottomThree = others.sublist(5, 8);
-    final topFive = others.sublist(0, 5);
+    final bottomThree = others.sublist(others.length - 3);
+    final topRest = others.sublist(0, others.length - 3);
     const yule = BasicSetCards.yule;
 
-    return [...topFive, yule, ...bottomThree];
+    return [...topRest, yule, ...bottomThree];
   }
 }

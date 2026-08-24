@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/basic_set_cards.dart';
 import '../data/basic_set_draw_deck.dart';
+import '../data/era_of_gold_cards.dart';
+import '../data/era_of_gold_draw_deck.dart';
 import '../data/event_deck.dart';
 import '../data/mock_game.dart';
 import '../data/region_deck.dart';
@@ -41,6 +43,7 @@ class GameNotifier extends Notifier<GameState> {
   StreamSubscription<TurnState>? _turnStateSub;
   StreamSubscription<FraternalFeudsRequest?>? _fraternalFeudsRequestSub;
   StreamSubscription<List<GameCard>>? _discardPileSub;
+  StreamSubscription<List<GameCard>>? _faceUpExpansionCardsSub;
 
   /// Regionstapelns kvarvarande, blandade kort (se [RegionDeck]) – dras
   /// från när en ny by byggs. Var spelares klient håller sin egen
@@ -50,18 +53,59 @@ class GameNotifier extends Notifier<GameState> {
   /// delad, synkad dragstapel är ett större steg för sig.
   List<GameCard> _regionDeck = RegionDeck.shuffledRemainingDeck();
 
-  /// De 4 grundspels-draghögarna (36 kort, se [BasicSetDrawDeck]) och
-  /// händelsekortsstapeln (9 kort, Yule 4:e från botten, se
-  /// [EventDeck]). Precis som regionstapeln hålls de lokalt per klient
-  /// tills vidare – bara antalet (alltid 9 vardera) syns i
-  /// centerStacks, inte de exakta korten.
+  /// Grundspelets draghögar (36 kort, se [BasicSetDrawDeck]) och
+  /// händelsekortsstapeln (Yule 4:e från botten, se [EventDeck]).
+  /// Precis som regionstapeln hålls de lokalt per klient tills vidare –
+  /// bara antalet syns i centerStacks, inte de exakta korten. Utan
+  /// aktiva temaset: 4 högar à 9 kort, 9 händelsekort. Med Gulderan
+  /// aktivt (se [_resetDecks]): omfördelas grundspelet till 3 högar à
+  /// 12 kort för att lämna plats åt Gulderans egna 2 (11 kort vardera,
+  /// se [EraOfGoldDrawDeck]) – alltså 5 högar totalt – och 3 extra
+  /// händelsekort läggs till.
   List<List<GameCard>> _drawStacks = BasicSetDrawDeck.shuffledFourStacks();
   List<GameCard> _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom();
 
-  void _resetDecks() {
+  /// Bygger om alla tre lokala dragstaplar (region/drag/händelse) för
+  /// en ny match, enligt vilka temaset som är aktiva. Returnerar den
+  /// öppna ansikte-upp-högen (se [GameState.faceUpExpansionCards]) –
+  /// anroparna (`playLocally`/`hostRoom`/`joinRoom`) sätter in den i
+  /// [state] själva, eftersom `state` inte alltid är uppdaterad med
+  /// [expansions] ännu vid anropstillfället.
+  List<GameCard> _resetDecks(Set<ExpansionSet> expansions) {
     _regionDeck = RegionDeck.shuffledRemainingDeck();
-    _drawStacks = BasicSetDrawDeck.shuffledFourStacks();
+    final hasGold = expansions.contains(ExpansionSet.eraOfGold);
+    final basicStacks =
+        BasicSetDrawDeck.shuffledStacks(stackCount: hasGold ? 3 : 4);
+    if (hasGold) {
+      _drawStacks = [...basicStacks, ...EraOfGoldDrawDeck.shuffledTwoStacks()];
+      _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom(
+          extraCards: EraOfGoldDrawDeck.eventCards());
+      return EraOfGoldDrawDeck.faceUpCards();
+    }
+    _drawStacks = basicStacks;
     _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom();
+    return const [];
+  }
+
+  /// Bygger `centerStacks`-kartan (draghögarnas synliga antal, plus de
+  /// fasta grundspels-antalen väg/by/stad/region) utifrån de FAKTISKT
+  /// uppbyggda dragstaplarna/händelsestapeln (se [_resetDecks]) i
+  /// stället för [MockGame.centerStackCounts]s hårdkodade 4×9/9 – annars
+  /// skulle en 5-högs Gulderan-match visa fel antal (och sakna
+  /// `draw5` helt).
+  Map<String, int> _buildCenterStacks() {
+    final base = MockGame.centerStackCounts();
+    final map = <String, int>{
+      'roads': base['roads']!,
+      'settlements': base['settlements']!,
+      'cities': base['cities']!,
+      'regions': base['regions']!,
+      'event': _eventDeck.length,
+    };
+    for (var i = 0; i < _drawStacks.length; i++) {
+      map['draw${i + 1}'] = _drawStacks[i].length;
+    }
+    return map;
   }
 
   /// Exponerat för UI/tester – de fyra draghögarna finns, är riktigt
@@ -98,6 +142,7 @@ class GameNotifier extends Notifier<GameState> {
       _turnStateSub?.cancel();
       _fraternalFeudsRequestSub?.cancel();
       _discardPileSub?.cancel();
+      _faceUpExpansionCardsSub?.cancel();
     });
     return GameState(
       you: MockGame.buildYou(),
@@ -117,16 +162,16 @@ class GameNotifier extends Notifier<GameState> {
   /// Startar om till lokalt läge (mock-data, ingen synk) – "spela
   /// lokalt"-genvägen i lobbyn, och det man hamnar i om man lämnar ett
   /// rum. [expansions] är de temaset spelaren valt i lobbyn (tom mängd =
-  /// rent grundspel) – styr just nu bara segervillkoret
-  /// ([GameState.victoryPointTarget]); själva draghögs-/uppstarts-
-  /// ombyggnaden för temaseten kommer i ett senare steg.
+  /// rent grundspel) – styr segervillkoret ([GameState.victoryPointTarget])
+  /// och draghögs-/ansikte-upp-uppställningen (se [_resetDecks]).
   void playLocally({Set<ExpansionSet> expansions = const {}}) {
     _playersSub?.cancel();
     _centerStacksSub?.cancel();
     _turnStateSub?.cancel();
     _fraternalFeudsRequestSub?.cancel();
     _discardPileSub?.cancel();
-    _resetDecks();
+    _faceUpExpansionCardsSub?.cancel();
+    final faceUp = _resetDecks(expansions);
 
     // Lokalt läge har ingen egen vy för en andra spelare att trycka
     // sig igenom "välj en draghög"-steget interaktivt, så här delas
@@ -140,13 +185,16 @@ class GameNotifier extends Notifier<GameState> {
         MockGame.buildStartingPlayer('opponent', 'Motståndare', isRed: false),
         1);
 
+    // _dealStartingHand ovan har redan tagit 3 kort ur högarna 0/1 (och
+    // muterat _drawStacks in place), så _buildCenterStacks() här läser
+    // redan de rätta, post-utdelning-antalen – ingen ytterligare -3
+    // ska dras av.
     state = GameState(
       you: you,
       opponent: opponent,
-      centerStacks: Map.of(MockGame.centerStackCounts())
-        ..update('draw1', (v) => v - 3)
-        ..update('draw2', (v) => v - 3),
+      centerStacks: _buildCenterStacks(),
       activeExpansions: expansions,
+      faceUpExpansionCards: faceUp,
       // Röd ("du") går alltid först – samma förenkling som starthandsvalet.
       activePlayerId: 'you',
     );
@@ -154,9 +202,11 @@ class GameNotifier extends Notifier<GameState> {
 
   /// Skapar ett nytt rum, blir "host" och väntar på att en motståndare
   /// ska gå med. Returnerar den genererade rumskoden. [expansions] är
-  /// hostens val i lobbyn (tom mängd = rent grundspel) – styr just nu
-  /// bara segervillkoret hos host själv; gästen känner ännu inte till
-  /// valet (synkas i ett senare steg, se [GameState.activeExpansions]).
+  /// hostens val i lobbyn (tom mängd = rent grundspel) – skickas med
+  /// till rummet så gästen kan läsa samma val (se [joinRoom]/
+  /// [GameSyncService.watchActiveExpansions]) i stället för att välja
+  /// själv, och styr draghögs-/ansikte-upp-uppställningen (se
+  /// [_resetDecks]).
   Future<String> hostRoom(String myName,
       {Set<ExpansionSet> expansions = const {}}) async {
     final roomCode = MockGame.generateRoomCode();
@@ -165,15 +215,16 @@ class GameNotifier extends Notifier<GameState> {
     final waitingOpponent = MockGame.buildStartingPlayer(
         'guest', 'Väntar på motståndare …',
         isRed: false);
-    final centerStacks = MockGame.centerStackCounts();
-    _resetDecks();
+    final faceUp = _resetDecks(expansions);
+    final centerStacks = _buildCenterStacks();
 
     // Röd (host) går alltid först – samma förenkling som starthandsvalet.
     const initialTurnState = TurnState(activePlayerId: 'host');
     try {
       await _sync
           .createRoom(
-              roomCode, 'host', hostPlayer, centerStacks, initialTurnState)
+              roomCode, 'host', hostPlayer, centerStacks, initialTurnState,
+              activeExpansions: expansions, faceUpExpansionCards: faceUp)
           .timeout(const Duration(seconds: 10));
     } on TimeoutException {
       throw Exception(
@@ -185,6 +236,7 @@ class GameNotifier extends Notifier<GameState> {
       opponent: waitingOpponent,
       centerStacks: centerStacks,
       activeExpansions: expansions,
+      faceUpExpansionCards: faceUp,
       mode: SessionMode.host,
       roomCode: roomCode,
       myPlayerId: 'host',
@@ -197,7 +249,11 @@ class GameNotifier extends Notifier<GameState> {
   }
 
   /// Går med i ett befintligt rum. Returnerar `null` vid lyckat
-  /// gick-med, annars ett felmeddelande att visa i lobbyn.
+  /// gick-med, annars ett felmeddelande att visa i lobbyn. Till
+  /// skillnad från [hostRoom] väljer gästen INTE själv vilka temaset
+  /// som gäller – de läses från rummet (satta av hosten vid
+  /// [createRoom]) så att båda klienterna bygger upp samma
+  /// draghögs-/ansikte-upp-uppställning (se [_resetDecks]).
   Future<String?> joinRoom(String roomCode, String myName) async {
     final guestPlayer =
         MockGame.buildStartingPlayer('guest', myName, isRed: false);
@@ -210,12 +266,29 @@ class GameNotifier extends Notifier<GameState> {
       return 'Fick ingen kontakt med servern. Kontrollera internetanslutningen och försök igen.';
     }
     if (error != null) return error;
-    _resetDecks();
+
+    var expansions = const <ExpansionSet>{};
+    try {
+      expansions = await _sync
+          .watchActiveExpansions(roomCode)
+          .first
+          .timeout(const Duration(seconds: 10));
+    } catch (_) {
+      // Antar rent grundspel om det här misslyckas – hellre en spelbar
+      // (fast fel) uppställning än att hela anslutningen stupar på det.
+    }
+    final faceUp = _resetDecks(expansions);
 
     state = GameState(
       you: guestPlayer,
       opponent: MockGame.buildStartingPlayer('host', '…', isRed: true),
-      centerStacks: MockGame.centerStackCounts(),
+      // Lokal, tillfällig gissning tills [_subscribeToRoom]s
+      // centerStacks-lyssnare hinner leverera hostens FAKTISKA (redan
+      // skrivna) antal – precis som innan, bara nu med rätt antal
+      // högar när ett temaset är aktivt.
+      centerStacks: _buildCenterStacks(),
+      activeExpansions: expansions,
+      faceUpExpansionCards: faceUp,
       mode: SessionMode.guest,
       roomCode: roomCode,
       myPlayerId: 'guest',
@@ -278,15 +351,33 @@ class GameNotifier extends Notifier<GameState> {
           .watchDiscardPile(roomCode)
           .first
           .timeout(const Duration(seconds: 10));
+      var expansions = const <ExpansionSet>{};
+      try {
+        expansions = await _sync
+            .watchActiveExpansions(roomCode)
+            .first
+            .timeout(const Duration(seconds: 10));
+      } catch (_) {
+        // Se joinRoom – hellre en spelbar (fast fel) uppställning.
+      }
+      final faceUpExpansionCards = await _sync
+          .watchFaceUpExpansionCards(roomCode)
+          .first
+          .timeout(const Duration(seconds: 10));
 
       _regionDeck = RegionDeck.shuffledRemainingDeck();
-      _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom();
-      _reconstructDrawStacksFromKnownCards(you, opponent, centerStacks);
+      final hasGold = expansions.contains(ExpansionSet.eraOfGold);
+      _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom(
+          extraCards: hasGold ? EraOfGoldDrawDeck.eventCards() : const []);
+      _reconstructDrawStacksFromKnownCards(
+          you, opponent, centerStacks, expansions);
 
       state = GameState(
         you: you,
         opponent: opponent,
         centerStacks: centerStacks,
+        activeExpansions: expansions,
+        faceUpExpansionCards: faceUpExpansionCards,
         mode: role == 'host' ? SessionMode.host : SessionMode.guest,
         roomCode: roomCode,
         myPlayerId: role,
@@ -330,21 +421,28 @@ class GameNotifier extends Notifier<GameState> {
     }
   }
 
-  /// Bygger om de fyra draghögarna lokalt efter [resumeRoom] – den här
-  /// klienten känner bara till det synkade ANTALET kvar i varje hög
-  /// ([centerStacks]), inte vilka specifika kort. Utgår från grund-
-  /// spelets fulla 36-korspool ([BasicSetDrawDeck]) och drar bort de
-  /// korttyper som redan syns i någon av spelarnas händer eller
+  /// Bygger om draghögarna lokalt efter [resumeRoom] – den här klienten
+  /// känner bara till det synkade ANTALET kvar i varje hög
+  /// ([centerStacks]), inte vilka specifika kort. Utgår från
+  /// grundspelets fulla 36-korspool ([BasicSetDrawDeck]) – plus
+  /// Gulderans egen pool när [expansions] innehåller
+  /// [ExpansionSet.eraOfGold] (se [EraOfGoldDrawDeck]) – och drar bort
+  /// de korttyper som redan syns i någon av spelarnas händer eller
   /// utplacerade på deras riken – annars skulle samma unika byggnad
   /// (t.ex. Klostret) kunna "dyka upp" igen i en dragstapel trots att
-  /// den redan ligger på brädet. Resten blandas och delas upp exakt
-  /// enligt de synkade antalen, så att högarnas STORLEK alltid stämmer
-  /// (helt avgörande – annars kan senare drag krascha mot en för kort
-  /// lista); den exakta sammansättningen kan skilja sig något från vad
-  /// som "egentligen" låg kvar, vilket är en accepterad brist (samma
-  /// typ av brist som region-/händelsekortsstapeln redan hade).
-  void _reconstructDrawStacksFromKnownCards(
-      Player you, Player opponent, Map<String, int> centerStacks) {
+  /// den redan ligger på brädet. Köpmansgille räknas aldrig hit – de 2
+  /// fysiska kopiorna ligger alltid ansikte-upp (se
+  /// [GameState.faceUpExpansionCards], synkad separat, ingen
+  /// rekonstruktion behövs där). Resten blandas och delas upp exakt
+  /// enligt de synkade antalen (en hög per `centerStacks['draw$i']`
+  /// som faktiskt finns, 4 eller 5 beroende på [expansions]), så att
+  /// högarnas STORLEK alltid stämmer (helt avgörande – annars kan
+  /// senare drag krascha mot en för kort lista); den exakta
+  /// sammansättningen kan skilja sig något från vad som "egentligen"
+  /// låg kvar, vilket är en accepterad brist (samma typ av brist som
+  /// region-/händelsekortsstapeln redan hade).
+  void _reconstructDrawStacksFromKnownCards(Player you, Player opponent,
+      Map<String, int> centerStacks, Set<ExpansionSet> expansions) {
     final accountedFor = <String, int>{};
     void markKnown(GameCard card) {
       accountedFor.update(card.baseId, (v) => v + 1, ifAbsent: () => 1);
@@ -359,6 +457,23 @@ class GameNotifier extends Notifier<GameState> {
       }
     }
 
+    // Fyra korttyper (Guldsmed/Lagerhus/Tullbro/Stora handelsskeppet)
+    // återanvänds rakt av från grundspelet med extra fysiska kopior i
+    // Gulderans egen pool (se EraOfGoldCards-doc) – samma id:n
+    // förekommer alltså i BÅDA supplyCounts-tabellerna nedan. Ett känt
+    // kort (i en hand/på ett rike) ska bara dras av EN gång från den
+    // sammanlagda mängden, inte en gång per pool – annars saknas ett
+    // kort i den slutliga sammanslagningen. remainingAccounted "spenderas"
+    // här: grundspelspoolen (som byggs först) får dra av mot kända kort
+    // innan Gulderan-poolen får resten.
+    final remainingAccounted = Map<String, int>.from(accountedFor);
+    int consumeAccounted(String id, int totalCount) {
+      final have = remainingAccounted[id] ?? 0;
+      final used = have < totalCount ? have : totalCount;
+      remainingAccounted[id] = have - used;
+      return totalCount - used;
+    }
+
     final byId = {for (final c in BasicSetCards.all) c.id: c};
     final pool = <GameCard>[];
     BasicSetCards.supplyCounts.forEach((id, totalCount) {
@@ -366,7 +481,7 @@ class GameNotifier extends Notifier<GameState> {
       if (id.startsWith('event-')) return;
       final template = byId[id];
       if (template == null) return;
-      final remaining = totalCount - (accountedFor[id] ?? 0);
+      final remaining = consumeAccounted(id, totalCount);
       // Offset (+1000) så id:na aldrig krockar med de "riktiga"
       // draghögs-id:na (0..totalCount-1) som redan kan ligga i en hand
       // eller på ett rike – kortsuffixet måste ändå matcha "-draw-N"
@@ -375,13 +490,25 @@ class GameNotifier extends Notifier<GameState> {
         pool.add(template.copyWith(id: '$id-draw-${1000 + i}'));
       }
     });
+    final hasGold = expansions.contains(ExpansionSet.eraOfGold);
+    if (hasGold) {
+      final goldById = {for (final c in EraOfGoldCards.all) c.id: c};
+      EraOfGoldCards.supplyCounts.forEach((id, totalCount) {
+        if (id.startsWith('event-')) return;
+        if (id == EraOfGoldCards.merchantGuild.id) return;
+        final template = goldById[id] ?? byId[id];
+        if (template == null) return;
+        final remaining = consumeAccounted(id, totalCount);
+        for (var i = 0; i < remaining; i++) {
+          pool.add(template.copyWith(id: '$id-gold-draw-${1000 + i}'));
+        }
+      });
+    }
     pool.shuffle();
 
+    final stackCount = hasGold ? 5 : 4;
     final counts = [
-      centerStacks['draw1'] ?? 0,
-      centerStacks['draw2'] ?? 0,
-      centerStacks['draw3'] ?? 0,
-      centerStacks['draw4'] ?? 0,
+      for (var i = 0; i < stackCount; i++) centerStacks['draw${i + 1}'] ?? 0,
     ];
     final stacks = <List<GameCard>>[];
     var offset = 0;
@@ -418,6 +545,9 @@ class GameNotifier extends Notifier<GameState> {
         if (state.winnerId != null) 'winnerId': state.winnerId,
         if (state.discardPile.isNotEmpty)
           'discardPile': state.discardPile.map((c) => c.toJson()).toList(),
+        if (state.faceUpExpansionCards.isNotEmpty)
+          'faceUpExpansionCards':
+              state.faceUpExpansionCards.map((c) => c.toJson()).toList(),
         'drawStacks': _drawStacks
             .map((stack) => stack.map((c) => c.toJson()).toList())
             .toList(),
@@ -464,6 +594,9 @@ class GameNotifier extends Notifier<GameState> {
       discardPile: json['discardPile'] == null
           ? const []
           : parseCards(json['discardPile']),
+      faceUpExpansionCards: json['faceUpExpansionCards'] == null
+          ? const []
+          : parseCards(json['faceUpExpansionCards']),
     );
   }
 
@@ -484,6 +617,7 @@ class GameNotifier extends Notifier<GameState> {
     _turnStateSub?.cancel();
     _fraternalFeudsRequestSub?.cancel();
     _discardPileSub?.cancel();
+    _faceUpExpansionCardsSub?.cancel();
 
     _playersSub = _sync.watchPlayers(roomCode).listen(
       (players) {
@@ -561,6 +695,15 @@ class GameNotifier extends Notifier<GameState> {
             state.copyWith(sessionError: 'Kunde inte synka slänghögen: $e');
       },
     );
+
+    _faceUpExpansionCardsSub =
+        _sync.watchFaceUpExpansionCards(roomCode).listen(
+      (cards) => state = state.copyWith(faceUpExpansionCards: cards),
+      onError: (Object e) {
+        state = state.copyWith(
+            sessionError: 'Kunde inte synka ansikte-upp-högen: $e');
+      },
+    );
   }
 
   void _syncMyPlayer() {
@@ -579,6 +722,13 @@ class GameNotifier extends Notifier<GameState> {
     final roomCode = state.roomCode;
     if (roomCode == null) return;
     unawaited(_sync.writeDiscardPile(roomCode, state.discardPile));
+  }
+
+  void _syncFaceUpExpansionCards() {
+    final roomCode = state.roomCode;
+    if (roomCode == null) return;
+    unawaited(_sync.writeFaceUpExpansionCards(
+        roomCode, state.faceUpExpansionCards));
   }
 
   /// Lägger [card] överst i slänghögen (se [GameState.discardPile]) och
@@ -1282,7 +1432,10 @@ class GameNotifier extends Notifier<GameState> {
       return 'Inte din tur att välja en draghög.';
     }
     final key = 'draw${index + 1}';
-    if ((state.centerStacks[key] ?? 0) < 9) return 'Den högen är redan vald.';
+    final fullSize = state.initialDrawStackSizes[index];
+    if ((state.centerStacks[key] ?? 0) < fullSize) {
+      return 'Den högen är redan vald.';
+    }
 
     final updated = _dealStartingHand(state.you, index);
     state = state.copyWith(
@@ -1340,13 +1493,31 @@ class GameNotifier extends Notifier<GameState> {
     return null;
   }
 
-  /// Bygger ett bygg-/enhets-/skeppskort på en byggplats. Om platsen
-  /// redan har ett kort byts det ut i stället för att avvisas (se
-  /// [PrincipalityGrid]s `onRequestBuildConfirm`/[BuildConfirmCard]s
-  /// "Ersätter X"-text): [card] kostar sitt fulla pris som vanligt
-  /// (ingen rabatt), och det gamla kortet läggs i slänghögen (se
-  /// [_discardToPile]) – eventuella poäng det gav försvinner
-  /// automatiskt eftersom det inte längre ligger i riket.
+  /// Delad kärna för [dropExpansion]/[buyFaceUpExpansion]: placerar
+  /// [card] på byggplatsen (byter ut ett eventuellt redan liggande
+  /// kort mot slänghögen, se [_discardToPile] – eventuella poäng det
+  /// gav försvinner automatiskt eftersom det inte längre ligger i
+  /// riket), synkar ditt rike. Anroparen ansvarar själv för att ta bort
+  /// [card] från sin KÄLLA (hand respektive den delade ansikte-upp-
+  /// högen) och synka den separat, INNAN det här anropas (annars skulle
+  /// [recomputeTokenHolders] hinna räkna med kortet på fel ställe).
+  void _placeExpansionCardAndSync(
+      int column, BuildingRow row, int slotIndex, GameCard card) {
+    final replaced =
+        state.you.principality.removeExpansion(column, row, slotIndex);
+    state.you.principality
+        .placeExpansion(column, row, slotIndex, PlacedCard(card: card));
+    state = state.copyWith(you: state.you, clearDraggingCard: true);
+    recomputeTokenHolders();
+    _syncMyPlayer();
+    if (replaced != null) _discardToPile(replaced.card);
+  }
+
+  /// Bygger ett bygg-/enhets-/skeppskort FRÅN HANDEN på en byggplats.
+  /// Om platsen redan har ett kort byts det ut i stället för att
+  /// avvisas (se [PrincipalityGrid]s `onRequestBuildConfirm`/
+  /// [BuildConfirmCard]s "Ersätter X"-text): [card] kostar sitt fulla
+  /// pris som vanligt (ingen rabatt), se [_placeExpansionCardAndSync].
   String? dropExpansion(
       int column, BuildingRow row, int slotIndex, GameCard card) {
     final turnError = _checkCanBuild();
@@ -1357,17 +1528,32 @@ class GameNotifier extends Notifier<GameState> {
       return 'Du kan bara ha en ${card.name} i ditt rike.';
     }
 
-    final replaced =
-        state.you.principality.removeExpansion(column, row, slotIndex);
-    state.you.principality
-        .placeExpansion(column, row, slotIndex, PlacedCard(card: card));
-    final updated =
-        state.you.copyWith(hand: List.of(state.you.hand)..remove(card));
+    state = state.copyWith(
+        you: state.you.copyWith(hand: List.of(state.you.hand)..remove(card)));
+    _placeExpansionCardAndSync(column, row, slotIndex, card);
+    return null;
+  }
 
-    state = state.copyWith(you: updated, clearDraggingCard: true);
-    recomputeTokenHolders();
-    _syncMyPlayer();
-    if (replaced != null) _discardToPile(replaced.card);
+  /// Köper ett kort direkt från den öppna ansikte-upp-högen (se
+  /// [GameState.faceUpExpansionCards], t.ex. Gulderans Köpmansgille) –
+  /// vem som helst kan bygga härifrån på sin egen tur, precis som ett
+  /// vanligt bygge från handen (se [dropExpansion], samma byt-ut-regel
+  /// om platsen redan är bebyggd).
+  String? buyFaceUpExpansion(
+      int column, BuildingRow row, int slotIndex, GameCard card) {
+    final turnError = _checkCanBuild();
+    if (turnError != null) return turnError;
+    if (!state.faceUpExpansionCards.contains(card)) return null;
+    if (card.isUnique &&
+        state.you.principality.hasExpansionCard(card.baseId)) {
+      return 'Du kan bara ha en ${card.name} i ditt rike.';
+    }
+
+    state = state.copyWith(
+        faceUpExpansionCards: List.of(state.faceUpExpansionCards)
+          ..remove(card));
+    _syncFaceUpExpansionCards();
+    _placeExpansionCardAndSync(column, row, slotIndex, card);
     return null;
   }
 

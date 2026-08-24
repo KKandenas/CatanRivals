@@ -635,6 +635,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           child: StackChoiceOverlay(
                             title:
                                 'Vilken draghög ska byggnaden läggas underst i?',
+                            stackCount: state.initialDrawStackSizes.length,
                             onChooseStack: (index) => _handleResult(context,
                                 notifier.resolveFeudBuildingRemoval(index)),
                             onCancel: () => _handleResult(
@@ -669,6 +670,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           child: StackChoiceOverlay(
                             title:
                                 'Vilken draghög ska kortet läggas underst i?',
+                            stackCount: state.initialDrawStackSizes.length,
                             onChooseStack: (index) {
                               final card = _pendingFraternalFeudsCard!;
                               setState(() => _pendingFraternalFeudsCard = null);
@@ -717,6 +719,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
               ),
               CenterStacksStrip(
                 stackCounts: state.centerStacks,
+                initialStackSizes: state.initialDrawStackSizes,
+                faceUpExpansionCards: state.faceUpExpansionCards,
                 onDragStarted: notifier.startDrag,
                 onDragEnd: notifier.endDrag,
                 canBuild: canBuildRightNow,
@@ -824,8 +828,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                         onDropExpansion: (column, row, slotIndex, card) =>
                             _handleResult(
                                 context,
-                                notifier.dropExpansion(
-                                    column, row, slotIndex, card)),
+                                state.faceUpExpansionCards.contains(card)
+                                    ? notifier.buyFaceUpExpansion(
+                                        column, row, slotIndex, card)
+                                    : notifier.dropExpansion(
+                                        column, row, slotIndex, card)),
                         onDropRoad: (column, card) => _handleResult(
                             context, notifier.dropRoad(column, card)),
                         onDropSettlement: (column, card) => _handleResult(

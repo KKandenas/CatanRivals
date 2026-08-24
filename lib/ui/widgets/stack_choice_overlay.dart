@@ -10,12 +10,17 @@ import '../theme/catan_colors.dart';
 /// det valet efter att själva kortet redan är utpekat.
 class StackChoiceOverlay extends StatelessWidget {
   final String title;
+
+  /// Hur många draghögar som ska visas att välja mellan – 4 utan tema,
+  /// 5 med Gulderan (se [GameState.initialDrawStackSizes].length).
+  final int stackCount;
   final void Function(int stackIndex) onChooseStack;
   final VoidCallback? onCancel;
 
   const StackChoiceOverlay({
     super.key,
     required this.title,
+    this.stackCount = 4,
     required this.onChooseStack,
     this.onCancel,
   });
@@ -47,14 +52,14 @@ class StackChoiceOverlay extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    for (var i = 0; i < 4; i++)
+                    for (var i = 0; i < stackCount; i++)
                       GestureDetector(
                         onTap: () => onChooseStack(i),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(6),
                           child: SizedBox(
-                            width: 56,
-                            height: 56,
+                            width: stackCount > 4 ? 48 : 56,
+                            height: stackCount > 4 ? 48 : 56,
                             child: Stack(
                               fit: StackFit.expand,
                               children: [

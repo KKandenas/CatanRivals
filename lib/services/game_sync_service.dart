@@ -16,18 +16,28 @@ import '../models/models.dart';
 ///   discardPile              -> List<GameCard.toJson()>, senast
 ///                                spelade kortet sist (se
 ///                                [GameNotifier.discardPile])
+///   activeExpansions          -> List<String> (ExpansionSet-namn),
+///                                satt en gång vid rumsskapande, se
+///                                [GameState.activeExpansions]
+///   faceUpExpansionCards      -> List<GameCard.toJson()>, se
+///                                [GameState.faceUpExpansionCards]
 /// ```
 abstract class GameSyncService {
   /// Skapar ett nytt rum med given kod och sätter värden-spelaren som
   /// första spelare. Antar att koden inte redan är upptagen (koden
-  /// genereras slumpmässigt av anroparen).
+  /// genereras slumpmässigt av anroparen). [activeExpansions] sätts en
+  /// gång här och ändras aldrig sedan (se [GameState.activeExpansions])
+  /// – gästen läser det via [watchActiveExpansions] i stället för att
+  /// välja själv.
   Future<void> createRoom(
     String roomCode,
     String hostId,
     Player hostPlayer,
     Map<String, int> centerStacks,
-    TurnState turnState,
-  );
+    TurnState turnState, {
+    Set<ExpansionSet> activeExpansions = const {},
+    List<GameCard> faceUpExpansionCards = const [],
+  });
 
   /// Går med i ett befintligt rum. Returnerar `null` vid lyckat
   /// gick-med, annars ett användarvänligt felmeddelande (rummet finns
@@ -70,4 +80,18 @@ abstract class GameSyncService {
   Stream<List<GameCard>> watchDiscardPile(String roomCode);
 
   Future<void> writeDiscardPile(String roomCode, List<GameCard> discardPile);
+
+  /// Strömmar vilka temaset rummet spelas med (satt en gång vid
+  /// [createRoom], ändras aldrig sedan) – [GameNotifier.joinRoom]/
+  /// [GameNotifier.resumeRoom] läser bara det första värdet (`.first`),
+  /// precis som centerStacks/turnState redan görs vid återanslutning.
+  Stream<Set<ExpansionSet>> watchActiveExpansions(String roomCode);
+
+  /// Strömmar den öppna ansikte-upp-högen (se
+  /// [GameState.faceUpExpansionCards]), varje gång den ändras – delad
+  /// mellan spelarna, precis som [watchDiscardPile].
+  Stream<List<GameCard>> watchFaceUpExpansionCards(String roomCode);
+
+  Future<void> writeFaceUpExpansionCards(
+      String roomCode, List<GameCard> faceUpExpansionCards);
 }

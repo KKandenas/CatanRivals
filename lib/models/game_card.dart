@@ -217,16 +217,33 @@ class GameCard {
         imageAsset: json['imageAsset'] as String,
       );
 
-  /// Korttypens id utan draghögens per-kopia-suffix ("-draw-N", se
-  /// [BasicSetDrawDeck]/[EventDeck]) – två fysiska kopior av samma
-  /// korttyp (t.ex. de två Spejare-korten) har olika [id] men samma
-  /// [baseId]. Använd den här, inte [id], för att avgöra vilken
-  /// *sorts* kort ett handkort är (t.ex. "är det här en Spejare?") –
-  /// [id] är bara rätt när man jämför mot exakt samma fysiska
-  /// kortexemplar (t.ex. `hand.contains(card)`/`hand.remove(card)`).
+  /// Korttypens id utan draghögens per-kopia-suffix ("-draw-N",
+  /// "-gold-draw-N", "-gold-event-N", "-faceup-N", se
+  /// [BasicSetDrawDeck]/[EventDeck]/[EraOfGoldDrawDeck]) – två fysiska
+  /// kopior av samma korttyp (t.ex. de två Spejare-korten, eller de två
+  /// ansikte-upp-Köpmansgillena) har olika [id] men samma [baseId].
+  /// Använd den här, inte [id], för att avgöra vilken *sorts* kort ett
+  /// handkort är (t.ex. "är det här en Spejare?") – [id] är bara rätt
+  /// när man jämför mot exakt samma fysiska kortexemplar (t.ex.
+  /// `hand.contains(card)`/`hand.remove(card)`).
+  ///
+  /// Suffixen provas mest specifikt (längst) först – annars skulle
+  /// t.ex. "-gold-draw-3" felaktigt bara få "-draw-3" bortklippt (och
+  /// lämna "-gold" kvar i basid:t), eftersom det också råkar sluta på
+  /// mönstret för det kortare, mer generiska suffixet.
+  static final List<RegExp> _suffixPatterns = [
+    RegExp(r'^(.*)-gold-draw-\d+$'),
+    RegExp(r'^(.*)-gold-event-\d+$'),
+    RegExp(r'^(.*)-faceup-\d+$'),
+    RegExp(r'^(.*)-draw-\d+$'),
+  ];
+
   String get baseId {
-    final match = RegExp(r'^(.*)-draw-\d+$').firstMatch(id);
-    return match?.group(1) ?? id;
+    for (final pattern in _suffixPatterns) {
+      final match = pattern.firstMatch(id);
+      if (match != null) return match.group(1)!;
+    }
+    return id;
   }
 
   /// Två [GameCard] räknas som samma kort om de har samma id, eftersom
