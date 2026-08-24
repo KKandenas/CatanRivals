@@ -270,12 +270,16 @@ class CenterStacksStrip extends StatelessWidget {
       );
     }
 
-    final tappable = isChoosingHand && isMyTurnToChooseHand && !claimed;
+    // Gulderans egna högar hör aldrig till starthanden (se
+    // GameNotifier.startHandDraft-doc) – bara grundspelets 3 (eller,
+    // utan tema, alla 4) går att välja.
+    final tappable =
+        isChoosingHand && isMyTurnToChooseHand && !claimed && !_isGoldStack(index);
     return _StackPile(
       asset: asset,
       count: count,
       width: 48,
-      dimmed: isChoosingHand && claimed,
+      dimmed: isChoosingHand && (claimed || _isGoldStack(index)),
       highlighted: tappable,
       peeking: peeking,
       onTap: tappable ? () => onChooseStack?.call(index) : null,

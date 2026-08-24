@@ -31,6 +31,7 @@ import '../widgets/rules_button.dart';
 import '../widgets/scout_prompt_card.dart';
 import '../widgets/scout_region_picker.dart';
 import '../widgets/stack_choice_overlay.dart';
+import '../widgets/starting_hand_draft_picker.dart';
 import '../widgets/top_status_bar.dart';
 import '../widgets/total_score_board.dart';
 import '../widgets/trade_phase_card.dart';
@@ -421,9 +422,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           color:
                               Theme.of(context).colorScheme.secondaryContainer,
                           child: Text(
-                            state.isMyTurnToChooseHand
-                                ? 'Din tur: tryck på en draghög för att ta dina 3 starthandkort'
-                                : 'Väntar på att ${state.opponent.name} väljer en draghög …',
+                            !state.isMyTurnToChooseHand
+                                ? 'Väntar på att ${state.opponent.name} väljer en draghög …'
+                                : state.activeExpansions.isEmpty
+                                    ? 'Din tur: tryck på en draghög för att ta dina 3 starthandkort'
+                                    : state.startingHandDraftPool != null
+                                        ? 'Din tur: välj 3 kort ur högen'
+                                        : 'Din tur: tryck på en av grundspelshögarna för att kika i den',
                             textAlign: TextAlign.center,
                           ),
                         ),
@@ -773,6 +778,22 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           ),
                         ),
                       ),
+                    // Starthandsutdelningen med ett tema aktivt (se
+                    // GameNotifier.startHandDraft/pickHandDraftCard) – den
+                    // uppslagna högen, en av grundspelets 3.
+                    if (state.startingHandDraftPool != null)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          padding: const EdgeInsets.all(12),
+                          child: StartingHandDraftPicker(
+                            pool: state.startingHandDraftPool!,
+                            pickedCount: state.startingHandDraftPicked.length,
+                            onPick: (card) => _handleResult(
+                                context, notifier.pickHandDraftCard(card)),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -782,10 +803,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 onDragStarted: notifier.startDrag,
                 onDragEnd: notifier.endDrag,
                 canBuild: canBuildRightNow,
-                isChoosingHand: state.isOnline && !state.handsReady,
+                isChoosingHand: state.isOnline &&
+                    !state.handsReady &&
+                    state.startingHandDraftPool == null,
                 isMyTurnToChooseHand: state.isMyTurnToChooseHand,
-                onChooseStack: (index) =>
-                    _handleResult(context, notifier.chooseStartingStack(index)),
+                onChooseStack: (index) => _handleResult(
+                    context,
+                    state.activeExpansions.isNotEmpty
+                        ? notifier.startHandDraft(index)
+                        : notifier.chooseStartingStack(index)),
                 handAdjustmentPhase: state.handAdjustmentPhase,
                 onDrawStack: (index) =>
                     _handleResult(context, notifier.drawHandCard(index)),

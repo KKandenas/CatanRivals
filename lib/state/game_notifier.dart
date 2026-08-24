@@ -1474,11 +1474,13 @@ class GameNotifier extends Notifier<GameState> {
   // Starthand: välj en draghög och ta dess 3 översta kort
   // ---------------------------------------------------------------------
 
-  /// Väljer draghög [index] (0–3) och tar dess 3 översta kort som
-  /// starthand (regelhäftet s. 6). Bara giltigt om det är den här
-  /// spelarens tur att välja (se [GameState.isMyTurnToChooseHand]) och
-  /// högen inte redan är vald. Returnerar `null` vid lyckat val, annars
-  /// ett felmeddelande.
+  /// Väljer draghög [index] (0–3) och tar dess 3 översta kort BLINT som
+  /// starthand (regelhäftet s. 6) – grundspelets väg, utan tema aktivt
+  /// (se game_board_screen.dart:s `onChooseStack`, som väljer den här
+  /// eller [startHandDraft] beroende på [GameState.activeExpansions]).
+  /// Bara giltigt om det är den här spelarens tur att välja (se
+  /// [GameState.isMyTurnToChooseHand]) och högen inte redan är vald.
+  /// Returnerar `null` vid lyckat val, annars ett felmeddelande.
   String? chooseStartingStack(int index) {
     if (state.handsReady) return null;
     if (!state.isMyTurnToChooseHand) {
@@ -1494,6 +1496,80 @@ class GameNotifier extends Notifier<GameState> {
     state = state.copyWith(
       you: updated,
       centerStacks: Map.of(state.centerStacks)..update(key, (v) => v - 3),
+    );
+    _syncMyPlayer();
+    _syncCenterStacks();
+    return null;
+  }
+
+  // ---------------------------------------------------------------------
+  // Starthand med tema: kika i en av grundspelets 3 högar, välj 3 kort
+  // ---------------------------------------------------------------------
+
+  /// Väljer en av grundspelets 3 draghögar (index 0–2, aldrig en av
+  /// Gulderans egna) att KIKA I, i stället för att blint dra – bekräftad
+  /// regel: "Man väljer en av de tre högarna som innehåller korten från
+  /// grundspelet. Man får kika på alla kort i högen och välja ut tre."
+  /// Alla kortet i högen läggs synliga i [GameState.startingHandDraftPool]
+  /// (se [pickHandDraftCard] för själva valet). Ingen synk här – rent
+  /// lokalt tills utdelningen är klar (se [pickHandDraftCard]s doc för
+  /// vad det betyder vid en sidladdning mitt i).
+  String? startHandDraft(int index) {
+    if (state.handsReady) return null;
+    if (!state.isMyTurnToChooseHand) {
+      return 'Inte din tur att välja en draghög.';
+    }
+    if (state.startingHandDraftStackIndex != null) return null;
+    // UI:t ska aldrig göra det här möjligt (se CenterStacksStrip), men
+    // dubbelkollar ändå – Gulderans egna högar hör inte till starthanden.
+    if (_isGoldStackIndex(index)) return null;
+    final key = 'draw${index + 1}';
+    final fullSize = state.initialDrawStackSizes[index];
+    if ((state.centerStacks[key] ?? 0) < fullSize) {
+      return 'Den högen är redan vald.';
+    }
+
+    state = state.copyWith(
+      startingHandDraftStackIndex: index,
+      startingHandDraftPool: List.of(_drawStacks[index]),
+      startingHandDraftPicked: const [],
+    );
+    return null;
+  }
+
+  /// Plockar [card] ur den uppslagna högen (se [startHandDraft]) till
+  /// din starthand. Vid det tredje kortet avslutas utdelningen: de
+  /// återstående 9 korten läggs tillbaka i draghögen i exakt samma
+  /// inbördes ordning som de låg i innan (de har bara tagits BORT ur en
+  /// kopia av den ursprungliga högen, aldrig blandats om), handen/
+  /// centerStacks uppdateras i ett enda svep och synkas.
+  ///
+  /// Sätter [Player.hasDrawnStartingHand] direkt här – till skillnad
+  /// från när ett tema är aktivt (se planen för Steg 5b, "fri
+  /// regionomflyttning"), där flaggan i stället väntar tills
+  /// omflyttningsfasen avslutas explicit.
+  String? pickHandDraftCard(GameCard card) {
+    final pool = state.startingHandDraftPool;
+    if (pool == null || !pool.contains(card)) return null;
+
+    final newPool = List<GameCard>.of(pool)..remove(card);
+    final picked = [...state.startingHandDraftPicked, card];
+    if (picked.length < 3) {
+      state = state.copyWith(
+          startingHandDraftPool: newPool, startingHandDraftPicked: picked);
+      return null;
+    }
+
+    final stackIndex = state.startingHandDraftStackIndex!;
+    _drawStacks[stackIndex] = newPool;
+    state = state.copyWith(
+      you: state.you.copyWith(
+          hand: [...state.you.hand, ...picked], hasDrawnStartingHand: true),
+      centerStacks: Map.of(state.centerStacks)
+        ..update('draw${stackIndex + 1}', (v) => v - 3),
+      clearStartingHandDraftStackIndex: true,
+      clearStartingHandDraftPool: true,
+      startingHandDraftPicked: const [],
     );
     _syncMyPlayer();
     _syncCenterStacks();

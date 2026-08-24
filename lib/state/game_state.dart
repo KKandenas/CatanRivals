@@ -201,6 +201,19 @@ class GameState {
   final List<GameCard> fraternalFeudsPicked;
   final List<int> fraternalFeudsPickedStacks;
 
+  /// Starthandsutdelningen (regelhäftet s. 6) när ett tema är aktivt (se
+  /// [GameNotifier.startHandDraft]/[GameNotifier.pickHandDraftCard]):
+  /// spelaren väljer en av de tre grundspelshögarna, ser ALLA dess kort
+  /// ([startingHandDraftPool]), och plockar ut 3 ett i taget – resten
+  /// läggs tillbaka i exakt samma inbördes ordning. [startingHandDraftPool]
+  /// är `null` när ingen utdelning pågår (antingen inte startad, eller
+  /// redan klar). Rent lokalt UI-state, aldrig synkat till motståndaren
+  /// – se [GameNotifier.startHandDraft]s doc för vad det innebär vid en
+  /// sidladdning mitt i.
+  final int? startingHandDraftStackIndex;
+  final List<GameCard>? startingHandDraftPool;
+  final List<GameCard> startingHandDraftPicked;
+
   const GameState({
     required this.you,
     required this.opponent,
@@ -239,6 +252,9 @@ class GameState {
     this.fraternalFeudsPicking = false,
     this.fraternalFeudsPicked = const [],
     this.fraternalFeudsPickedStacks = const [],
+    this.startingHandDraftStackIndex,
+    this.startingHandDraftPool,
+    this.startingHandDraftPicked = const [],
   });
 
   bool get isOnline => mode != SessionMode.local;
@@ -395,6 +411,11 @@ class GameState {
     bool? fraternalFeudsPicking,
     List<GameCard>? fraternalFeudsPicked,
     List<int>? fraternalFeudsPickedStacks,
+    int? startingHandDraftStackIndex,
+    bool clearStartingHandDraftStackIndex = false,
+    List<GameCard>? startingHandDraftPool,
+    bool clearStartingHandDraftPool = false,
+    List<GameCard>? startingHandDraftPicked,
   }) {
     return GameState(
       you: you ?? this.you,
@@ -460,6 +481,14 @@ class GameState {
           fraternalFeudsPicked ?? this.fraternalFeudsPicked,
       fraternalFeudsPickedStacks:
           fraternalFeudsPickedStacks ?? this.fraternalFeudsPickedStacks,
+      startingHandDraftStackIndex: clearStartingHandDraftStackIndex
+          ? null
+          : (startingHandDraftStackIndex ?? this.startingHandDraftStackIndex),
+      startingHandDraftPool: clearStartingHandDraftPool
+          ? null
+          : (startingHandDraftPool ?? this.startingHandDraftPool),
+      startingHandDraftPicked:
+          startingHandDraftPicked ?? this.startingHandDraftPicked,
     );
   }
 }
