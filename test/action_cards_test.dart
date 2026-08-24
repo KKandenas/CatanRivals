@@ -77,7 +77,9 @@ void main() {
       container.read(gameProvider.notifier).rollProductionDie();
     });
 
-    test('discardActionCard tar bort kortet från handen utan att röra resurser', () {
+    test(
+        'discardActionCard tar bort kortet från handen utan att röra resurser, och lägger det i slänghögen',
+        () {
       final notifier = container.read(gameProvider.notifier);
       final before = container.read(gameProvider);
       final card =
@@ -90,6 +92,8 @@ void main() {
       final after = container.read(gameProvider);
       expect(after.you.hand.contains(card), isFalse);
       expect(after.you.resourceCount(ResourceType.lumber), lumberBefore);
+      expect(after.discardPile, hasLength(1));
+      expect(after.discardPile.last.id, card.id);
     });
 
     test('no-op om kortet inte finns på handen', () {

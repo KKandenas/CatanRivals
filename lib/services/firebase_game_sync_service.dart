@@ -109,4 +109,23 @@ class FirebaseGameSyncService implements GameSyncService {
   Future<void> clearFraternalFeudsRequest(String roomCode) {
     return _roomRef(roomCode).child('fraternalFeudsRequest').remove();
   }
+
+  @override
+  Stream<List<GameCard>> watchDiscardPile(String roomCode) {
+    return _roomRef(roomCode).child('discardPile').onValue.map((event) {
+      final raw = event.snapshot.value;
+      if (raw is! List) return const <GameCard>[];
+      return raw
+          .whereType<Object>()
+          .map((c) => GameCard.fromJson(Map<String, dynamic>.from(c as Map)))
+          .toList();
+    });
+  }
+
+  @override
+  Future<void> writeDiscardPile(String roomCode, List<GameCard> discardPile) {
+    return _roomRef(roomCode)
+        .child('discardPile')
+        .set(discardPile.map((c) => c.toJson()).toList());
+  }
 }

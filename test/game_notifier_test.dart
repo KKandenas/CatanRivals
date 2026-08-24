@@ -108,6 +108,55 @@ void main() {
       expect(after.you.principality.settlementAt(2)!.aboveSites[0], isNull);
     });
 
+    test(
+        'dropExpansion på en redan bebyggd plats byter ut det gamla kortet mot det nya i stället för att avvisas',
+        () {
+      final notifier = container.read(gameProvider.notifier);
+      final before = container.read(gameProvider);
+      final storehouse = before.you.hand.firstWhere((c) => c.id == 'building-storehouse');
+      final siglind = before.you.hand.firstWhere((c) => c.id == 'hero-siglind');
+
+      expect(notifier.dropExpansion(0, BuildingRow.above, 0, storehouse), isNull);
+      expect(before.discardPile, isEmpty);
+
+      final error = notifier.dropExpansion(0, BuildingRow.above, 0, siglind);
+
+      expect(error, isNull);
+      final after = container.read(gameProvider);
+      expect(after.you.principality.settlementAt(0)!.aboveSites[0]!.card.id,
+          siglind.id,
+          reason: 'det nya kortet ska stå på platsen');
+      expect(after.you.hand.contains(siglind), isFalse);
+      expect(after.discardPile, hasLength(1));
+      expect(after.discardPile.last.id, storehouse.id,
+          reason: 'det utbytta kortet ska hamna överst i slänghögen');
+    });
+
+    test(
+        'byt-ut-mekaniken tar bort det gamla kortets poäng (räknas inte längre in i riket)',
+        () {
+      final notifier = container.read(gameProvider.notifier);
+      final before = container.read(gameProvider);
+      // Ett byggkort med segerpoäng (skiljer sig från den fasta
+      // mock-handen, som normalt inte har något på hand med VP) – samma
+      // teknik som victory_test.dart använder för att styra poäng
+      // deterministiskt.
+      final scoringCard = BasicSetCards.abbey.copyWith(victoryPoints: 3, progressPoints: 0);
+      before.you.hand.add(scoringCard);
+      expect(notifier.dropExpansion(0, BuildingRow.above, 0, scoringCard), isNull);
+      final withCard = container.read(gameProvider);
+      expect(withCard.totalVictoryPointsFor(withCard.you),
+          withCard.you.principality.settlements.length + 3);
+
+      final storehouse = withCard.you.hand.firstWhere((c) => c.id == 'building-storehouse');
+      expect(notifier.dropExpansion(0, BuildingRow.above, 0, storehouse), isNull);
+
+      final after = container.read(gameProvider);
+      expect(after.totalVictoryPointsFor(after.you),
+          after.you.principality.settlements.length,
+          reason: 'de 3 segerpoängen ska försvinna med det utbytta kortet');
+    });
+
     test('dropRoad builds a road at the frontier and decrements the stack', () {
       final notifier = container.read(gameProvider.notifier);
       final before = container.read(gameProvider);

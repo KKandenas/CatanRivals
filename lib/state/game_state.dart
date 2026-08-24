@@ -65,6 +65,15 @@ class GameState {
   /// draghögarna byggs upp vid start.
   final Set<ExpansionSet> activeExpansions;
 
+  /// Slänghögen: spelade handlingskort och byggnader/enheter/skepp som
+  /// bytts ut mot ett nytt kort på samma plats (se
+  /// [GameNotifier._discardToPile]) – senast tillagda kortet sist/överst.
+  /// Delad mellan spelarna (inte per spelare), bara det översta kortet
+  /// visas i UI:t (se [DiscardPileView]) men hela listan finns här så
+  /// att framtida kort (Gustav bibliotekarien/Guido ambassadören, se
+  /// era_of_progress_cards.dart) kan välja fritt bland alla.
+  final List<GameCard> discardPile;
+
   final SessionMode mode;
   final String? roomCode;
   final String myPlayerId;
@@ -188,6 +197,7 @@ class GameState {
     required this.centerStacks,
     this.draggingCard,
     this.activeExpansions = const {},
+    this.discardPile = const [],
     this.mode = SessionMode.local,
     this.roomCode,
     this.myPlayerId = 'you',
@@ -315,6 +325,7 @@ class GameState {
     GameCard? draggingCard,
     bool clearDraggingCard = false,
     Set<ExpansionSet>? activeExpansions,
+    List<GameCard>? discardPile,
     SessionMode? mode,
     String? roomCode,
     String? myPlayerId,
@@ -366,6 +377,7 @@ class GameState {
       draggingCard:
           clearDraggingCard ? null : (draggingCard ?? this.draggingCard),
       activeExpansions: activeExpansions ?? this.activeExpansions,
+      discardPile: discardPile ?? this.discardPile,
       mode: mode ?? this.mode,
       roomCode: roomCode ?? this.roomCode,
       myPlayerId: myPlayerId ?? this.myPlayerId,

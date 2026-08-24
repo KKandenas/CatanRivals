@@ -33,7 +33,12 @@ typedef PendingRegionDropCallback = void Function(BuildingRow row, GameCard card
 /// Anropas när ett väg-/by-/stads-/utbyggnadskort släpps på en giltig
 /// plats – innan det faktiskt byggs. `onConfirm` bygger kortet om
 /// spelaren bekräftar (se `BuildConfirmCard` i game_board_screen.dart).
-typedef BuildConfirmRequest = void Function(GameCard card, VoidCallback onConfirm);
+/// `replacedCard` är satt bara när platsen redan har ett bygg-/enhets-/
+/// skeppskort (se [_buildingSite]) – man får byta ut det mot det nya
+/// kortet (full kostnad, det gamla hamnar i slänghögen, se
+/// [GameNotifier.dropExpansion]).
+typedef BuildConfirmRequest = void Function(GameCard card, VoidCallback onConfirm,
+    {GameCard? replacedCard});
 
 /// Anropas när en plats trycks på under Omlokalisering (se
 /// [RelocationTargetKind]/[GameNotifier.selectRelocationTarget]) –
@@ -414,7 +419,25 @@ class PrincipalityGrid extends StatelessWidget {
 
   Widget _buildingSite(
       int column, BuildingRow row, int slotIndex, PlacedCard? placed) {
-    if (placed != null) return _expansionCard(placed, column, row, slotIndex);
+    if (placed != null) {
+      final card = _expansionCard(placed, column, row, slotIndex);
+      // En redan bebyggd plats går också att släppa ett nytt kort på –
+      // du får då byta ut det gamla mot det nya (kostar det nya kortets
+      // fulla pris, det gamla hamnar i slänghögen, se
+      // GameNotifier.dropExpansion) – precis som en tom platshållare,
+      // bara med kortet ovanpå i stället för BuildingSiteView.
+      if (!interactive) return card;
+      return DragTarget<GameCard>(
+        onWillAcceptWithDetails: (details) =>
+            details.data.category == CardCategory.expansion,
+        onAcceptWithDetails: (details) => onRequestBuildConfirm?.call(
+          details.data,
+          () => onDropExpansion?.call(column, row, slotIndex, details.data),
+          replacedCard: placed.card,
+        ),
+        builder: (context, candidates, rejected) => card,
+      );
+    }
     if (!interactive) return const BuildingSiteView();
 
     return DragTarget<GameCard>(

@@ -52,12 +52,21 @@ String? _pointsPhrase(GameCard card) {
 /// helt i draget.
 class BuildConfirmCard extends StatelessWidget {
   final GameCard card;
+
+  /// Satt bara när platsen redan har ett bygg-/enhets-/skeppskort (se
+  /// [PrincipalityGrid]s `onRequestBuildConfirm`) – man får byta ut det
+  /// mot [card] i stället för att bygget avvisas: fortfarande [card]s
+  /// fulla kostnad (ingen rabatt), och [replacedCard] hamnar i
+  /// slänghögen (se [GameNotifier.dropExpansion]).
+  final GameCard? replacedCard;
+
   final VoidCallback onConfirm;
   final VoidCallback onCancel;
 
   const BuildConfirmCard({
     super.key,
     required this.card,
+    this.replacedCard,
     required this.onConfirm,
     required this.onCancel,
   });
@@ -117,6 +126,16 @@ class BuildConfirmCard extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               'Ger $pointsPhrase.',
+                              style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontStyle: FontStyle.italic,
+                                  color: CatanColors.ink),
+                            ),
+                          ],
+                          if (replacedCard != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Ersätter ${replacedCard!.name}, som läggs i slänghögen.',
                               style: const TextStyle(
                                   fontSize: 12.5,
                                   fontStyle: FontStyle.italic,

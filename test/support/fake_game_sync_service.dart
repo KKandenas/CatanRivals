@@ -13,11 +13,13 @@ class FakeGameSyncService implements GameSyncService {
   final Map<String, Map<String, int>> _centerStacks = {};
   final Map<String, TurnState> _turnStates = {};
   final Map<String, FraternalFeudsRequest?> _fraternalFeudsRequests = {};
+  final Map<String, List<GameCard>> _discardPiles = {};
   final Map<String, StreamController<Map<String, Player>>> _playerControllers = {};
   final Map<String, StreamController<Map<String, int>>> _centerStackControllers = {};
   final Map<String, StreamController<TurnState>> _turnStateControllers = {};
   final Map<String, StreamController<FraternalFeudsRequest?>>
       _fraternalFeudsRequestControllers = {};
+  final Map<String, StreamController<List<GameCard>>> _discardPileControllers = {};
 
   StreamController<Map<String, Player>> _playersController(String roomCode) =>
       _playerControllers.putIfAbsent(roomCode, () => StreamController.broadcast());
@@ -33,6 +35,10 @@ class FakeGameSyncService implements GameSyncService {
       _fraternalFeudsRequestControllers.putIfAbsent(
           roomCode, () => StreamController.broadcast());
 
+  StreamController<List<GameCard>> _discardPileController(String roomCode) =>
+      _discardPileControllers.putIfAbsent(
+          roomCode, () => StreamController.broadcast());
+
   @override
   Future<void> createRoom(
     String roomCode,
@@ -44,9 +50,11 @@ class FakeGameSyncService implements GameSyncService {
     _players[roomCode] = {hostId: hostPlayer};
     _centerStacks[roomCode] = Map.of(centerStacks);
     _turnStates[roomCode] = turnState;
+    _discardPiles[roomCode] = const [];
     _playersController(roomCode).add(Map.of(_players[roomCode]!));
     _centerStacksController(roomCode).add(Map.of(_centerStacks[roomCode]!));
     _turnStateController(roomCode).add(turnState);
+    _discardPileController(roomCode).add(const []);
   }
 
   @override
@@ -129,5 +137,21 @@ class FakeGameSyncService implements GameSyncService {
   Future<void> clearFraternalFeudsRequest(String roomCode) async {
     _fraternalFeudsRequests[roomCode] = null;
     _fraternalFeudsRequestController(roomCode).add(null);
+  }
+
+  @override
+  Stream<List<GameCard>> watchDiscardPile(String roomCode) {
+    final existing = _discardPiles[roomCode];
+    final controller = _discardPileController(roomCode);
+    if (existing != null) {
+      return controller.stream.transform(_replayLatest(List.of(existing)));
+    }
+    return controller.stream;
+  }
+
+  @override
+  Future<void> writeDiscardPile(String roomCode, List<GameCard> discardPile) async {
+    _discardPiles[roomCode] = List.of(discardPile);
+    _discardPileController(roomCode).add(List.of(discardPile));
   }
 }

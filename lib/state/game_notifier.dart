@@ -40,6 +40,7 @@ class GameNotifier extends Notifier<GameState> {
   StreamSubscription<Map<String, int>>? _centerStacksSub;
   StreamSubscription<TurnState>? _turnStateSub;
   StreamSubscription<FraternalFeudsRequest?>? _fraternalFeudsRequestSub;
+  StreamSubscription<List<GameCard>>? _discardPileSub;
 
   /// Regionstapelns kvarvarande, blandade kort (se [RegionDeck]) – dras
   /// från när en ny by byggs. Var spelares klient håller sin egen
@@ -96,6 +97,7 @@ class GameNotifier extends Notifier<GameState> {
       _centerStacksSub?.cancel();
       _turnStateSub?.cancel();
       _fraternalFeudsRequestSub?.cancel();
+      _discardPileSub?.cancel();
     });
     return GameState(
       you: MockGame.buildYou(),
@@ -123,6 +125,7 @@ class GameNotifier extends Notifier<GameState> {
     _centerStacksSub?.cancel();
     _turnStateSub?.cancel();
     _fraternalFeudsRequestSub?.cancel();
+    _discardPileSub?.cancel();
     _resetDecks();
 
     // Lokalt läge har ingen egen vy för en andra spelare att trycka
@@ -271,6 +274,10 @@ class GameNotifier extends Notifier<GameState> {
           .watchTurnState(roomCode)
           .first
           .timeout(const Duration(seconds: 10));
+      final discardPile = await _sync
+          .watchDiscardPile(roomCode)
+          .first
+          .timeout(const Duration(seconds: 10));
 
       _regionDeck = RegionDeck.shuffledRemainingDeck();
       _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom();
@@ -292,6 +299,7 @@ class GameNotifier extends Notifier<GameState> {
         drawnEventCard: turnState.drawnEventCard,
         peekingStackIndex: turnState.peekingStackIndex,
         winnerId: turnState.winnerId,
+        discardPile: discardPile,
       );
       _subscribeToRoom(roomCode);
 
@@ -408,6 +416,8 @@ class GameNotifier extends Notifier<GameState> {
         if (state.drawnEventCard != null)
           'drawnEventCard': state.drawnEventCard!.toJson(),
         if (state.winnerId != null) 'winnerId': state.winnerId,
+        if (state.discardPile.isNotEmpty)
+          'discardPile': state.discardPile.map((c) => c.toJson()).toList(),
         'drawStacks': _drawStacks
             .map((stack) => stack.map((c) => c.toJson()).toList())
             .toList(),
@@ -451,6 +461,9 @@ class GameNotifier extends Notifier<GameState> {
           : GameCard.fromJson(
               Map<String, dynamic>.from(json['drawnEventCard'] as Map)),
       winnerId: json['winnerId'] as String?,
+      discardPile: json['discardPile'] == null
+          ? const []
+          : parseCards(json['discardPile']),
     );
   }
 
@@ -470,6 +483,7 @@ class GameNotifier extends Notifier<GameState> {
     _centerStacksSub?.cancel();
     _turnStateSub?.cancel();
     _fraternalFeudsRequestSub?.cancel();
+    _discardPileSub?.cancel();
 
     _playersSub = _sync.watchPlayers(roomCode).listen(
       (players) {
@@ -539,6 +553,14 @@ class GameNotifier extends Notifier<GameState> {
             state.copyWith(sessionError: 'Kunde inte synka Brödrafejd: $e');
       },
     );
+
+    _discardPileSub = _sync.watchDiscardPile(roomCode).listen(
+      (discardPile) => state = state.copyWith(discardPile: discardPile),
+      onError: (Object e) {
+        state =
+            state.copyWith(sessionError: 'Kunde inte synka slänghögen: $e');
+      },
+    );
   }
 
   void _syncMyPlayer() {
@@ -551,6 +573,24 @@ class GameNotifier extends Notifier<GameState> {
     final roomCode = state.roomCode;
     if (roomCode == null) return;
     unawaited(_sync.writeCenterStacks(roomCode, state.centerStacks));
+  }
+
+  void _syncDiscardPile() {
+    final roomCode = state.roomCode;
+    if (roomCode == null) return;
+    unawaited(_sync.writeDiscardPile(roomCode, state.discardPile));
+  }
+
+  /// Lägger [card] överst i slänghögen (se [GameState.discardPile]) och
+  /// synkar den – spelade handlingskort (se [discardActionCard]) och
+  /// byggnader/enheter/skepp som bytts ut mot ett nytt kort på samma
+  /// plats (se [dropExpansion]) hamnar här. INTE samma sak som att lägga
+  /// ett kort längst ner i en draghög (Fejd/Brödrafejd/handjustering/
+  /// kika-fasen) – de mekanikerna är oförändrade och rör aldrig
+  /// slänghögen.
+  void _discardToPile(GameCard card) {
+    state = state.copyWith(discardPile: [...state.discardPile, card]);
+    _syncDiscardPile();
   }
 
   void _syncTurnState() {
@@ -915,12 +955,12 @@ class GameNotifier extends Notifier<GameState> {
   }
 
   /// Spelar ett självbevakat handlingskort (Handelskaravan/Guldsmed):
-  /// tar bara bort kortet från handen – spelaren justerar sedan själv
-  /// resurserna manuellt med +/- på sina regioner utifrån kortets
-  /// `effectText`, precis som byggkostnader och tärningsutdelning. Bara
-  /// giltigt under action-fasen, precis som ett bygge (se
-  /// [_checkCanBuild]) – handlingskort spelas efter tärningsslaget, inte
-  /// innan.
+  /// tar bort kortet från handen och lägger det överst i slänghögen (se
+  /// [_discardToPile]) – spelaren justerar sedan själv resurserna
+  /// manuellt med +/- på sina regioner utifrån kortets `effectText`,
+  /// precis som byggkostnader och tärningsutdelning. Bara giltigt under
+  /// action-fasen, precis som ett bygge (se [_checkCanBuild]) –
+  /// handlingskort spelas efter tärningsslaget, inte innan.
   String? discardActionCard(GameCard card) {
     final turnError = _checkCanBuild();
     if (turnError != null) return turnError;
@@ -930,6 +970,7 @@ class GameNotifier extends Notifier<GameState> {
       you: state.you.copyWith(hand: List.of(state.you.hand)..remove(card)),
     );
     _syncMyPlayer();
+    _discardToPile(card);
     return null;
   }
 
@@ -1299,6 +1340,13 @@ class GameNotifier extends Notifier<GameState> {
     return null;
   }
 
+  /// Bygger ett bygg-/enhets-/skeppskort på en byggplats. Om platsen
+  /// redan har ett kort byts det ut i stället för att avvisas (se
+  /// [PrincipalityGrid]s `onRequestBuildConfirm`/[BuildConfirmCard]s
+  /// "Ersätter X"-text): [card] kostar sitt fulla pris som vanligt
+  /// (ingen rabatt), och det gamla kortet läggs i slänghögen (se
+  /// [_discardToPile]) – eventuella poäng det gav försvinner
+  /// automatiskt eftersom det inte längre ligger i riket.
   String? dropExpansion(
       int column, BuildingRow row, int slotIndex, GameCard card) {
     final turnError = _checkCanBuild();
@@ -1309,6 +1357,8 @@ class GameNotifier extends Notifier<GameState> {
       return 'Du kan bara ha en ${card.name} i ditt rike.';
     }
 
+    final replaced =
+        state.you.principality.removeExpansion(column, row, slotIndex);
     state.you.principality
         .placeExpansion(column, row, slotIndex, PlacedCard(card: card));
     final updated =
@@ -1317,6 +1367,7 @@ class GameNotifier extends Notifier<GameState> {
     state = state.copyWith(you: updated, clearDraggingCard: true);
     recomputeTokenHolders();
     _syncMyPlayer();
+    if (replaced != null) _discardToPile(replaced.card);
     return null;
   }
 

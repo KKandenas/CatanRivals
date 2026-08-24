@@ -13,6 +13,9 @@ import '../models/models.dart';
 ///   turnState                -> TurnState.toJson()
 ///   fraternalFeudsRequest    -> FraternalFeudsRequest.toJson(), eller
 ///                                frånvarande/null
+///   discardPile              -> List<GameCard.toJson()>, senast
+///                                spelade kortet sist (se
+///                                [GameNotifier.discardPile])
 /// ```
 abstract class GameSyncService {
   /// Skapar ett nytt rum med given kod och sätter värden-spelaren som
@@ -60,4 +63,11 @@ abstract class GameSyncService {
   /// den aldrig ska tillämpas) – förhindrar att den appliceras igen,
   /// t.ex. vid en sidladdning (se [GameNotifier.resumeRoom]).
   Future<void> clearFraternalFeudsRequest(String roomCode);
+
+  /// Strömmar slänghögen (se [GameNotifier.discardPile]), varje gång
+  /// den ändras – delad mellan spelarna (inte per spelare), precis som
+  /// [watchCenterStacks].
+  Stream<List<GameCard>> watchDiscardPile(String roomCode);
+
+  Future<void> writeDiscardPile(String roomCode, List<GameCard> discardPile);
 }

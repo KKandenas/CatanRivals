@@ -14,6 +14,7 @@ import '../widgets/carved_frame.dart';
 import '../widgets/center_stacks_strip.dart';
 import '../widgets/dice_roll_button.dart';
 import '../widgets/dice_roll_summary_banner.dart';
+import '../widgets/discard_pile_view.dart';
 import '../widgets/event_card_reveal_card.dart';
 import '../widgets/event_die_icon.dart';
 import '../widgets/feud_building_instruction_bar.dart';
@@ -58,6 +59,12 @@ class GameBoardScreen extends ConsumerStatefulWidget {
 class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   GameCard? _pendingBuildCard;
   VoidCallback? _pendingBuildConfirm;
+
+  /// Satt bara när [_pendingBuildCard] skulle ERSÄTTA ett kort som redan
+  /// ligger på byggplatsen (se [PrincipalityGrid.onRequestBuildConfirm]/
+  /// [BuildConfirmRequest]) – låter [BuildConfirmCard] varna om det i
+  /// stället för att bara visa en vanlig byggbekräftelse.
+  GameCard? _pendingReplacedCard;
 
   /// Handkortet som just nu är valt att slänga under
   /// [HandAdjustmentPhase.discarding] – rent lokalt UI-val (vilken
@@ -119,7 +126,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   /// kastade bort det första kortets bekräftelse utan felmeddelande
   /// (kortet stannade förvisso kvar i handen, men försvann spårlöst ur
   /// bekräftelserutan – väldigt lätt att missa mitt i draget).
-  void _requestBuildConfirm(GameCard card, VoidCallback onConfirm) {
+  void _requestBuildConfirm(GameCard card, VoidCallback onConfirm,
+      {GameCard? replacedCard}) {
     if (_pendingBuildCard != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -132,6 +140,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     setState(() {
       _pendingBuildCard = card;
       _pendingBuildConfirm = onConfirm;
+      _pendingReplacedCard = replacedCard;
     });
   }
 
@@ -139,6 +148,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     setState(() {
       _pendingBuildCard = null;
       _pendingBuildConfirm = null;
+      _pendingReplacedCard = null;
     });
   }
 
@@ -513,6 +523,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           padding: const EdgeInsets.all(12),
                           child: BuildConfirmCard(
                             card: _pendingBuildCard!,
+                            replacedCard: _pendingReplacedCard,
                             onConfirm: _confirmPendingBuild,
                             onCancel: _clearPendingBuild,
                           ),
@@ -735,6 +746,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 peekingStackIndex:
                     state.isMyTurn ? null : state.peekingStackIndex,
               ),
+              DiscardPileView(discardPile: state.discardPile),
               if (state.pendingRegions.isNotEmpty)
                 PendingRegionsBar(
                   cards: state.pendingRegions,
