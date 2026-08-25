@@ -37,7 +37,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
 
   /// "Duel of the Princes": alla tre temaseten SAMTIDIGT (se
   /// [DuelOfThePrincesSetup]-klassdoc) – ett eget, femte alternativ i
-  /// temavals-raden, ömsesidigt uteslutande med [_selectedTheme] (ett
+  /// temavals-rutorna, ömsesidigt uteslutande med [_selectedTheme] (ett
   /// tryck på endera rutgruppen nollställer den andra, se
   /// [_themeOption]s `onSelect`).
   bool _allExpansions = false;
@@ -174,7 +174,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     );
   }
 
-  /// En tryckbar temaruta i temavals-raden (se [_selectedTheme]/
+  /// En tryckbar temaruta i temavals-rutorna (se [_selectedTheme]/
   /// [_allExpansions]) – visar samma kortbaksbild som draghögarna
   /// faktiskt använder i spelet för de fyra vanliga rutorna (se
   /// [CatanAssets.backBasicSet]/[backEraGold]/[backEraTurmoil]/
@@ -197,7 +197,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         key: optionKey,
         onTap: _busy ? null : onSelect,
         child: Container(
-          height: 96,
+          height: 130,
           margin: const EdgeInsets.symmetric(horizontal: 4),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
@@ -282,6 +282,13 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                               style: Theme.of(context).textTheme.labelLarge),
                         ),
                         const SizedBox(height: 6),
+                        // Två rader i stället för en enda rad med alla 5 –
+                        // annars blir varje ruta för smal för att synas
+                        // ordentligt (särskilt "Alla expansioner", som har
+                        // en mer detaljerad bild än de rena kortbaksbilderna).
+                        // Övre raden: grundspelet + alla expansioner (de två
+                        // "hela match"-valen); undre raden: de tre enskilda
+                        // temaseten.
                         Row(
                           children: [
                             _themeOption(
@@ -293,6 +300,20 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                               }),
                               backgroundImage: CatanAssets.backBasicSet,
                             ),
+                            _themeOption(
+                              optionKey: const ValueKey('theme-option-all'),
+                              selected: _allExpansions,
+                              onSelect: () => setState(() {
+                                _allExpansions = true;
+                                _selectedTheme = null;
+                              }),
+                              backgroundImage: CatanAssets.coverAllExpansions,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
                             _themeOption(
                               optionKey: const ValueKey('theme-option-gold'),
                               selected: !_allExpansions &&
@@ -324,15 +345,6 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                                 _allExpansions = false;
                               }),
                               backgroundImage: CatanAssets.backEraProgress,
-                            ),
-                            _themeOption(
-                              optionKey: const ValueKey('theme-option-all'),
-                              selected: _allExpansions,
-                              onSelect: () => setState(() {
-                                _allExpansions = true;
-                                _selectedTheme = null;
-                              }),
-                              backgroundImage: CatanAssets.coverAllExpansions,
                             ),
                           ],
                         ),
