@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/models.dart';
+import '../../state/build_requirements.dart';
 import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
 import 'expansion_card_view.dart';
@@ -37,9 +38,14 @@ typedef PendingRegionDropCallback = void Function(BuildingRow row, GameCard card
 /// `replacedCard` är satt bara när platsen redan har ett bygg-/enhets-/
 /// skeppskort (se [_buildingSite]) – man får byta ut det mot det nya
 /// kortet (full kostnad, det gamla hamnar i slänghögen, se
-/// [GameNotifier.dropExpansion]).
+/// [GameNotifier.dropExpansion]). `blockedReason` (se
+/// `build_requirements.dart`) är satt när platsen tekniskt sett tar
+/// emot kortets kategori men ett krav inte är uppfyllt (t.ex. Guldgömma
+/// utan hjälte, en stadsutbyggnad på en vanlig by) – kortet landar
+/// ändå (så spelaren FÅR en förklaring) men `BuildConfirmCard` visar då
+/// bara texten, ingen "Betalt"-väg.
 typedef BuildConfirmRequest = void Function(GameCard card, VoidCallback onConfirm,
-    {GameCard? replacedCard});
+    {GameCard? replacedCard, String? blockedReason});
 
 /// Anropas när en plats trycks på under Omlokalisering (se
 /// [RelocationTargetKind]/[GameNotifier.selectRelocationTarget]) –
@@ -169,7 +175,8 @@ class PrincipalityGrid extends StatelessWidget {
       draggingCard?.category == CardCategory.settlement;
   bool get _draggingCity => draggingCard?.category == CardCategory.city;
   bool get _draggingExpansion =>
-      draggingCard?.category == CardCategory.expansion;
+      draggingCard?.category == CardCategory.expansion ||
+      draggingCard?.category == CardCategory.cityExpansion;
   bool get _draggingRegion => draggingCard?.category == CardCategory.region;
   bool get _draggingRegionExpansion =>
       draggingCard?.category == CardCategory.regionExpansion;
@@ -357,6 +364,8 @@ class PrincipalityGrid extends StatelessWidget {
       onAcceptWithDetails: (details) => onRequestBuildConfirm?.call(
         details.data,
         () => onDropRegionExpansion?.call(column, row, details.data),
+        blockedReason:
+            buildRequirementBlockedReason(details.data, board, column, row),
       ),
       builder: (context, candidates, rejected) {
         final isHovering = candidates.isNotEmpty;
@@ -533,11 +542,14 @@ class PrincipalityGrid extends StatelessWidget {
       if (!interactive || !allowReplaceExpansion) return card;
       return DragTarget<GameCard>(
         onWillAcceptWithDetails: (details) =>
-            details.data.category == CardCategory.expansion,
+            details.data.category == CardCategory.expansion ||
+            details.data.category == CardCategory.cityExpansion,
         onAcceptWithDetails: (details) => onRequestBuildConfirm?.call(
           details.data,
           () => onDropExpansion?.call(column, row, slotIndex, details.data),
           replacedCard: placed.card,
+          blockedReason:
+              buildRequirementBlockedReason(details.data, board, column, row),
         ),
         builder: (context, candidates, rejected) => card,
       );
@@ -546,10 +558,13 @@ class PrincipalityGrid extends StatelessWidget {
 
     return DragTarget<GameCard>(
       onWillAcceptWithDetails: (details) =>
-          details.data.category == CardCategory.expansion,
+          details.data.category == CardCategory.expansion ||
+          details.data.category == CardCategory.cityExpansion,
       onAcceptWithDetails: (details) => onRequestBuildConfirm?.call(
         details.data,
         () => onDropExpansion?.call(column, row, slotIndex, details.data),
+        blockedReason:
+            buildRequirementBlockedReason(details.data, board, column, row),
       ),
       builder: (context, candidates, rejected) {
         final isHovering = candidates.isNotEmpty;

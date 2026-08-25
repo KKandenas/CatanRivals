@@ -1,3 +1,4 @@
+import 'package:catan_rivals/data/basic_set_cards.dart';
 import 'package:catan_rivals/data/era_of_gold_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/state/game_notifier.dart';
@@ -28,6 +29,9 @@ void main() {
     final notifier = container.read(gameProvider.notifier);
     final state = container.read(gameProvider);
     state.you.hand.add(EraOfGoldCards.goldCache);
+    // Guldgömma kräver en utplacerad hjälte med minst 1 styrkepoäng.
+    state.you.principality
+        .placeExpansion(0, BuildingRow.above, 0, const PlacedCard(card: BasicSetCards.harald));
 
     final error =
         notifier.dropRegionExpansion(1, BuildingRow.above, EraOfGoldCards.goldCache);

@@ -26,7 +26,7 @@ void main() {
           interactive: true,
           allowReplaceExpansion: allowReplaceExpansion,
           onDropExpansion: (_, __, ___, ____) {},
-          onRequestBuildConfirm: (_, __, {replacedCard}) {},
+          onRequestBuildConfirm: (_, __, {replacedCard, blockedReason}) {},
         ),
       ),
     );

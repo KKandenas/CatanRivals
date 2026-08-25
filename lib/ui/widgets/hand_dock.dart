@@ -265,7 +265,8 @@ class _HandCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final playable = card.category == CardCategory.expansion ||
-        card.category == CardCategory.regionExpansion;
+        card.category == CardCategory.regionExpansion ||
+        card.category == CardCategory.cityExpansion;
     // Spejare undantas: den frågas automatiskt vid by-bygge i stället
     // (se klassdocen på [HandDock]), inte via ett tryck i handen.
     // Brigitta och Reiner härolden går bara att spela på din egen tur,

@@ -50,6 +50,15 @@ String? _pointsPhrase(GameCard card) {
 /// respektive resurs, sedan avgör spelaren själv med "Betalt" eller
 /// "Avbryt". Kortet byggs bara om "Betalt" trycks; "Avbryt" struntar
 /// helt i draget.
+///
+/// Om [blockedReason] är satt (se
+/// [GameNotifier.buildRequirementBlockedReason]/`build_requirements.dart`
+/// – t.ex. Guldgömma utan hjälte, en stadsutbyggnad på en vanlig by)
+/// visas i stället BARA den förklarande texten (samma stil som
+/// card_detail_dialog.dart:s `blockedReason`) och en "Stäng"-knapp –
+/// draget landade (så spelaren FÅR en förklaring, i stället för att
+/// kortet bara studsar tillbaka utan förklaring), men går inte att
+/// bekräfta.
 class BuildConfirmCard extends StatelessWidget {
   final GameCard card;
 
@@ -60,6 +69,8 @@ class BuildConfirmCard extends StatelessWidget {
   /// slänghögen (se [GameNotifier.dropExpansion]).
   final GameCard? replacedCard;
 
+  final String? blockedReason;
+
   final VoidCallback onConfirm;
   final VoidCallback onCancel;
 
@@ -67,6 +78,7 @@ class BuildConfirmCard extends StatelessWidget {
     super.key,
     required this.card,
     this.replacedCard,
+    this.blockedReason,
     required this.onConfirm,
     required this.onCancel,
   });
@@ -147,45 +159,85 @@ class BuildConfirmCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (card.buildingCost.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Betala genom att trycka − på respektive resurs:',
-                    style: TextStyle(fontSize: 11.5, color: CatanColors.ink),
+                if (blockedReason != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: CatanColors.parchmentDark,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: CatanColors.woodFrame),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.info_outline,
+                            size: 18, color: CatanColors.ink),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            blockedReason!,
+                            style: const TextStyle(
+                                fontSize: 13,
+                                color: CatanColors.ink,
+                                height: 1.35),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 6,
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                          foregroundColor: CatanColors.ink,
+                          side: const BorderSide(color: CatanColors.woodFrame)),
+                      onPressed: onCancel,
+                      child: const Text('Stäng'),
+                    ),
+                  ),
+                ] else ...[
+                  if (card.buildingCost.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Betala genom att trycka − på respektive resurs:',
+                      style: TextStyle(fontSize: 11.5, color: CatanColors.ink),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        for (final entry in card.buildingCost.entries)
+                          _CostBadge(type: entry.key, amount: entry.value),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  Row(
                     children: [
-                      for (final entry in card.buildingCost.entries)
-                        _CostBadge(type: entry.key, amount: entry.value),
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                              foregroundColor: CatanColors.ink,
+                              side: const BorderSide(color: CatanColors.woodFrame)),
+                          onPressed: onCancel,
+                          child: const Text('Avbryt'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF4F6F45)),
+                          onPressed: onConfirm,
+                          child: const Text('Betalt'),
+                        ),
+                      ),
                     ],
                   ),
                 ],
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                            foregroundColor: CatanColors.ink,
-                            side: const BorderSide(color: CatanColors.woodFrame)),
-                        onPressed: onCancel,
-                        child: const Text('Avbryt'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF4F6F45)),
-                        onPressed: onConfirm,
-                        child: const Text('Betalt'),
-                      ),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),

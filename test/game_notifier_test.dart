@@ -1,4 +1,5 @@
 import 'package:catan_rivals/data/basic_set_cards.dart';
+import 'package:catan_rivals/data/era_of_gold_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/state/game_notifier.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -78,6 +79,60 @@ void main() {
       final after = container.read(gameProvider);
       expect(after.you.hand.contains(uniqueCopy), isTrue); // slängdes inte
       expect(after.you.principality.settlementAt(2)!.aboveSites[0], isNull);
+    });
+
+    test(
+        'dropExpansion avvisar en stadsutbyggnad på en vanlig by (kräver en stad, se build_requirements.dart)',
+        () {
+      final notifier = container.read(gameProvider.notifier);
+      final before = container.read(gameProvider);
+      before.you.hand.add(EraOfGoldCards.merchantGuild);
+      // Kolumn 0 är en by, inte en stad, i mock-uppställningen.
+      expect(before.you.principality.settlementAt(0)!.isCity, isFalse);
+
+      final error =
+          notifier.dropExpansion(0, BuildingRow.above, 0, EraOfGoldCards.merchantGuild);
+
+      expect(error, 'Köpmansgille kräver en stad, inte bara en by.');
+      final after = container.read(gameProvider);
+      expect(after.you.hand.contains(EraOfGoldCards.merchantGuild), isTrue);
+      expect(after.you.principality.settlementAt(0)!.aboveSites[0], isNull);
+    });
+
+    test('dropExpansion tillåter en stadsutbyggnad på en riktig stad', () {
+      final notifier = container.read(gameProvider.notifier);
+      final before = container.read(gameProvider);
+      before.you.hand.add(EraOfGoldCards.merchantGuild);
+      before.you.principality
+          .upgradeToCity(0, const PlacedCard(card: BasicSetCards.city));
+
+      final error =
+          notifier.dropExpansion(0, BuildingRow.above, 0, EraOfGoldCards.merchantGuild);
+
+      expect(error, isNull);
+      expect(
+          container.read(gameProvider).you.principality
+              .settlementAt(0)!
+              .aboveSites[0]!
+              .card
+              .id,
+          EraOfGoldCards.merchantGuild.id);
+    });
+
+    test('dropExpansion avvisar Stapelhus utan Köpmansgille i riket', () {
+      final notifier = container.read(gameProvider.notifier);
+      final before = container.read(gameProvider);
+      before.you.hand.add(EraOfGoldCards.stapleHouse);
+      before.you.principality
+          .upgradeToCity(0, const PlacedCard(card: BasicSetCards.city));
+
+      final error =
+          notifier.dropExpansion(0, BuildingRow.above, 0, EraOfGoldCards.stapleHouse);
+
+      expect(error, 'Stapelhus kräver Köpmansgille i ditt rike.');
+      expect(
+          container.read(gameProvider).you.hand.contains(EraOfGoldCards.stapleHouse),
+          isTrue);
     });
 
     test(

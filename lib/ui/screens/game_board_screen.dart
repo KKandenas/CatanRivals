@@ -70,6 +70,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   /// stället för att bara visa en vanlig byggbekräftelse.
   GameCard? _pendingReplacedCard;
 
+  /// Satt bara när ett krav inte är uppfyllt (se
+  /// `build_requirements.dart`) – [BuildConfirmCard] visar då bara den
+  /// här texten och en "Stäng"-knapp i stället för kostnad/"Betalt".
+  String? _pendingBlockedReason;
+
   /// Handkortet som just nu är valt att slänga under
   /// [HandAdjustmentPhase.discarding] – rent lokalt UI-val (vilken
   /// draghög det till slut hamnar i avgörs av nästa tryck, se
@@ -135,7 +140,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   /// (kortet stannade förvisso kvar i handen, men försvann spårlöst ur
   /// bekräftelserutan – väldigt lätt att missa mitt i draget).
   void _requestBuildConfirm(GameCard card, VoidCallback onConfirm,
-      {GameCard? replacedCard}) {
+      {GameCard? replacedCard, String? blockedReason}) {
     if (_pendingBuildCard != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -149,6 +154,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
       _pendingBuildCard = card;
       _pendingBuildConfirm = onConfirm;
       _pendingReplacedCard = replacedCard;
+      _pendingBlockedReason = blockedReason;
     });
   }
 
@@ -157,6 +163,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
       _pendingBuildCard = null;
       _pendingBuildConfirm = null;
       _pendingReplacedCard = null;
+      _pendingBlockedReason = null;
     });
   }
 
@@ -629,6 +636,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           child: BuildConfirmCard(
                             card: _pendingBuildCard!,
                             replacedCard: _pendingReplacedCard,
+                            blockedReason: _pendingBlockedReason,
                             onConfirm: _confirmPendingBuild,
                             onCancel: _clearPendingBuild,
                           ),

@@ -14,6 +14,7 @@ import '../models/models.dart';
 import '../services/game_sync_providers.dart';
 import '../services/game_sync_service.dart';
 import '../services/session_storage.dart';
+import 'build_requirements.dart';
 import 'game_state.dart';
 
 /// Spelets state-provider. Läs med `ref.watch(gameProvider)` och mutera
@@ -1795,6 +1796,9 @@ class GameNotifier extends Notifier<GameState> {
     }
     final replaceError = _checkReplaceAllowed(column, row, slotIndex);
     if (replaceError != null) return replaceError;
+    final blockedReason =
+        buildRequirementBlockedReason(card, state.you.principality, column, row);
+    if (blockedReason != null) return blockedReason;
 
     state = state.copyWith(
         you: state.you.copyWith(hand: List.of(state.you.hand)..remove(card)));
@@ -1823,6 +1827,9 @@ class GameNotifier extends Notifier<GameState> {
     if (state.you.principality.regionExpansionAt(column, row) != null) {
       return 'Den regionen har redan en landskapsutbyggnad.';
     }
+    final blockedReason =
+        buildRequirementBlockedReason(card, state.you.principality, column, row);
+    if (blockedReason != null) return blockedReason;
 
     state = state.copyWith(
         you: state.you.copyWith(hand: List.of(state.you.hand)..remove(card)));

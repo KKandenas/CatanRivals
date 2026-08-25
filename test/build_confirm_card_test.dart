@@ -10,12 +10,16 @@ import 'package:flutter_test/flutter_test.dart';
 /// GameNotifier.dropExpansion/PrincipalityGrid.onRequestBuildConfirm).
 void main() {
   Future<void> pumpCard(WidgetTester tester,
-      {required replacedCard, VoidCallback? onConfirm, VoidCallback? onCancel}) async {
+      {required replacedCard,
+      String? blockedReason,
+      VoidCallback? onConfirm,
+      VoidCallback? onCancel}) async {
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
         body: BuildConfirmCard(
           card: BasicSetCards.storehouse,
           replacedCard: replacedCard,
+          blockedReason: blockedReason,
           onConfirm: onConfirm ?? () {},
           onCancel: onCancel ?? () {},
         ),
@@ -37,5 +41,40 @@ void main() {
     expect(
         find.text('Ersätter ${BasicSetCards.road.name}, som läggs i slänghögen.'),
         findsOneWidget);
+  });
+
+  group('blockedReason (se build_requirements.dart)', () {
+    testWidgets('visar texten och en "Stäng"-knapp, ingen "Betalt"', (tester) async {
+      await pumpCard(tester,
+          replacedCard: null,
+          blockedReason: 'Kräver Köpmansgille i ditt rike.');
+
+      expect(find.text('Kräver Köpmansgille i ditt rike.'), findsOneWidget);
+      expect(find.text('Stäng'), findsOneWidget);
+      expect(find.text('Betalt'), findsNothing);
+      expect(find.text('Avbryt'), findsNothing);
+    });
+
+    testWidgets('utan blockedReason visas kostnad/Betalt/Avbryt som vanligt',
+        (tester) async {
+      await pumpCard(tester, replacedCard: null);
+
+      expect(find.text('Betalt'), findsOneWidget);
+      expect(find.text('Avbryt'), findsOneWidget);
+      expect(find.text('Stäng'), findsNothing);
+    });
+
+    testWidgets('"Stäng" anropar onCancel', (tester) async {
+      var cancelled = false;
+      await pumpCard(tester,
+          replacedCard: null,
+          blockedReason: 'Kräver Köpmansgille i ditt rike.',
+          onCancel: () => cancelled = true);
+
+      await tester.tap(find.text('Stäng'));
+      await tester.pump();
+
+      expect(cancelled, isTrue);
+    });
   });
 }
