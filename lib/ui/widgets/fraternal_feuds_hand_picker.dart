@@ -6,19 +6,27 @@ import 'card_detail_dialog.dart';
 import 'expansion_card_view.dart';
 
 /// Motståndarens öppna hand under Brödrafejd (regelhäftet: "selects 2
-/// cards from the opponent's hand") – bara lokalt läge (se
-/// [GameNotifier.startFraternalFeudsPick]). Samma icke-modala mönster
-/// som [ScoutRegionPicker]: hela handen visas på en gång, ett tryck
+/// cards from the opponent's hand") eller Förrädare (regelhäftet:
+/// "titta på motståndarens kort ... välj ett som läggs till den egna
+/// handen", se [GameNotifier.pickTraitorCard]) – bara lokalt läge för
+/// Brödrafejd (se [GameNotifier.startFraternalFeudsPick]), men både
+/// lokalt och online för Förrädare (kortet läggs direkt till din egen
+/// hand, ingen mellanlagring behövs). Samma icke-modala mönster som
+/// [ScoutRegionPicker]: hela handen visas på en gång, ett tryck
 /// förstorar och frågar innan kortet väljs.
 class FraternalFeudsHandPicker extends StatelessWidget {
   final List<GameCard> hand;
-  final int pickedCount;
+
+  /// Rubriktexten ovanför korten – anroparen bygger den själv (t.ex.
+  /// "Brödrafejd: välj 1/2 kort..." eller "Förrädare: välj 1 kort...")
+  /// eftersom de två händelserna räknar val olika.
+  final String label;
   final void Function(GameCard card) onPick;
 
   const FraternalFeudsHandPicker({
     super.key,
     required this.hand,
-    required this.pickedCount,
+    required this.label,
     required this.onPick,
   });
 
@@ -39,8 +47,7 @@ class FraternalFeudsHandPicker extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Brödrafejd: välj $pickedCount/2 kort från motståndarens hand '
-                  '(tryck för att förstora)',
+                  label,
                   style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,

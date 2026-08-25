@@ -243,6 +243,15 @@ class GameState {
   final List<GameCard> fraternalFeudsPicked;
   final List<int> fraternalFeudsPickedStacks;
 
+  /// Förrädare (Oroligheternas tid, regelhäftet: "man får titta på
+  /// motståndarens kort de har på handen och välja ett som läggs till
+  /// den egna handen") – se [GameNotifier.useTraitor]/
+  /// [GameNotifier.pickTraitorCard]. Rent lokalt UI-state (till skillnad
+  /// från [fraternalFeudsPicking] behöver ingen mellanlagring av det
+  /// valda kortet skickas online – se [TraitorRequest]-doc), sant tills
+  /// ett kort valts eller flödet avbryts.
+  final bool traitorPicking;
+
   /// Starthandsutdelningen (regelhäftet s. 6) när ett tema är aktivt (se
   /// [GameNotifier.startHandDraft]/[GameNotifier.pickHandDraftCard]):
   /// spelaren väljer en av de tre grundspelshögarna, ser ALLA dess kort
@@ -316,6 +325,7 @@ class GameState {
     this.fraternalFeudsPicking = false,
     this.fraternalFeudsPicked = const [],
     this.fraternalFeudsPickedStacks = const [],
+    this.traitorPicking = false,
     this.startingHandDraftStackIndex,
     this.startingHandDraftPool,
     this.startingHandDraftPicked = const [],
@@ -493,6 +503,7 @@ class GameState {
     bool? fraternalFeudsPicking,
     List<GameCard>? fraternalFeudsPicked,
     List<int>? fraternalFeudsPickedStacks,
+    bool? traitorPicking,
     int? startingHandDraftStackIndex,
     bool clearStartingHandDraftStackIndex = false,
     List<GameCard>? startingHandDraftPool,
@@ -581,6 +592,7 @@ class GameState {
           fraternalFeudsPicked ?? this.fraternalFeudsPicked,
       fraternalFeudsPickedStacks:
           fraternalFeudsPickedStacks ?? this.fraternalFeudsPickedStacks,
+      traitorPicking: traitorPicking ?? this.traitorPicking,
       startingHandDraftStackIndex: clearStartingHandDraftStackIndex
           ? null
           : (startingHandDraftStackIndex ?? this.startingHandDraftStackIndex),

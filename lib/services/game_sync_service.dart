@@ -13,6 +13,8 @@ import '../models/models.dart';
 ///   turnState                -> TurnState.toJson()
 ///   fraternalFeudsRequest    -> FraternalFeudsRequest.toJson(), eller
 ///                                frånvarande/null
+///   traitorRequest           -> TraitorRequest.toJson(), eller
+///                                frånvarande/null
 ///   discardPile              -> List<GameCard.toJson()>, senast
 ///                                spelade kortet sist (se
 ///                                [GameNotifier.discardPile])
@@ -87,6 +89,17 @@ abstract class GameSyncService {
   /// den aldrig ska tillämpas) – förhindrar att den appliceras igen,
   /// t.ex. vid en sidladdning (se [GameNotifier.resumeRoom]).
   Future<void> clearFraternalFeudsRequest(String roomCode);
+
+  /// Strömmar den aktiva Förrädare-förfrågan i rummet (se
+  /// [TraitorRequest]) – `null` när ingen väntar. Samma resonemang som
+  /// [watchFraternalFeudsRequest]; bara relevant online.
+  Stream<TraitorRequest?> watchTraitorRequest(String roomCode);
+
+  Future<void> writeTraitorRequest(String roomCode, TraitorRequest request);
+
+  /// Tar bort förfrågan efter att mottagaren tillämpat den – se
+  /// [clearFraternalFeudsRequest]-doc.
+  Future<void> clearTraitorRequest(String roomCode);
 
   /// Strömmar slänghögen (se [GameNotifier.discardPile]), varje gång
   /// den ändras – delad mellan spelarna (inte per spelare), precis som

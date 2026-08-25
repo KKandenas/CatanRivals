@@ -120,6 +120,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   /// kortet alltid tvingar fram Fest-utfallet. Bågskytt/Pyroman sätter
   /// bara en väntande flagga (se [AttackCardInstructionBar]/
   /// StackChoiceOverlay nedan – MOTSTÅNDAREN gör det egentliga valet).
+  /// Förrädare öppnar i stället motståndarens hand direkt för DIG att
+  /// välja ur (se [FraternalFeudsHandPicker]/[GameNotifier.useTraitor]).
   /// Plundringsfärds resurstal (1 eller 2, beroende på vem som leder)
   /// visas i en SnackBar direkt efter, precis som Stapelhus – övriga
   /// (Handelskaravan/Guldsmed) är självbevakade och behöver inget mer
@@ -148,6 +150,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     }
     if (card.baseId == EraOfTurmoilCards.arsonist.id) {
       _handleResult(context, notifier.useArsonist());
+      return;
+    }
+    if (card.baseId == EraOfTurmoilCards.traitor.id) {
+      _handleResult(context, notifier.useTraitor());
       return;
     }
     if (card.baseId == EraOfTurmoilCards.voyageOfPlunder.id) {
@@ -858,7 +864,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           padding: const EdgeInsets.all(12),
                           child: FraternalFeudsHandPicker(
                             hand: state.opponent.hand,
-                            pickedCount: state.fraternalFeudsPicked.length,
+                            label:
+                                'Brödrafejd: välj ${state.fraternalFeudsPicked.length}/2 '
+                                'kort från motståndarens hand (tryck för att förstora)',
                             onPick: (card) => setState(
                                 () => _pendingFraternalFeudsCard = card),
                           ),
@@ -883,6 +891,26 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                             },
                             onCancel: () => setState(
                                 () => _pendingFraternalFeudsCard = null),
+                          ),
+                        ),
+                      ),
+                    // Förrädare (se GameNotifier.useTraitor/
+                    // pickTraitorCard, både lokalt och online):
+                    // motståndarens hand öppen, kortet läggs direkt till
+                    // din egen hand – till skillnad från Brödrafejd inget
+                    // andra steg (ingen draghög att välja).
+                    if (state.traitorPicking)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          padding: const EdgeInsets.all(12),
+                          child: FraternalFeudsHandPicker(
+                            hand: state.opponent.hand,
+                            label:
+                                'Förrädare: välj 1 kort från motståndarens hand '
+                                'att lägga till din egen (tryck för att förstora)',
+                            onPick: (card) => _handleResult(
+                                context, notifier.pickTraitorCard(card)),
                           ),
                         ),
                       ),

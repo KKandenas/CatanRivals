@@ -46,6 +46,7 @@ class GameNotifier extends Notifier<GameState> {
   StreamSubscription<Map<String, int>>? _centerStacksSub;
   StreamSubscription<TurnState>? _turnStateSub;
   StreamSubscription<FraternalFeudsRequest?>? _fraternalFeudsRequestSub;
+  StreamSubscription<TraitorRequest?>? _traitorRequestSub;
   StreamSubscription<List<GameCard>>? _discardPileSub;
   StreamSubscription<List<List<GameCard>>>? _drawStacksSub;
   StreamSubscription<List<GameCard>>? _regionDeckSub;
@@ -237,6 +238,7 @@ class GameNotifier extends Notifier<GameState> {
       _centerStacksSub?.cancel();
       _turnStateSub?.cancel();
       _fraternalFeudsRequestSub?.cancel();
+      _traitorRequestSub?.cancel();
       _discardPileSub?.cancel();
       _drawStacksSub?.cancel();
       _regionDeckSub?.cancel();
@@ -267,6 +269,7 @@ class GameNotifier extends Notifier<GameState> {
     _centerStacksSub?.cancel();
     _turnStateSub?.cancel();
     _fraternalFeudsRequestSub?.cancel();
+    _traitorRequestSub?.cancel();
     _discardPileSub?.cancel();
     _drawStacksSub?.cancel();
     _regionDeckSub?.cancel();
@@ -657,6 +660,20 @@ class GameNotifier extends Notifier<GameState> {
       } catch (_) {
         // Ignoreras medvetet – se kommentaren ovan.
       }
+      // Samma reservlösning för en Förrädare-förfrågan (se
+      // TraitorRequest) som hann komma in medan klienten var nere.
+      try {
+        final pendingTraitorRequest = await _sync
+            .watchTraitorRequest(roomCode)
+            .first
+            .timeout(const Duration(seconds: 5));
+        if (pendingTraitorRequest != null &&
+            pendingTraitorRequest.requesterId != role) {
+          _fulfillTraitorRequest(pendingTraitorRequest);
+        }
+      } catch (_) {
+        // Ignoreras medvetet – se kommentaren ovan.
+      }
 
       return null;
     } on TimeoutException {
@@ -873,6 +890,7 @@ class GameNotifier extends Notifier<GameState> {
     _centerStacksSub?.cancel();
     _turnStateSub?.cancel();
     _fraternalFeudsRequestSub?.cancel();
+    _traitorRequestSub?.cancel();
     _discardPileSub?.cancel();
     _drawStacksSub?.cancel();
     _regionDeckSub?.cancel();
@@ -950,6 +968,21 @@ class GameNotifier extends Notifier<GameState> {
       onError: (Object e) {
         state =
             state.copyWith(sessionError: 'Kunde inte synka Brödrafejd: $e');
+      },
+    );
+
+    // Förrädare online (se useTraitor/_fulfillTraitorRequest): samma
+    // "reagera bara på NÅGON ANNANS förfrågan"-resonemang som
+    // Brödrafejd ovan.
+    _traitorRequestSub = _sync.watchTraitorRequest(roomCode).listen(
+      (request) {
+        if (request == null) return;
+        if (request.requesterId == state.myPlayerId) return;
+        _fulfillTraitorRequest(request);
+      },
+      onError: (Object e) {
+        state =
+            state.copyWith(sessionError: 'Kunde inte synka Förrädare: $e');
       },
     );
 
@@ -1722,6 +1755,123 @@ class GameNotifier extends Notifier<GameState> {
   }
 
   // ---------------------------------------------------------------------
+  // Förrädare (kräver Värdshus): titta i motståndarens hand (redan
+  // fullt synkad och synlig, se FraternalFeudsRequest-doc) och välj 1
+  // kort som läggs till din EGEN hand. Till skillnad från Bågskytt/
+  // Pyroman/Piratskepp (där den DRABBADE spelaren agerar på sin egen
+  // klient) är det HÄR den AKTIVA spelaren som pekar ut kortet – du har
+  // redan skrivrätt till din egen hand (kortet läggs dit direkt/synkas
+  // omedelbart), men motståndarens hand kan bara motståndarens EGEN
+  // klient skriva till online, så en [TraitorRequest] skickas för att
+  // be den ta bort samma kort ur sin hand (se _fulfillTraitorRequest).
+  // ---------------------------------------------------------------------
+
+  /// Spelar Förrädare från handen: kräver Värdshus, kortet läggs
+  /// direkt i slänghögen (precis som Plundringsfärd/Bågskytt/Pyroman –
+  /// du har redan "använt" kortet oavsett vad valet blir), sedan väntar
+  /// själva handvalet (se [pickTraitorCard]). No-op om motståndaren
+  /// inte har några kort att välja mellan (samma "inget händer"-mönster
+  /// som Bågskytt/Pyroman utan giltigt mål).
+  String? useTraitor() {
+    final turnError = _checkCanBuild();
+    if (turnError != null) return turnError;
+    GameCard? card;
+    for (final c in state.you.hand) {
+      if (c.baseId == EraOfTurmoilCards.traitor.id) {
+        card = c;
+        break;
+      }
+    }
+    if (card == null) return null;
+    if (!state.you.principality
+        .hasExpansionCard(EraOfTurmoilCards.hedgeTavern.id)) {
+      return 'Kräver Värdshus i ditt rike.';
+    }
+
+    state = state.copyWith(
+      you: state.you.copyWith(hand: List.of(state.you.hand)..remove(card)),
+    );
+    _syncMyPlayer();
+    _discardToPile(card);
+    if (state.opponent.hand.isNotEmpty) {
+      state = state.copyWith(traitorPicking: true);
+    }
+    return null;
+  }
+
+  /// Avbryter handväljaren utan att göra något – Förrädare-kortet är
+  /// redan spelat (se [useTraitor]-doc, samma "inget att ångra"-läge
+  /// som Bågskytt/Pyroman efter att kortet väl använts), så det här
+  /// stänger bara vyn.
+  String? cancelTraitorPick() {
+    state = state.copyWith(traitorPicking: false);
+    return null;
+  }
+
+  /// Väljer [card] ur motståndarens hand och lägger den till din EGEN
+  /// hand. Lokalt muteras båda spelarnas hand direkt (samma
+  /// [GameNotifier] äger båda). Online läggs kortet till din hand
+  /// direkt (redan skrivbart), sedan skickas en [TraitorRequest] som
+  /// motståndarens klient tillämpar på sig själv (se
+  /// _fulfillTraitorRequest).
+  String? pickTraitorCard(GameCard card) {
+    if (!state.traitorPicking) return null;
+    if (!state.opponent.hand.contains(card)) return null;
+
+    if (!state.isOnline) {
+      state = state.copyWith(
+        you: state.you.copyWith(hand: [...state.you.hand, card]),
+        opponent:
+            state.opponent.copyWith(hand: List.of(state.opponent.hand)..remove(card)),
+        traitorPicking: false,
+      );
+      _syncMyPlayer();
+      return null;
+    }
+
+    state = state.copyWith(
+      you: state.you.copyWith(hand: [...state.you.hand, card]),
+      traitorPicking: false,
+    );
+    _syncMyPlayer();
+    final roomCode = state.roomCode;
+    if (roomCode != null) {
+      unawaited(_sync.writeTraitorRequest(
+        roomCode,
+        TraitorRequest(requesterId: state.myPlayerId, cardId: card.id),
+      ));
+    }
+    return null;
+  }
+
+  /// Tillämpar en mottagen [TraitorRequest] på DIN EGEN hand – bara
+  /// motståndarens klient (den som spelade Förrädare) kör den här, som
+  /// svar på att den valt ett kort ur din hand (se [pickTraitorCard]).
+  /// Letar upp kortet via id och tar bort det, sedan rensar förfrågan
+  /// så den inte tillämpas igen (t.ex. efter en sidladdning, se
+  /// [resumeRoom]).
+  void _fulfillTraitorRequest(TraitorRequest request) {
+    GameCard? card;
+    for (final c in state.you.hand) {
+      if (c.id == request.cardId) {
+        card = c;
+        break;
+      }
+    }
+    final roomCode = state.roomCode;
+    if (card == null) {
+      // Redan borta – t.ex. dubbelleverans.
+      if (roomCode != null) unawaited(_sync.clearTraitorRequest(roomCode));
+      return;
+    }
+    state = state.copyWith(
+      you: state.you.copyWith(hand: List.of(state.you.hand)..remove(card)),
+    );
+    _syncMyPlayer();
+    if (roomCode != null) unawaited(_sync.clearTraitorRequest(roomCode));
+  }
+
+  // ---------------------------------------------------------------------
   // Piratskepp: motståndaren väljer bort ett eget handelsskepp, se
   // [_maybeTriggerPirateShip]/[TurnState.pirateShipDiscardPending]-doc.
   // Precis som Fejd tar den DRABBADE spelaren bort sitt EGET kort på sin
@@ -2451,7 +2601,8 @@ class GameNotifier extends Notifier<GameState> {
     if (state.feudBuildingPickActive ||
         state.fraternalFeudsPicking ||
         state.riotsUnitPickActive ||
-        state.attackCardPickedUnit != null) {
+        state.attackCardPickedUnit != null ||
+        state.traitorPicking) {
       return 'Avsluta händelsekortet innan du bygger vidare.';
     }
     if (state.pendingRegions.isNotEmpty) {

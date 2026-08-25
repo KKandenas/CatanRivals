@@ -125,6 +125,25 @@ class FirebaseGameSyncService implements GameSyncService {
   }
 
   @override
+  Stream<TraitorRequest?> watchTraitorRequest(String roomCode) {
+    return _roomRef(roomCode).child('traitorRequest').onValue.map((event) {
+      final raw = event.snapshot.value;
+      if (raw is! Map) return null;
+      return TraitorRequest.fromJson(Map<String, dynamic>.from(raw));
+    });
+  }
+
+  @override
+  Future<void> writeTraitorRequest(String roomCode, TraitorRequest request) {
+    return _roomRef(roomCode).child('traitorRequest').set(request.toJson());
+  }
+
+  @override
+  Future<void> clearTraitorRequest(String roomCode) {
+    return _roomRef(roomCode).child('traitorRequest').remove();
+  }
+
+  @override
   Stream<List<GameCard>> watchDiscardPile(String roomCode) {
     return _roomRef(roomCode).child('discardPile').onValue.map((event) {
       final raw = event.snapshot.value;

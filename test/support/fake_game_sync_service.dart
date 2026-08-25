@@ -13,6 +13,7 @@ class FakeGameSyncService implements GameSyncService {
   final Map<String, Map<String, int>> _centerStacks = {};
   final Map<String, TurnState> _turnStates = {};
   final Map<String, FraternalFeudsRequest?> _fraternalFeudsRequests = {};
+  final Map<String, TraitorRequest?> _traitorRequests = {};
   final Map<String, List<GameCard>> _discardPiles = {};
   final Map<String, Set<ExpansionSet>> _activeExpansions = {};
   final Map<String, List<List<GameCard>>> _drawStacks = {};
@@ -23,6 +24,8 @@ class FakeGameSyncService implements GameSyncService {
   final Map<String, StreamController<TurnState>> _turnStateControllers = {};
   final Map<String, StreamController<FraternalFeudsRequest?>>
       _fraternalFeudsRequestControllers = {};
+  final Map<String, StreamController<TraitorRequest?>>
+      _traitorRequestControllers = {};
   final Map<String, StreamController<List<GameCard>>> _discardPileControllers = {};
   final Map<String, StreamController<Set<ExpansionSet>>>
       _activeExpansionsControllers = {};
@@ -43,6 +46,11 @@ class FakeGameSyncService implements GameSyncService {
   StreamController<FraternalFeudsRequest?> _fraternalFeudsRequestController(
           String roomCode) =>
       _fraternalFeudsRequestControllers.putIfAbsent(
+          roomCode, () => StreamController.broadcast());
+
+  StreamController<TraitorRequest?> _traitorRequestController(
+          String roomCode) =>
+      _traitorRequestControllers.putIfAbsent(
           roomCode, () => StreamController.broadcast());
 
   StreamController<List<GameCard>> _discardPileController(String roomCode) =>
@@ -177,6 +185,24 @@ class FakeGameSyncService implements GameSyncService {
   Future<void> clearFraternalFeudsRequest(String roomCode) async {
     _fraternalFeudsRequests[roomCode] = null;
     _fraternalFeudsRequestController(roomCode).add(null);
+  }
+
+  @override
+  Stream<TraitorRequest?> watchTraitorRequest(String roomCode) {
+    final controller = _traitorRequestController(roomCode);
+    return controller.stream.transform(_replayLatest(_traitorRequests[roomCode]));
+  }
+
+  @override
+  Future<void> writeTraitorRequest(String roomCode, TraitorRequest request) async {
+    _traitorRequests[roomCode] = request;
+    _traitorRequestController(roomCode).add(request);
+  }
+
+  @override
+  Future<void> clearTraitorRequest(String roomCode) async {
+    _traitorRequests[roomCode] = null;
+    _traitorRequestController(roomCode).add(null);
   }
 
   @override
