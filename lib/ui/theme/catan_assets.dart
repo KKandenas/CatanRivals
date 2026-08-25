@@ -17,6 +17,14 @@ class CatanAssets {
   static const String lobbyBackground = '$_ui/lobby_background.webp';
   static const String boardBackground = '$_ui/board_background.webp';
 
+  /// Omslagsbild för "Duel of the Princes"-temavalet i lobbyn (alla tre
+  /// temaseten samtidigt, se [DuelOfThePrincesSetup]-klassdoc) – till
+  /// skillnad från [backEraGold]/[backEraTurmoil]/[backEraProgress]
+  /// återanvänds den INTE som en riktig kortbaksbild i själva spelet
+  /// (draghögarna visar var sin egen temabaksbild där i stället, se
+  /// [CenterStacksStrip]) – bara en egen lobby-illustration för läget.
+  static const String coverAllExpansions = '$_ui/cover_all_expansions.webp';
+
   /// Händelsetärningens sex sidor (se [EventDieFace]) – de fem
   /// symbolerna från regelhäftets referenskort.
   static const String eventDieBrigandAttack =

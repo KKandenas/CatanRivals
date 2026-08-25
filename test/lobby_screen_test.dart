@@ -97,6 +97,60 @@ void main() {
   });
 
   testWidgets(
+      'temarutan för Duel of the Princes (alla expansioner) skickar med alla tre till playLocally',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpLobby(tester);
+    final container =
+        ProviderScope.containerOf(tester.element(find.byType(LobbyScreen)));
+
+    await tester.tap(find.byKey(const ValueKey('theme-option-all')));
+    await tester.pump();
+    await tester.tap(find.text('Spela lokalt (utan synk)'));
+    await tester.pumpAndSettle();
+
+    expect(
+        container.read(gameProvider).activeExpansions,
+        {
+          ExpansionSet.eraOfGold,
+          ExpansionSet.eraOfTurmoil,
+          ExpansionSet.eraOfProgress
+        });
+    expect(container.read(gameProvider).victoryPointTarget, 13);
+  });
+
+  testWidgets(
+      'alla expansioner-rutan och ett enskilt tema är ömsesidigt uteslutande, i båda riktningarna',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpLobby(tester);
+    final container =
+        ProviderScope.containerOf(tester.element(find.byType(LobbyScreen)));
+
+    // Gulderan, sedan alla expansioner: bara det senaste valet ska gälla.
+    await tester.tap(find.byKey(const ValueKey('theme-option-gold')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('theme-option-all')));
+    await tester.pump();
+    // ... och tvärtom: alla expansioner, sedan Gulderan igen.
+    await tester.tap(find.byKey(const ValueKey('theme-option-gold')));
+    await tester.pump();
+    await tester.tap(find.text('Spela lokalt (utan synk)'));
+    await tester.pumpAndSettle();
+
+    expect(container.read(gameProvider).activeExpansions,
+        {ExpansionSet.eraOfGold});
+  });
+
+  testWidgets(
       'temarutorna är ömsesidigt uteslutande – väljer man ett nytt tema avmarkeras det förra',
       (tester) async {
     tester.view.physicalSize = const Size(1200, 2000);

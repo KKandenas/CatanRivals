@@ -26,17 +26,25 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   bool _busy = false;
   String? _error;
 
-  /// Vilket tema som ska vara aktivt i nästa match (se
+  /// Vilket ENSKILT tema som ska vara aktivt i nästa match (se
   /// [GameState.activeExpansions]) – `null` betyder inget tema. Bara ETT
-  /// tema åt gången går att välja så länge (de kombineras inte i
-  /// spelmotorn än, se [GameNotifier._resetDecks]) – därför ett enda
-  /// nullbart fält i stället för flera kryssrutor. Bara relevant för
-  /// "Skapa nytt rum"/"Spela lokalt" – den som går med i ett befintligt
-  /// rum ärver hostens val i stället.
+  /// tema åt gången går att välja här (ömsesidigt uteslutande med
+  /// [_allExpansions], se dess doc) – därför ett enda nullbart fält i
+  /// stället för flera kryssrutor. Bara relevant för "Skapa nytt rum"/
+  /// "Spela lokalt" – den som går med i ett befintligt rum ärver hostens
+  /// val i stället.
   ExpansionSet? _selectedTheme;
 
-  Set<ExpansionSet> get _selectedExpansions =>
-      _selectedTheme == null ? {} : {_selectedTheme!};
+  /// "Duel of the Princes": alla tre temaseten SAMTIDIGT (se
+  /// [DuelOfThePrincesSetup]-klassdoc) – ett eget, femte alternativ i
+  /// temavals-raden, ömsesidigt uteslutande med [_selectedTheme] (ett
+  /// tryck på endera rutgruppen nollställer den andra, se
+  /// [_themeOption]s `onSelect`).
+  bool _allExpansions = false;
+
+  Set<ExpansionSet> get _selectedExpansions => _allExpansions
+      ? {ExpansionSet.eraOfGold, ExpansionSet.eraOfTurmoil, ExpansionSet.eraOfProgress}
+      : (_selectedTheme == null ? {} : {_selectedTheme!});
 
   /// Om appen just nu kollar efter en sparad, pågående match att
   /// återuppta (se [SessionStorage]) – sant tills kollen är klar, så att
@@ -166,25 +174,28 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     );
   }
 
-  /// En tryckbar temaruta i temavals-raden (se [_selectedTheme]) – visar
-  /// samma kortbaksbild som draghögarna faktiskt använder i spelet (se
+  /// En tryckbar temaruta i temavals-raden (se [_selectedTheme]/
+  /// [_allExpansions]) – visar samma kortbaksbild som draghögarna
+  /// faktiskt använder i spelet för de fyra vanliga rutorna (se
   /// [CatanAssets.backBasicSet]/[backEraGold]/[backEraTurmoil]/
-  /// [backEraProgress]/[CenterStacksStrip]), ingen egen text ovanpå eftersom bilderna
-  /// redan har temanamnet inbakat. Den valda rutan får en tjockare
-  /// träfärgad ram (samma träfärg som resten av lobbyns ram, se
-  /// [CatanColors.woodFrame]) och full ljusstyrka; de andra dämpas lite
-  /// för att tydligt sticka ut mot den valda.
+  /// [backEraProgress]/[CenterStacksStrip]), och en egen omslagsbild för
+  /// "Duel of the Princes"-rutan (se [CatanAssets.coverAllExpansions] –
+  /// den har ingen EGEN kortbaksbild i spelet, se dess doc). Ingen egen
+  /// text ovanpå eftersom bilderna redan har temanamnet inbakat. Den
+  /// valda rutan får en tjockare träfärgad ram (samma träfärg som
+  /// resten av lobbyns ram, se [CatanColors.woodFrame]) och full
+  /// ljusstyrka; de andra dämpas lite för att tydligt sticka ut mot den
+  /// valda.
   Widget _themeOption({
-    required ExpansionSet? value,
+    required bool selected,
+    required VoidCallback onSelect,
     required String backgroundImage,
     required Key optionKey,
   }) {
-    final selected = _selectedTheme == value;
     return Expanded(
       child: GestureDetector(
         key: optionKey,
-        onTap:
-            _busy ? null : () => setState(() => _selectedTheme = value),
+        onTap: _busy ? null : onSelect,
         child: Container(
           height: 96,
           margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -275,25 +286,53 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                           children: [
                             _themeOption(
                               optionKey: const ValueKey('theme-option-none'),
-                              value: null,
+                              selected: !_allExpansions && _selectedTheme == null,
+                              onSelect: () => setState(() {
+                                _selectedTheme = null;
+                                _allExpansions = false;
+                              }),
                               backgroundImage: CatanAssets.backBasicSet,
                             ),
                             _themeOption(
                               optionKey: const ValueKey('theme-option-gold'),
-                              value: ExpansionSet.eraOfGold,
+                              selected: !_allExpansions &&
+                                  _selectedTheme == ExpansionSet.eraOfGold,
+                              onSelect: () => setState(() {
+                                _selectedTheme = ExpansionSet.eraOfGold;
+                                _allExpansions = false;
+                              }),
                               backgroundImage: CatanAssets.backEraGold,
                             ),
                             _themeOption(
                               optionKey:
                                   const ValueKey('theme-option-turmoil'),
-                              value: ExpansionSet.eraOfTurmoil,
+                              selected: !_allExpansions &&
+                                  _selectedTheme == ExpansionSet.eraOfTurmoil,
+                              onSelect: () => setState(() {
+                                _selectedTheme = ExpansionSet.eraOfTurmoil;
+                                _allExpansions = false;
+                              }),
                               backgroundImage: CatanAssets.backEraTurmoil,
                             ),
                             _themeOption(
                               optionKey:
                                   const ValueKey('theme-option-progress'),
-                              value: ExpansionSet.eraOfProgress,
+                              selected: !_allExpansions &&
+                                  _selectedTheme == ExpansionSet.eraOfProgress,
+                              onSelect: () => setState(() {
+                                _selectedTheme = ExpansionSet.eraOfProgress;
+                                _allExpansions = false;
+                              }),
                               backgroundImage: CatanAssets.backEraProgress,
+                            ),
+                            _themeOption(
+                              optionKey: const ValueKey('theme-option-all'),
+                              selected: _allExpansions,
+                              onSelect: () => setState(() {
+                                _allExpansions = true;
+                                _selectedTheme = null;
+                              }),
+                              backgroundImage: CatanAssets.coverAllExpansions,
                             ),
                           ],
                         ),

@@ -86,4 +86,28 @@ class EraOfGoldDrawDeck {
     final half = cards.length ~/ 2;
     return [cards.sublist(0, half), cards.sublist(half)];
   }
+
+  /// Duel of the Princes ("Alla expansioner", se
+  /// [DuelOfThePrincesSetup]-klassdoc): EN oblandad kortpool av
+  /// Gulderans EGNA kort – till skillnad från [_drawPoolCards] utesluts
+  /// INTE Köpmansgille här (det finns inga ansikte-upp-kort i det här
+  /// läget, se [Player.faceUpExpansionCard]), bara det antal
+  /// [removeCounts] (nyckel = [GameCard.baseId]) pekar ut plockas bort
+  /// innan resten fyller poolen – exakt de kopior som blir kvar (t.ex.
+  /// 1 av Köpmansgilles 2) blandas alltså in tillsammans med de andra
+  /// korten, precis som regelhäftet beskriver.
+  static List<GameCard> reducedPoolCards(Map<String, int> removeCounts) {
+    final cards = <GameCard>[];
+    EraOfGoldCards.supplyCounts.forEach((id, count) {
+      if (id.startsWith('event-')) return;
+      final reduced = count - (removeCounts[id] ?? 0);
+      if (reduced <= 0) return;
+      final template = _templateFor(id);
+      if (template == null) return;
+      for (var i = 0; i < reduced; i++) {
+        cards.add(template.copyWith(id: '$id-gold-draw-$i'));
+      }
+    });
+    return cards;
+  }
 }

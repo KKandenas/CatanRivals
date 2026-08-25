@@ -447,9 +447,14 @@ class GameState {
 
   /// Hur många segerpoäng som krävs för att vinna (regelhäftet: 7 i
   /// grundspelet, men 12 så fort minst ett temaset är aktivt – fler
-  /// byggmöjligheter gör 7 poäng för lätt uppnått). Enda stället det här
-  /// jämförs är [GameNotifier._advanceToNextPlayer].
-  int get victoryPointTarget => activeExpansions.isEmpty ? 7 : 12;
+  /// byggmöjligheter gör 7 poäng för lätt uppnått), och 13 i "Duel of
+  /// the Princes"-läget (alla tre temaseten aktiva samtidigt, se
+  /// [DuelOfThePrincesSetup]-klassdoc) – ännu fler byggmöjligheter där.
+  /// Enda stället det här jämförs är [GameNotifier._advanceToNextPlayer].
+  int get victoryPointTarget {
+    if (activeExpansions.length >= 3) return 13;
+    return activeExpansions.isEmpty ? 7 : 12;
+  }
 
   /// Hur många kort respektive draghög startar med (innan någon dragit
   /// ur den) – grundspelets 36 kort delas på 4 högar (9 vardera) utan
@@ -459,13 +464,22 @@ class GameState {
   /// sorterats ut till ansikte-upp-högen) och Oroligheternas tids 22
   /// (11 vardera, efter att 2 Värdshus sorterats ut på samma sätt)
   /// respektive Utvecklingens tids 24 (12 vardera, efter att 2
-  /// Universitet sorterats ut – setet har fler fysiska kort totalt) –
-  /// de tre temaseten kombineras aldrig i samma match, se
-  /// [LobbyScreen]. Används för att avgöra om en hög redan är vald
-  /// under starthandsvalet (se [CenterStacksStrip]/
+  /// Universitet sorterats ut – setet har fler fysiska kort totalt). I
+  /// "Duel of the Princes"-läget (alla tre temaseten samtidigt, se
+  /// [DuelOfThePrincesSetup]-klassdoc) kombineras de i stället i EN EGEN
+  /// hög VARDERA (index 3/4/5, fast ordning Gulderan/Oroligheternas
+  /// tid/Utvecklingens tid) – 12/12/14 kort, efter att ett förutbestämt
+  /// urval namngivna kort (se [DuelOfThePrincesSetup]) plockats bort och
+  /// (till skillnad från annars) EN kopia av Köpmansgille/Värdshus/
+  /// Universitet lämnats kvar i respektive pool (inga ansikte-upp-kort
+  /// i det läget). Används för att avgöra om en hög redan är vald under
+  /// starthandsvalet (se [CenterStacksStrip]/
   /// [GameNotifier.chooseStartingStack]) – kan inte bara jämföra mot ett
   /// hårdkodat 9 längre nu när högstorleken varierar beroende på tema.
   List<int> get initialDrawStackSizes {
+    if (activeExpansions.length >= 3) {
+      return const [12, 12, 12, 12, 12, 14];
+    }
     if (activeExpansions.contains(ExpansionSet.eraOfGold) ||
         activeExpansions.contains(ExpansionSet.eraOfTurmoil)) {
       return const [12, 12, 12, 11, 11];

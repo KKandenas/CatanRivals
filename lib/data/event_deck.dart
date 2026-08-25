@@ -28,17 +28,40 @@ class EventDeck {
 
   static final Map<String, GameCard> _byId = {for (final c in BasicSetCards.all) c.id: c};
 
-  static List<GameCard> shuffledWithYuleFourthFromBottom(
-      {Random? random, List<GameCard> extraCards = const []}) {
-    final rng = random ?? Random();
-    final others = <GameCard>[...extraCards];
+  /// Grundspelets 8 egna händelsekort (utan Jul, se klassdoc) – en EN
+  /// källa till sanning, delad mellan [shuffledWithYuleFourthFromBottom]
+  /// och [DuelOfThePrincesSetup] (som kuraterar dem ihop med temasetens
+  /// egna INNAN blandning, i stället för att bara lägga till dem som
+  /// råa extraCards).
+  static List<GameCard> basicEventCards() {
+    final cards = <GameCard>[];
     _basicEventIds.forEach((id, count) {
       final template = _byId[id]!;
       for (var i = 0; i < count; i++) {
-        others.add(template.copyWith(id: '$id-draw-$i'));
+        cards.add(template.copyWith(id: '$id-draw-$i'));
       }
     });
-    others.shuffle(rng);
+    return cards;
+  }
+
+  static List<GameCard> shuffledWithYuleFourthFromBottom(
+      {Random? random, List<GameCard> extraCards = const []}) {
+    return shuffledFromCards([...basicEventCards(), ...extraCards],
+        random: random);
+  }
+
+  /// Blandar [cards] – som redan innehåller ALLA kort som ska vara med,
+  /// till skillnad från [shuffledWithYuleFourthFromBottom] som alltid
+  /// lägger till grundspelets 8 egna på egen hand – och lägger in Jul
+  /// som 4:e kortet räknat från botten, exakt samma ordningslogik som
+  /// [shuffledWithYuleFourthFromBottom] (se dess doc). Delad hjälpare
+  /// för [DuelOfThePrincesSetup], som bygger en helt egen kortlista
+  /// (kuraterad från 15 namngivna kort ner till 6, se dess doc) i
+  /// stället för att bara skicka extraCards.
+  static List<GameCard> shuffledFromCards(List<GameCard> cards,
+      {Random? random}) {
+    final rng = random ?? Random();
+    final others = List<GameCard>.of(cards)..shuffle(rng);
 
     final bottomThree = others.sublist(others.length - 3);
     final topRest = others.sublist(0, others.length - 3);

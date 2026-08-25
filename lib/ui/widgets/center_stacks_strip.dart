@@ -83,6 +83,16 @@ class CenterStacksStrip extends StatelessWidget {
   /// temasetets egna. `null` när inget kort är valt.
   final bool? selectedDiscardCardIsThemeCard;
 
+  /// Duel of the Princes (6 högar, se [GameState.initialDrawStackSizes]):
+  /// vilken EXAKT temahög (3/4/5) det valda kortet hör till – till
+  /// skillnad från [selectedDiscardCardIsThemeCard] ovan (som bara vet
+  /// "något temaset", tillräckligt när ett enda tema delar på EN
+  /// gemensam 2-högspool) räcker inte det längre nu när varje temaset
+  /// har sin egen ENSKILDA hög. `null` betyder "inte aktuellt"
+  /// (grundspelskort, eller inte duel-läge) – då avgör
+  /// [selectedDiscardCardIsThemeCard] som vanligt i stället.
+  final int? selectedDiscardCardExactStackIndex;
+
   /// Vilket tema som är aktivt (se [GameState.activeExpansions]) –
   /// avgör vilken kortbaksbild [_backAssetFor] visar för temasetets
   /// EGNA högar (Gulderan/Oroligheternas tid har olika baksidor, se
@@ -141,6 +151,7 @@ class CenterStacksStrip extends StatelessWidget {
     this.onDiscardToStack,
     this.hasSelectedDiscardCard = false,
     this.selectedDiscardCardIsThemeCard,
+    this.selectedDiscardCardExactStackIndex,
     this.activeExpansions = const {},
     this.tradePhase = TradePhase.none,
     this.onExchangeDiscardToStack,
@@ -211,11 +222,24 @@ class CenterStacksStrip extends StatelessWidget {
   /// som visas ([_backAssetFor]) och (tillsammans med
   /// [selectedDiscardCardIsThemeCard]) vilka högar som går att slänga
   /// ett valt handkort i.
-  bool _isThemeStack(int index) =>
-      initialStackSizes.length == 5 && index >= initialStackSizes.length - 2;
+  /// I Duel of the Princes-läget (se [GameState.initialDrawStackSizes]
+  /// 6-högsfall) har VARJE temaset sin egen ENSKILDA hög (index 3/4/5)
+  /// i stället för att dela på 2 gemensamma – "sista 3" räknas då i
+  /// stället för "sista 2".
+  bool _isThemeStack(int index) {
+    if (initialStackSizes.length == 6) return index >= 3;
+    return initialStackSizes.length == 5 && index >= initialStackSizes.length - 2;
+  }
 
   String _backAssetFor(int index) {
     if (!_isThemeStack(index)) return CatanAssets.backBasicSet;
+    if (initialStackSizes.length == 6) {
+      // Duel of the Princes: fast ordning Gulderan/Oroligheternas tid/
+      // Utvecklingens tid (index 3/4/5, se DuelOfThePrincesSetup-doc).
+      if (index == 3) return CatanAssets.backEraGold;
+      if (index == 4) return CatanAssets.backEraTurmoil;
+      return CatanAssets.backEraProgress;
+    }
     if (activeExpansions.contains(ExpansionSet.eraOfTurmoil)) {
       return CatanAssets.backEraTurmoil;
     }
@@ -249,7 +273,9 @@ class CenterStacksStrip extends StatelessWidget {
       // matchande högen highlightas/går att trycka på, i stället för
       // att gå att trycka och sedan mötas av ett felmeddelande.
       final tappable = hasSelectedDiscardCard &&
-          selectedDiscardCardIsThemeCard == _isThemeStack(index);
+          (selectedDiscardCardExactStackIndex != null
+              ? selectedDiscardCardExactStackIndex == index
+              : selectedDiscardCardIsThemeCard == _isThemeStack(index));
       return _StackPile(
         asset: asset,
         count: count,
@@ -262,7 +288,9 @@ class CenterStacksStrip extends StatelessWidget {
     if (tradePhase == TradePhase.exchangeDiscard ||
         tradePhase == TradePhase.peekDiscard) {
       final tappable = hasSelectedExchangeCard &&
-          selectedDiscardCardIsThemeCard == _isThemeStack(index);
+          (selectedDiscardCardExactStackIndex != null
+              ? selectedDiscardCardExactStackIndex == index
+              : selectedDiscardCardIsThemeCard == _isThemeStack(index));
       return _StackPile(
         asset: asset,
         count: count,

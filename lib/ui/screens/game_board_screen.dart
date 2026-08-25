@@ -89,6 +89,23 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   /// [CenterStacksStrip.onDiscardToStack]).
   GameCard? _selectedDiscardCard;
 
+  /// Duel of the Princes (6 högar, se [GameState.initialDrawStackSizes]):
+  /// vilken EXAKT temahög (3/4/5) [_selectedDiscardCard] hör till – se
+  /// [CenterStacksStrip.selectedDiscardCardExactStackIndex]-doc för
+  /// varför det inte räcker att bara veta ATT det är ett temakort här,
+  /// till skillnad från det vanliga enda-tema-läget. `null` i alla
+  /// andra lägen (grundspelskort, inget kort valt, eller inte
+  /// duel-läge).
+  int? _selectedDiscardCardExactStackIndex(GameState state) {
+    if (state.initialDrawStackSizes.length != 6) return null;
+    final card = _selectedDiscardCard;
+    if (card == null) return null;
+    if (card.id.contains('-gold-draw-')) return 3;
+    if (card.id.contains('-turmoil-draw-')) return 4;
+    if (card.id.contains('-progress-draw-')) return 5;
+    return null;
+  }
+
   /// Nyckeln (samma som `key: ValueKey(...)` på [DiceRollSummaryBanner]
   /// nedan) för det senast med "OK" stängda tärningskastet – rent
   /// lokalt UI-state. Måste ligga här (inte inuti banner-widgeten
@@ -1189,7 +1206,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 selectedDiscardCardIsThemeCard: _selectedDiscardCard == null
                     ? null
                     : (_selectedDiscardCard!.id.contains('-gold-draw-') ||
-                        _selectedDiscardCard!.id.contains('-turmoil-draw-')),
+                        _selectedDiscardCard!.id.contains('-turmoil-draw-') ||
+                        _selectedDiscardCard!.id.contains('-progress-draw-')),
+                selectedDiscardCardExactStackIndex:
+                    _selectedDiscardCardExactStackIndex(state),
                 onDiscardToStack: (index) {
                   final card = _selectedDiscardCard;
                   if (card == null) return;

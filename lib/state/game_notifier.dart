@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/basic_set_cards.dart';
 import '../data/basic_set_draw_deck.dart';
+import '../data/duel_of_the_princes_setup.dart';
 import '../data/era_of_gold_cards.dart';
 import '../data/era_of_gold_draw_deck.dart';
 import '../data/era_of_progress_cards.dart';
@@ -122,15 +123,18 @@ class GameNotifier extends Notifier<GameState> {
   }
 
   /// Bygger om alla tre lokala dragstaplar (region/drag/händelse) för
-  /// en ny match, enligt vilka temaset som är aktiva. Bara ETT tema kan
-  /// vara aktivt åt gången så länge (se [LobbyScreen]s ömsesidigt
-  /// uteslutande val) – de tre temaseten kombineras alltså aldrig i
-  /// samma match. Returnerar de unika ansikte-upp-korten (se
-  /// [Player.faceUpExpansionCard], 2× Köpmansgille för Gulderan, 2×
-  /// Värdshus för Oroligheternas tid respektive 2× Universitet för
-  /// Utvecklingens tid, annars en tom lista) – index 0/1 motsvarar
-  /// alltid respektive spelares EGET kort (du/host får 0, motståndaren/
-  /// gästen får 1), samma ordning oavsett klient eftersom
+  /// en ny match, enligt vilka temaset som är aktiva. Antingen väljer
+  /// spelaren ETT enda tema (se [LobbyScreen]s val, den vanliga vägen
+  /// nedan) eller ALLA tre samtidigt ("Duel of the Princes", se
+  /// [DuelOfThePrincesSetup]-klassdoc och den grenen allra först i
+  /// funktionskroppen) – aldrig exakt två. Returnerar de unika
+  /// ansikte-upp-korten (se [Player.faceUpExpansionCard], 2×
+  /// Köpmansgille för Gulderan, 2× Värdshus för Oroligheternas tid
+  /// respektive 2× Universitet för Utvecklingens tid, en tom lista både
+  /// utan tema OCH i Duel of the Princes-läget – där finns inga
+  /// ansikte-upp-kort alls) – index 0/1 motsvarar alltid respektive
+  /// spelares EGET kort (du/host får 0, motståndaren/gästen får 1),
+  /// samma ordning oavsett klient eftersom
   /// [EraOfGoldDrawDeck.faceUpCards]/[EraOfTurmoilDrawDeck.faceUpCards]/
   /// [EraOfProgressDrawDeck.faceUpCards] aldrig blandar dem. Anroparna
   /// (`playLocally`/`hostRoom`/`joinRoom`) sätter in respektive kort på
@@ -142,6 +146,19 @@ class GameNotifier extends Notifier<GameState> {
     final hasGold = expansions.contains(ExpansionSet.eraOfGold);
     final hasTurmoil = expansions.contains(ExpansionSet.eraOfTurmoil);
     final hasProgress = expansions.contains(ExpansionSet.eraOfProgress);
+    // "Duel of the Princes" (alla tre samtidigt, se
+    // [DuelOfThePrincesSetup]-klassdoc) MÅSTE kollas FÖRE de enskilda
+    // temagrenarna nedan – annars skulle t.ex. hasGold-grenen tas även
+    // när alla tre är aktiva, eftersom den bara kollar "är Gulderan
+    // med", inte "är Gulderan ENSAM".
+    if (hasGold && hasTurmoil && hasProgress) {
+      _drawStacks = DuelOfThePrincesSetup.shuffledDrawStacks();
+      _eventDeck = DuelOfThePrincesSetup.shuffledEventDeck();
+      // Inga ansikte-upp-kort i det här läget – Köpmansgille/Värdshus/
+      // Universitet blandas i stället in i respektive temasets egen
+      // hög (se [DuelOfThePrincesSetup._goldRemoveCounts] m.fl.).
+      return const [];
+    }
     final basicStacks = BasicSetDrawDeck.shuffledStacks(
         stackCount: hasGold || hasTurmoil || hasProgress ? 3 : 4);
     if (hasGold) {
@@ -778,11 +795,23 @@ class GameNotifier extends Notifier<GameState> {
     });
     final hasGold = expansions.contains(ExpansionSet.eraOfGold);
     final hasTurmoil = expansions.contains(ExpansionSet.eraOfTurmoil);
+    // Duel of the Princes (alla tre samtidigt, se
+    // [DuelOfThePrincesSetup]-klassdoc): till skillnad från annars finns
+    // INGA ansikte-upp-kort, så Köpmansgille/Värdshus/Universitet ska
+    // INTE uteslutas nedan – de hör hemma i respektive pool precis som
+    // vilket annat kort som helst (den exakta "ta bort N namngivna
+    // kort"-kureringen replikeras dock inte här, samma accepterade
+    // brist som redan gäller övriga korttyper i den här reservlösningen,
+    // se klassdoc).
+    final hasProgress = expansions.contains(ExpansionSet.eraOfProgress);
+    final isDuelOfThePrinces = hasGold && hasTurmoil && hasProgress;
     final goldById = {for (final c in EraOfGoldCards.all) c.id: c};
     if (hasGold) {
       EraOfGoldCards.supplyCounts.forEach((id, totalCount) {
         if (id.startsWith('event-')) return;
-        if (id == EraOfGoldCards.merchantGuild.id) return;
+        if (id == EraOfGoldCards.merchantGuild.id && !isDuelOfThePrinces) {
+          return;
+        }
         final template = goldById[id] ?? byId[id];
         if (template == null) return;
         final remaining = consumeAccounted(id, totalCount);
@@ -795,7 +824,9 @@ class GameNotifier extends Notifier<GameState> {
       final turmoilById = {for (final c in EraOfTurmoilCards.all) c.id: c};
       EraOfTurmoilCards.supplyCounts.forEach((id, totalCount) {
         if (id.startsWith('event-')) return;
-        if (id == EraOfTurmoilCards.hedgeTavern.id) return;
+        if (id == EraOfTurmoilCards.hedgeTavern.id && !isDuelOfThePrinces) {
+          return;
+        }
         final template = turmoilById[id] ?? byId[id] ?? goldById[id];
         if (template == null) return;
         final remaining = consumeAccounted(id, totalCount);
@@ -804,12 +835,13 @@ class GameNotifier extends Notifier<GameState> {
         }
       });
     }
-    final hasProgress = expansions.contains(ExpansionSet.eraOfProgress);
     if (hasProgress) {
       final progressById = {for (final c in EraOfProgressCards.all) c.id: c};
       EraOfProgressCards.supplyCounts.forEach((id, totalCount) {
         if (id.startsWith('event-')) return;
-        if (id == EraOfProgressCards.university.id) return;
+        if (id == EraOfProgressCards.university.id && !isDuelOfThePrinces) {
+          return;
+        }
         final template = progressById[id] ?? byId[id];
         if (template == null) return;
         final remaining = consumeAccounted(id, totalCount);
@@ -820,7 +852,8 @@ class GameNotifier extends Notifier<GameState> {
     }
     pool.shuffle();
 
-    final stackCount = hasGold || hasTurmoil || hasProgress ? 5 : 4;
+    final stackCount =
+        isDuelOfThePrinces ? 6 : (hasGold || hasTurmoil || hasProgress ? 5 : 4);
     final counts = [
       for (var i = 0; i < stackCount; i++) centerStacks['draw${i + 1}'] ?? 0,
     ];
@@ -1294,11 +1327,20 @@ class GameNotifier extends Notifier<GameState> {
   /// grundspelets 9 kort kom tillbaka).
   GameCard? _drawEventCardResolvingYule() {
     if (_eventDeck.isEmpty) return null;
+    final isDuelOfThePrinces = state.activeExpansions.length >= 3;
     var remaining = List<GameCard>.of(_eventDeck);
     var card = remaining.removeAt(0);
     while (card.id == BasicSetCards.yule.id) {
-      remaining = EventDeck.shuffledWithYuleFourthFromBottom(
-          extraCards: _themeEventCards(state.activeExpansions));
+      // Duel of the Princes ombladas om helt enligt sin egen 15→6-
+      // kurering (regelhäftet: "Shuffle the event card stack as
+      // performed at the beginning of the game" – dvs. precis samma
+      // procedur som vid matchstart, inklusive urvalet, inte bara en
+      // ordinarie ombladning av de kort som redan är kvar) i stället
+      // för [_themeEventCards] (som bara känner till EN aktiv tema).
+      remaining = isDuelOfThePrinces
+          ? DuelOfThePrincesSetup.shuffledEventDeck()
+          : EventDeck.shuffledWithYuleFourthFromBottom(
+              extraCards: _themeEventCards(state.activeExpansions));
       if (remaining.isEmpty) {
         _setEventDeck(remaining);
         return null;
@@ -2415,9 +2457,13 @@ class GameNotifier extends Notifier<GameState> {
   /// Om draghög [stackIndex] är en av det AKTIVA temasetets EGNA högar
   /// (de sista 2 av 5, se [_resetDecks]/[EraOfGoldDrawDeck]/
   /// [EraOfTurmoilDrawDeck]) – `false` för grundspelets högar, och
-  /// alltid `false` utan något tema aktivt (bara 4 högar då).
-  bool _isThemeStackIndex(int stackIndex) =>
-      _drawStacks.length == 5 && stackIndex >= _drawStacks.length - 2;
+  /// alltid `false` utan något tema aktivt (bara 4 högar då). I Duel of
+  /// the Princes-läget (6 högar, se [DuelOfThePrincesSetup]) räknas de
+  /// sista 3 (index 3/4/5) i stället, en per temaset.
+  bool _isThemeStackIndex(int stackIndex) {
+    if (_drawStacks.length == 6) return stackIndex >= 3;
+    return _drawStacks.length == 5 && stackIndex >= _drawStacks.length - 2;
+  }
 
   /// Om [card] fysiskt drogs från ett temasets egna högar – avgörs av
   /// draghögs-suffixet i [GameCard.id] ("-gold-draw-N"/
@@ -2437,15 +2483,40 @@ class GameNotifier extends Notifier<GameState> {
   /// får bara läggas tillbaka i grundspelets högar, temasetets egna kort
   /// bara i temasetets (regelhäftets uppdelning per set, se
   /// [_isThemeStackIndex]/[_isThemeCard]) – annars ett tydligt
-  /// felmeddelande i stället för att tyst blanda ihop högarna.
+  /// felmeddelande i stället för att tyst blanda ihop högarna. I Duel of
+  /// the Princes-läget (6 högar) räcker det INTE att bara veta ATT ett
+  /// kort hör till "något" temaset – varje temaset har sin EGEN,
+  /// ENSKILDA hög (index 3/4/5, se [DuelOfThePrincesSetup]-klassdoc), så
+  /// det måste vara RÄTT temasets hög.
   String? _checkStackMatchesCardOrigin(GameCard card, int stackIndex) {
+    if (_drawStacks.length == 6) {
+      final isGold = card.id.contains('-gold-draw-');
+      final isTurmoil = card.id.contains('-turmoil-draw-');
+      final isProgress = card.id.contains('-progress-draw-');
+      if (isGold && stackIndex == 3) return null;
+      if (isTurmoil && stackIndex == 4) return null;
+      if (isProgress && stackIndex == 5) return null;
+      if (!isGold && !isTurmoil && !isProgress) {
+        return stackIndex < 3
+            ? null
+            : 'Det kortet hör till en av grundspelets högar.';
+      }
+      final themeName = isGold
+          ? 'Gulderans'
+          : isTurmoil
+              ? 'Oroligheternas tids'
+              : 'Utvecklingens tids';
+      return 'Det kortet hör till $themeName egen hög.';
+    }
     if (_isThemeCard(card) == _isThemeStackIndex(stackIndex)) return null;
     if (!_isThemeCard(card)) {
       return 'Det kortet hör till en av grundspelets högar.';
     }
     final themeName = state.activeExpansions.contains(ExpansionSet.eraOfGold)
         ? 'Gulderans'
-        : 'Oroligheternas tids';
+        : state.activeExpansions.contains(ExpansionSet.eraOfTurmoil)
+            ? 'Oroligheternas tids'
+            : 'Utvecklingens tids';
     return 'Det kortet hör till en av $themeName högar.';
   }
 
