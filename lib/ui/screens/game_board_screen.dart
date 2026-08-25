@@ -170,8 +170,22 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
 
   void _confirmPendingBuild() {
     final confirm = _pendingBuildConfirm;
+    final builtCard = _pendingBuildCard;
     _clearPendingBuild();
     confirm?.call();
+    // Stapelhus: "Du får omedelbart 2 valfria resurser." – appen flyttar
+    // inga resurser åt spelarna (se dropExpansion-doc), så bara en text
+    // som en påminnelse, precis som byggkostnader visas men inte dras
+    // av automatiskt.
+    if (builtCard?.baseId == EraOfGoldCards.stapleHouse.id) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Stapelhus byggt: du får 2 valfria resurser direkt.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   /// Lämnar matchen helt (se [GameNotifier.leaveGame]) och går tillbaka
