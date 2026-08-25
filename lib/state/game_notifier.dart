@@ -7,6 +7,8 @@ import '../data/basic_set_cards.dart';
 import '../data/basic_set_draw_deck.dart';
 import '../data/era_of_gold_cards.dart';
 import '../data/era_of_gold_draw_deck.dart';
+import '../data/era_of_turmoil_cards.dart';
+import '../data/era_of_turmoil_draw_deck.dart';
 import '../data/event_deck.dart';
 import '../data/mock_game.dart';
 import '../data/region_deck.dart';
@@ -80,10 +82,11 @@ class GameNotifier extends Notifier<GameState> {
   /// eftersom varje klient tidigare byggde sin egen, oberoende blandade
   /// hög). `_setDrawStack` är den ENDA vägen att mutera en enskild hög
   /// efter att spelet startat – garanterar att ingen kodplats glömmer
-  /// synken. Utan aktiva temaset: 4 högar à 9 kort. Med Gulderan aktivt
+  /// synken. Utan aktiva temaset: 4 högar à 9 kort. Med ett tema aktivt
   /// (se [_resetDecks]): omfördelas grundspelet till 3 högar à 12 kort
-  /// för att lämna plats åt Gulderans egna 2 (11 kort vardera, se
-  /// [EraOfGoldDrawDeck]) – alltså 5 högar totalt.
+  /// för att lämna plats åt temasetets egna 2 (Gulderan: 11 kort
+  /// vardera, se [EraOfGoldDrawDeck]; Oroligheternas tid: 12 kort
+  /// vardera, se [EraOfTurmoilDrawDeck]) – alltså 5 högar totalt.
   List<List<GameCard>> _drawStacks = BasicSetDrawDeck.shuffledFourStacks();
 
   /// Muterar hög [index] till [cards] och synkar direkt (se
@@ -115,25 +118,39 @@ class GameNotifier extends Notifier<GameState> {
   }
 
   /// Bygger om alla tre lokala dragstaplar (region/drag/händelse) för
-  /// en ny match, enligt vilka temaset som är aktiva. Returnerar de
-  /// unika ansikte-upp-korten (se [Player.faceUpExpansionCard], t.ex.
-  /// 2× Köpmansgille för Gulderan, annars en tom lista) – index 0/1
-  /// motsvarar alltid respektive spelares EGET kort (du/host får 0,
-  /// motståndaren/gästen får 1), samma ordning oavsett klient eftersom
-  /// [EraOfGoldDrawDeck.faceUpCards] aldrig blandar dem. Anroparna
-  /// (`playLocally`/`hostRoom`/`joinRoom`) sätter in respektive kort på
-  /// sin [Player] själva, eftersom `state` inte alltid är uppdaterad med
-  /// [expansions] ännu vid anropstillfället.
+  /// en ny match, enligt vilka temaset som är aktiva. Bara ETT tema kan
+  /// vara aktivt åt gången så länge (se [LobbyScreen]s ömsesidigt
+  /// uteslutande val) – Gulderan och Oroligheternas tid kombineras
+  /// alltså aldrig i samma match. Returnerar de unika ansikte-upp-korten
+  /// (se [Player.faceUpExpansionCard], t.ex. 2× Köpmansgille för
+  /// Gulderan, annars en tom lista – Oroligheternas tid har ingen
+  /// motsvarande mekanik) – index 0/1 motsvarar alltid respektive
+  /// spelares EGET kort (du/host får 0, motståndaren/gästen får 1),
+  /// samma ordning oavsett klient eftersom [EraOfGoldDrawDeck.faceUpCards]
+  /// aldrig blandar dem. Anroparna (`playLocally`/`hostRoom`/`joinRoom`)
+  /// sätter in respektive kort på sin [Player] själva, eftersom `state`
+  /// inte alltid är uppdaterad med [expansions] ännu vid
+  /// anropstillfället.
   List<GameCard> _resetDecks(Set<ExpansionSet> expansions) {
     _regionDeck = RegionDeck.shuffledRemainingDeck();
     final hasGold = expansions.contains(ExpansionSet.eraOfGold);
-    final basicStacks =
-        BasicSetDrawDeck.shuffledStacks(stackCount: hasGold ? 3 : 4);
+    final hasTurmoil = expansions.contains(ExpansionSet.eraOfTurmoil);
+    final basicStacks = BasicSetDrawDeck.shuffledStacks(
+        stackCount: hasGold || hasTurmoil ? 3 : 4);
     if (hasGold) {
       _drawStacks = [...basicStacks, ...EraOfGoldDrawDeck.shuffledTwoStacks()];
       _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom(
           extraCards: EraOfGoldDrawDeck.eventCards());
       return EraOfGoldDrawDeck.faceUpCards();
+    }
+    if (hasTurmoil) {
+      _drawStacks = [
+        ...basicStacks,
+        ...EraOfTurmoilDrawDeck.shuffledTwoStacks()
+      ];
+      _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom(
+          extraCards: EraOfTurmoilDrawDeck.eventCards());
+      return const [];
     }
     _drawStacks = basicStacks;
     _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom();
@@ -634,9 +651,10 @@ class GameNotifier extends Notifier<GameState> {
   /// [_drawStacks]-doc, eller ett nätverksfel). Den här klienten känner
   /// då bara till det synkade ANTALET kvar i varje hög
   /// ([centerStacks]), inte vilka specifika kort. Utgår från
-  /// grundspelets fulla 36-korspool ([BasicSetDrawDeck]) – plus
-  /// Gulderans egen pool när [expansions] innehåller
-  /// [ExpansionSet.eraOfGold] (se [EraOfGoldDrawDeck]) – och drar bort
+  /// grundspelets fulla 36-korspool ([BasicSetDrawDeck]) – plus det
+  /// aktiva temasetets egen pool (Gulderan eller Oroligheternas tid, se
+  /// [EraOfGoldDrawDeck]/[EraOfTurmoilDrawDeck] – de två kombineras
+  /// aldrig i samma match) – och drar bort
   /// de korttyper som redan syns i någon av spelarnas händer eller
   /// utplacerade på deras riken – annars skulle samma unika byggnad
   /// (t.ex. Klostret) kunna "dyka upp" igen i en dragstapel trots att
@@ -702,8 +720,9 @@ class GameNotifier extends Notifier<GameState> {
       }
     });
     final hasGold = expansions.contains(ExpansionSet.eraOfGold);
+    final hasTurmoil = expansions.contains(ExpansionSet.eraOfTurmoil);
+    final goldById = {for (final c in EraOfGoldCards.all) c.id: c};
     if (hasGold) {
-      final goldById = {for (final c in EraOfGoldCards.all) c.id: c};
       EraOfGoldCards.supplyCounts.forEach((id, totalCount) {
         if (id.startsWith('event-')) return;
         if (id == EraOfGoldCards.merchantGuild.id) return;
@@ -715,9 +734,21 @@ class GameNotifier extends Notifier<GameState> {
         }
       });
     }
+    if (hasTurmoil) {
+      final turmoilById = {for (final c in EraOfTurmoilCards.all) c.id: c};
+      EraOfTurmoilCards.supplyCounts.forEach((id, totalCount) {
+        if (id.startsWith('event-')) return;
+        final template = turmoilById[id] ?? byId[id] ?? goldById[id];
+        if (template == null) return;
+        final remaining = consumeAccounted(id, totalCount);
+        for (var i = 0; i < remaining; i++) {
+          pool.add(template.copyWith(id: '$id-turmoil-draw-${1000 + i}'));
+        }
+      });
+    }
     pool.shuffle();
 
-    final stackCount = hasGold ? 5 : 4;
+    final stackCount = hasGold || hasTurmoil ? 5 : 4;
     final counts = [
       for (var i = 0; i < stackCount; i++) centerStacks['draw${i + 1}'] ?? 0,
     ];
@@ -1586,33 +1617,38 @@ class GameNotifier extends Notifier<GameState> {
     return card;
   }
 
-  /// Om draghög [stackIndex] är en av Gulderans EGNA högar (de sista 2
-  /// av 5, se [_resetDecks]/[EraOfGoldDrawDeck]) – `false` för
-  /// grundspelets högar, och alltid `false` utan Gulderan aktivt (bara
-  /// 4 högar då).
-  bool _isGoldStackIndex(int stackIndex) =>
+  /// Om draghög [stackIndex] är en av det AKTIVA temasetets EGNA högar
+  /// (de sista 2 av 5, se [_resetDecks]/[EraOfGoldDrawDeck]/
+  /// [EraOfTurmoilDrawDeck]) – `false` för grundspelets högar, och
+  /// alltid `false` utan något tema aktivt (bara 4 högar då).
+  bool _isThemeStackIndex(int stackIndex) =>
       _drawStacks.length == 5 && stackIndex >= _drawStacks.length - 2;
 
-  /// Om [card] fysiskt drogs från en av Gulderans egna högar – avgörs
-  /// av draghögs-suffixet i [GameCard.id] ("-gold-draw-N", se
-  /// [EraOfGoldDrawDeck]/[_reconstructDrawStacksFromKnownCards]), INTE
-  /// av [GameCard.expansionSet]: fyra korttyper (Guldsmed/Lagerhus/
-  /// Tullbro/Stora handelsskeppet) återanvänds från grundspelets egna
-  /// definition (`expansionSet: basic`) men fyller ändå platser i
-  /// Gulderans fysiska hög – bara suffixet avslöjar vilken pool kortet
-  /// faktiskt kom ifrån.
-  bool _isGoldCard(GameCard card) => card.id.contains('-gold-draw-');
+  /// Om [card] fysiskt drogs från ett temasets egna högar – avgörs av
+  /// draghögs-suffixet i [GameCard.id] ("-gold-draw-N"/
+  /// "-turmoil-draw-N", se [EraOfGoldDrawDeck]/[EraOfTurmoilDrawDeck]/
+  /// [_reconstructDrawStacksFromKnownCards]), INTE av
+  /// [GameCard.expansionSet]: flera korttyper återanvänds från
+  /// grundspelets (eller ett annat temasets) egna definition men fyller
+  /// ändå platser i temasetets fysiska hög – bara suffixet avslöjar
+  /// vilken pool kortet faktiskt kom ifrån.
+  bool _isThemeCard(GameCard card) =>
+      card.id.contains('-gold-draw-') || card.id.contains('-turmoil-draw-');
 
   /// Kollar att [card] hör hemma i draghög [stackIndex] – grundspelskort
-  /// får bara läggas tillbaka i grundspelets högar, Gulderan-kort bara i
-  /// Gulderans (regelhäftets uppdelning per set, se
-  /// [_isGoldStackIndex]/[_isGoldCard]) – annars ett tydligt
+  /// får bara läggas tillbaka i grundspelets högar, temasetets egna kort
+  /// bara i temasetets (regelhäftets uppdelning per set, se
+  /// [_isThemeStackIndex]/[_isThemeCard]) – annars ett tydligt
   /// felmeddelande i stället för att tyst blanda ihop högarna.
   String? _checkStackMatchesCardOrigin(GameCard card, int stackIndex) {
-    if (_isGoldCard(card) == _isGoldStackIndex(stackIndex)) return null;
-    return _isGoldCard(card)
-        ? 'Det kortet hör till en av Gulderans högar.'
-        : 'Det kortet hör till en av grundspelets högar.';
+    if (_isThemeCard(card) == _isThemeStackIndex(stackIndex)) return null;
+    if (!_isThemeCard(card)) {
+      return 'Det kortet hör till en av grundspelets högar.';
+    }
+    final themeName = state.activeExpansions.contains(ExpansionSet.eraOfGold)
+        ? 'Gulderans'
+        : 'Oroligheternas tids';
+    return 'Det kortet hör till en av $themeName högar.';
   }
 
   /// Slänger [card] till botten av draghög [stackIndex], och
@@ -1847,7 +1883,7 @@ class GameNotifier extends Notifier<GameState> {
   // ---------------------------------------------------------------------
 
   /// Väljer en av grundspelets 3 draghögar (index 0–2, aldrig en av
-  /// Gulderans egna) att KIKA I, i stället för att blint dra – bekräftad
+  /// temasetets egna) att KIKA I, i stället för att blint dra – bekräftad
   /// regel: "Man väljer en av de tre högarna som innehåller korten från
   /// grundspelet. Man får kika på alla kort i högen och välja ut tre."
   /// Alla kortet i högen läggs synliga i [GameState.startingHandDraftPool]
@@ -1861,8 +1897,8 @@ class GameNotifier extends Notifier<GameState> {
     }
     if (state.startingHandDraftStackIndex != null) return null;
     // UI:t ska aldrig göra det här möjligt (se CenterStacksStrip), men
-    // dubbelkollar ändå – Gulderans egna högar hör inte till starthanden.
-    if (_isGoldStackIndex(index)) return null;
+    // dubbelkollar ändå – temasetets egna högar hör inte till starthanden.
+    if (_isThemeStackIndex(index)) return null;
     final key = 'draw${index + 1}';
     final fullSize = state.initialDrawStackSizes[index];
     if ((state.centerStacks[key] ?? 0) < fullSize) {

@@ -17,6 +17,11 @@ class CatanAssets {
   static const String lobbyBackground = '$_ui/lobby_background.webp';
   static const String boardBackground = '$_ui/board_background.webp';
 
+  /// Omslagsbild för temavalet i lobbyn (se [LobbyScreen]) – Gulderan
+  /// har ingen motsvarande egen bild ännu, den rutan visar bara en
+  /// guldfärgad platta i stället.
+  static const String eraTurmoilCover = '$_ui/era_turmoil_cover.jpg';
+
   /// Händelsetärningens sex sidor (se [EventDieFace]) – de fem
   /// symbolerna från regelhäftets referenskort.
   static const String eventDieBrigandAttack =

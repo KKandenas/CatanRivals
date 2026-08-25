@@ -1,5 +1,6 @@
 import 'package:catan_rivals/data/basic_set_draw_deck.dart';
 import 'package:catan_rivals/data/era_of_gold_draw_deck.dart';
+import 'package:catan_rivals/data/era_of_turmoil_draw_deck.dart';
 import 'package:catan_rivals/data/event_deck.dart';
 import 'package:catan_rivals/data/region_deck.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -68,6 +69,51 @@ void main() {
       expect(drawnIds.intersection(faceUpIds), isEmpty);
       expect(drawnIds.intersection(eventIds), isEmpty);
       expect(drawnIds.length + faceUpIds.length + eventIds.length, 27);
+    });
+  });
+
+  group('EraOfTurmoilDrawDeck', () {
+    test('eventCards() ger de 4 händelsekorten som hör till setet', () {
+      final cards = EraOfTurmoilDrawDeck.eventCards();
+
+      expect(cards, hasLength(4));
+      expect(
+        cards.map((c) => c.baseId).toSet(),
+        {'event-riots', 'event-feud', 'event-fraternal-feuds'},
+      );
+      expect(
+          cards.where((c) => c.baseId == 'event-riots').length, 2);
+    });
+
+    test('shuffledTwoStacks() delar de 24 återstående korten i 2 högar à 12, utan förlust/dubblett', () {
+      final stacks = EraOfTurmoilDrawDeck.shuffledTwoStacks();
+
+      expect(stacks, hasLength(2));
+      for (final stack in stacks) {
+        expect(stack, hasLength(12));
+      }
+
+      // Facit: 28 fysiska kort totalt - 4 händelsekort = 24 kvar till
+      // draghögarna (se EraOfTurmoilCards.supplyCounts) – ingen
+      // ansikte-upp-mekanik i det här setet (till skillnad från
+      // Gulderans Köpmansgille).
+      final drawnIds = stacks.expand((s) => s).map((c) => c.id).toSet();
+      expect(drawnIds, hasLength(24));
+
+      final eventIds =
+          EraOfTurmoilDrawDeck.eventCards().map((c) => c.id).toSet();
+      expect(drawnIds.intersection(eventIds), isEmpty);
+      expect(drawnIds.length + eventIds.length, 28);
+    });
+
+    test('action-brigands (återanvänt från Gulderan) hamnar i draghögarna med rätt baseId', () {
+      final drawnIds =
+          EraOfTurmoilDrawDeck.shuffledTwoStacks().expand((s) => s);
+
+      final brigands =
+          drawnIds.where((c) => c.baseId == 'action-brigands').toList();
+      expect(brigands, hasLength(1));
+      expect(brigands.single.id, contains('-turmoil-draw-'));
     });
   });
 

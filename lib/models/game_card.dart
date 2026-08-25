@@ -218,14 +218,15 @@ class GameCard {
       );
 
   /// Korttypens id utan draghögens per-kopia-suffix ("-draw-N",
-  /// "-gold-draw-N", "-gold-event-N", "-faceup-N", se
-  /// [BasicSetDrawDeck]/[EventDeck]/[EraOfGoldDrawDeck]) – två fysiska
-  /// kopior av samma korttyp (t.ex. de två Spejare-korten, eller de två
-  /// ansikte-upp-Köpmansgillena) har olika [id] men samma [baseId].
-  /// Använd den här, inte [id], för att avgöra vilken *sorts* kort ett
-  /// handkort är (t.ex. "är det här en Spejare?") – [id] är bara rätt
-  /// när man jämför mot exakt samma fysiska kortexemplar (t.ex.
-  /// `hand.contains(card)`/`hand.remove(card)`).
+  /// "-gold-draw-N", "-gold-event-N", "-turmoil-draw-N",
+  /// "-turmoil-event-N", "-faceup-N", se [BasicSetDrawDeck]/
+  /// [EventDeck]/[EraOfGoldDrawDeck]/[EraOfTurmoilDrawDeck]) – två
+  /// fysiska kopior av samma korttyp (t.ex. de två Spejare-korten, eller
+  /// de två ansikte-upp-Köpmansgillena) har olika [id] men samma
+  /// [baseId]. Använd den här, inte [id], för att avgöra vilken *sorts*
+  /// kort ett handkort är (t.ex. "är det här en Spejare?") – [id] är
+  /// bara rätt när man jämför mot exakt samma fysiska kortexemplar
+  /// (t.ex. `hand.contains(card)`/`hand.remove(card)`).
   ///
   /// Suffixen provas mest specifikt (längst) först – annars skulle
   /// t.ex. "-gold-draw-3" felaktigt bara få "-draw-3" bortklippt (och
@@ -234,6 +235,8 @@ class GameCard {
   static final List<RegExp> _suffixPatterns = [
     RegExp(r'^(.*)-gold-draw-\d+$'),
     RegExp(r'^(.*)-gold-event-\d+$'),
+    RegExp(r'^(.*)-turmoil-draw-\d+$'),
+    RegExp(r'^(.*)-turmoil-event-\d+$'),
     RegExp(r'^(.*)-faceup-\d+$'),
     RegExp(r'^(.*)-draw-\d+$'),
   ];

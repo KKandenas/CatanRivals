@@ -359,17 +359,23 @@ class GameState {
 
   /// Hur många kort respektive draghög startar med (innan någon dragit
   /// ur den) – grundspelets 36 kort delas på 4 högar (9 vardera) utan
-  /// tema, men på 3 högar (12 vardera) när Guldeuropa/Gulderan är
-  /// aktivt (se [GameNotifier._resetDecks]), plus 2 högar till med
-  /// Gulderans egna 22 draghögskort (11 vardera). Används för att avgöra
-  /// om en hög redan är vald under starthandsvalet (se
-  /// [CenterStacksStrip]/[GameNotifier.chooseStartingStack]) – kan inte
-  /// bara jämföra mot ett hårdkodat 9 längre nu när högstorleken varierar
-  /// beroende på tema.
-  List<int> get initialDrawStackSizes =>
-      activeExpansions.contains(ExpansionSet.eraOfGold)
-          ? const [12, 12, 12, 11, 11]
-          : const [9, 9, 9, 9];
+  /// tema, men på 3 högar (12 vardera) när ett temaset är aktivt (se
+  /// [GameNotifier._resetDecks]), plus 2 högar till med temasetets egna
+  /// draghögskort: Gulderans 22 (11 vardera) respektive Oroligheternas
+  /// tids 24 (12 vardera – de två temaseten kombineras aldrig i samma
+  /// match, se [LobbyScreen]). Används för att avgöra om en hög redan är
+  /// vald under starthandsvalet (se [CenterStacksStrip]/
+  /// [GameNotifier.chooseStartingStack]) – kan inte bara jämföra mot ett
+  /// hårdkodat 9 längre nu när högstorleken varierar beroende på tema.
+  List<int> get initialDrawStackSizes {
+    if (activeExpansions.contains(ExpansionSet.eraOfGold)) {
+      return const [12, 12, 12, 11, 11];
+    }
+    if (activeExpansions.contains(ExpansionSet.eraOfTurmoil)) {
+      return const [12, 12, 12, 12, 12];
+    }
+    return const [9, 9, 9, 9];
+  }
 
   /// [player]s totala segerpoäng: poängen från riket plus 1 vardera om
   /// spelaren just nu har Hero Token/Trade Token (se

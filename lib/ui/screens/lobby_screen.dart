@@ -26,15 +26,17 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   bool _busy = false;
   String? _error;
 
-  /// Vilka temaset som ska vara aktiva i nästa match (se
-  /// [GameState.activeExpansions]) – bara Gulderan går att välja så
-  /// länge (Utvecklingens tid/Oroligheternas tid är inte kopplade till
-  /// spelmotorn än). Bara relevant för "Skapa nytt rum"/"Spela lokalt" –
-  /// den som går med i ett befintligt rum ärver hostens val i stället.
-  bool _eraOfGold = false;
+  /// Vilket tema som ska vara aktivt i nästa match (se
+  /// [GameState.activeExpansions]) – `null` betyder inget tema. Bara ETT
+  /// tema åt gången går att välja så länge (de kombineras inte i
+  /// spelmotorn än, se [GameNotifier._resetDecks]) – därför ett enda
+  /// nullbart fält i stället för flera kryssrutor. Bara relevant för
+  /// "Skapa nytt rum"/"Spela lokalt" – den som går med i ett befintligt
+  /// rum ärver hostens val i stället.
+  ExpansionSet? _selectedTheme;
 
   Set<ExpansionSet> get _selectedExpansions =>
-      _eraOfGold ? {ExpansionSet.eraOfGold} : {};
+      _selectedTheme == null ? {} : {_selectedTheme!};
 
   /// Om appen just nu kollar efter en sparad, pågående match att
   /// återuppta (se [SessionStorage]) – sant tills kollen är klar, så att
@@ -164,6 +166,65 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     );
   }
 
+  /// En tryckbar temaruta i temavals-raden (se [_selectedTheme]) –
+  /// antingen med en bakgrundsbild ([backgroundImage], t.ex.
+  /// Oroligheternas tids omslag) eller en enfärgad platta
+  /// ([accentColor], t.ex. Gulderans guldfärg) om ingen bild finns än.
+  /// Den valda rutan får en tjockare träfärgad ram, samma träfärg som
+  /// resten av lobbyns ram (se [CatanColors.woodFrame]).
+  Widget _themeOption({
+    required String label,
+    required ExpansionSet? value,
+    Color? accentColor,
+    String? backgroundImage,
+  }) {
+    final selected = _selectedTheme == value;
+    final hasDarkBackground = accentColor != null || backgroundImage != null;
+    return Expanded(
+      child: GestureDetector(
+        onTap:
+            _busy ? null : () => setState(() => _selectedTheme = value),
+        child: Container(
+          height: 88,
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: backgroundImage == null
+                ? (accentColor ?? CatanColors.parchmentDark)
+                : null,
+            image: backgroundImage == null
+                ? null
+                : DecorationImage(
+                    image: AssetImage(backgroundImage),
+                    fit: BoxFit.cover,
+                    colorFilter: ColorFilter.mode(
+                        Colors.black.withValues(alpha: selected ? 0.15 : 0.5),
+                        BlendMode.darken),
+                  ),
+            border: Border.all(
+              color: selected ? CatanColors.woodFrame : Colors.black26,
+              width: selected ? 3 : 1,
+            ),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: hasDarkBackground ? Colors.white : CatanColors.ink,
+              fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+              fontSize: 13,
+              shadows: hasDarkBackground
+                  ? const [Shadow(color: Colors.black87, blurRadius: 4)]
+                  : null,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_resuming) {
@@ -220,30 +281,28 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                         const SizedBox(height: 12),
                         // Gäller "Skapa nytt rum" och "Spela lokalt" – den
                         // som går med i ett befintligt rum ärver i stället
-                        // hostens val (se GameState.activeExpansions). Ren
-                        // Checkbox+Text i stället för CheckboxListTile –
-                        // ListTile vill måla sin bakgrund/ink-splash på
-                        // närmaste Material-anfader, vilket den parkament-
-                        // färgade Container:n ovanför (som INTE är en
-                        // Material) döljer, vilket Flutter varnar högljutt
-                        // om (kastar rent av under test).
-                        GestureDetector(
-                          onTap: _busy
-                              ? null
-                              : () => setState(() => _eraOfGold = !_eraOfGold),
-                          child: Row(
-                            children: [
-                              Checkbox(
-                                value: _eraOfGold,
-                                onChanged: _busy
-                                    ? null
-                                    : (checked) => setState(
-                                        () => _eraOfGold = checked ?? false),
-                              ),
-                              const Expanded(
-                                  child: Text('Spela med Gulderan-expansionen')),
-                            ],
-                          ),
+                        // hostens val (se GameState.activeExpansions).
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text('Tema',
+                              style: Theme.of(context).textTheme.labelLarge),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            _themeOption(label: 'Inget tema', value: null),
+                            _themeOption(
+                              label: 'Gulderan',
+                              value: ExpansionSet.eraOfGold,
+                              accentColor:
+                                  CatanColors.resource[ResourceType.gold],
+                            ),
+                            _themeOption(
+                              label: 'Oroligheternas tid',
+                              value: ExpansionSet.eraOfTurmoil,
+                              backgroundImage: CatanAssets.eraTurmoilCover,
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 12),
                         FilledButton(
