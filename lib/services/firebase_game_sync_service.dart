@@ -19,7 +19,6 @@ class FirebaseGameSyncService implements GameSyncService {
     Map<String, int> centerStacks,
     TurnState turnState, {
     Set<ExpansionSet> activeExpansions = const {},
-    List<GameCard> faceUpExpansionCards = const [],
     List<List<GameCard>> drawStacks = const [],
     List<GameCard> regionDeck = const [],
     List<GameCard> eventDeck = const [],
@@ -31,9 +30,6 @@ class FirebaseGameSyncService implements GameSyncService {
       'turnState': turnState.toJson(),
       if (activeExpansions.isNotEmpty)
         'activeExpansions': activeExpansions.map((e) => e.name).toList(),
-      if (faceUpExpansionCards.isNotEmpty)
-        'faceUpExpansionCards':
-            faceUpExpansionCards.map((c) => c.toJson()).toList(),
       if (drawStacks.isNotEmpty)
         'drawStacks': drawStacks
             .map((stack) => stack.map((c) => c.toJson()).toList())
@@ -159,25 +155,6 @@ class FirebaseGameSyncService implements GameSyncService {
     });
   }
 
-  @override
-  Stream<List<GameCard>> watchFaceUpExpansionCards(String roomCode) {
-    return _roomRef(roomCode).child('faceUpExpansionCards').onValue.map((event) {
-      final raw = event.snapshot.value;
-      if (raw is! List) return const <GameCard>[];
-      return raw
-          .whereType<Object>()
-          .map((c) => GameCard.fromJson(Map<String, dynamic>.from(c as Map)))
-          .toList();
-    });
-  }
-
-  @override
-  Future<void> writeFaceUpExpansionCards(
-      String roomCode, List<GameCard> faceUpExpansionCards) {
-    return _roomRef(roomCode)
-        .child('faceUpExpansionCards')
-        .set(faceUpExpansionCards.map((c) => c.toJson()).toList());
-  }
 
   @override
   Stream<List<List<GameCard>>> watchDrawStacks(String roomCode) {

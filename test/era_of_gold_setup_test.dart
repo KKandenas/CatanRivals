@@ -1,4 +1,5 @@
 import 'package:catan_rivals/data/basic_set_cards.dart';
+import 'package:catan_rivals/data/era_of_gold_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/services/game_sync_providers.dart';
 import 'package:catan_rivals/state/game_notifier.dart';
@@ -7,11 +8,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fake_game_sync_service.dart';
 
-/// Testar Gulderan-uppställningen (Steg 3–4 i utökningsplanen): 3
-/// grundspels-draghögar à 12 + 2 Gulderan-draghögar à 11 (i stället för
-/// 4 à 9 utan tema), samt den öppna ansikte-upp-högen med 2×
-/// Köpmansgille som vem som helst kan bygga direkt från (se
-/// [GameNotifier.buyFaceUpExpansion]).
+/// Testar Gulderan-uppställningen: 3 grundspels-draghögar à 12 + 2
+/// Gulderan-draghögar à 11 (i stället för 4 à 9 utan tema), samt
+/// ansikte-upp-kortet Köpmansgille – VARJE spelare har sin EGEN,
+/// separata plats med som mest 1 eget kort (se
+/// [Player.faceUpExpansionCard]-doc), inte en delad hög båda kan bygga
+/// från: bygger den ena spelaren sitt kort påverkas inte den andras
+/// (se [GameNotifier.buyFaceUpExpansion]).
 void main() {
   Future<void> pump() => Future<void>.delayed(Duration.zero);
 
@@ -23,13 +26,14 @@ void main() {
   }
 
   group('uppställning (playLocally)', () {
-    test('utan tema: 4 draghögar à 9, ingen ansikte-upp-hög', () {
+    test('utan tema: 4 draghögar à 9, inget ansikte-upp-kort', () {
       final container = buildContainer();
       addTearDown(container.dispose);
       container.read(gameProvider.notifier).playLocally();
 
       final state = container.read(gameProvider);
-      expect(state.faceUpExpansionCards, isEmpty);
+      expect(state.you.faceUpExpansionCard, isNull);
+      expect(state.opponent.faceUpExpansionCard, isNull);
       // you/opponent har redan fått sina starthänder (3 kort var) från
       // hög 1 respektive 2 (se playLocally-doc), så de är 9-3=6.
       expect(state.centerStacks['draw1'], 6);
@@ -39,7 +43,8 @@ void main() {
       expect(state.centerStacks.containsKey('draw5'), isFalse);
     });
 
-    test('med Gulderan: 5 draghögar (3x12, 2x11) och 2 Köpmansgille ansikte-upp',
+    test(
+        'med Gulderan: 5 draghögar (3x12, 2x11) och varsitt eget Köpmansgille',
         () {
       final container = buildContainer();
       addTearDown(container.dispose);
@@ -48,11 +53,13 @@ void main() {
           .playLocally(expansions: {ExpansionSet.eraOfGold});
 
       final state = container.read(gameProvider);
-      expect(state.faceUpExpansionCards, hasLength(2));
-      expect(
-        state.faceUpExpansionCards.map((c) => c.baseId).toSet(),
-        {'city-expansion-merchant-guild'},
-      );
+      expect(state.you.faceUpExpansionCard?.baseId,
+          EraOfGoldCards.merchantGuild.id);
+      expect(state.opponent.faceUpExpansionCard?.baseId,
+          EraOfGoldCards.merchantGuild.id);
+      // Två SKILDA fysiska kopior, inte samma kort visat två gånger.
+      expect(state.you.faceUpExpansionCard!.id,
+          isNot(state.opponent.faceUpExpansionCard!.id));
       // Starthänderna dras från hög 1/2 (12 vardera), så 12-3=9.
       expect(state.centerStacks['draw1'], 9);
       expect(state.centerStacks['draw2'], 9);
@@ -75,15 +82,20 @@ void main() {
     });
     tearDown(() => container.dispose());
 
-    test('bygger kortet, tar bort det ur den delade ansikte-upp-högen', () {
-      final card = container.read(gameProvider).faceUpExpansionCards.first;
+    test(
+        'bygger DITT EGET kort, tar bort det från din plats – motståndarens eget kort påverkas inte',
+        () {
+      final before = container.read(gameProvider);
+      final card = before.you.faceUpExpansionCard!;
+      final opponentCard = before.opponent.faceUpExpansionCard;
 
       final error = notifier.buyFaceUpExpansion(0, BuildingRow.above, 0, card);
 
       expect(error, isNull);
       final state = container.read(gameProvider);
-      expect(state.faceUpExpansionCards, hasLength(1));
-      expect(state.faceUpExpansionCards.contains(card), isFalse);
+      expect(state.you.faceUpExpansionCard, isNull);
+      expect(state.opponent.faceUpExpansionCard, opponentCard,
+          reason: 'motståndarens separata kort ska inte påverkas alls');
       expect(state.you.principality.settlementAt(0)!.aboveSites[0]!.card.id,
           card.id);
     });
@@ -94,25 +106,24 @@ void main() {
       final notifier2 = container2.read(gameProvider.notifier);
       notifier2.playLocally(expansions: {ExpansionSet.eraOfGold});
       // Ingen rollProductionDie() här.
-      final card = container2.read(gameProvider).faceUpExpansionCards.first;
+      final card = container2.read(gameProvider).you.faceUpExpansionCard!;
 
       final error = notifier2.buyFaceUpExpansion(0, BuildingRow.above, 0, card);
 
       expect(error, isNotNull);
-      expect(container2.read(gameProvider).faceUpExpansionCards, hasLength(2));
+      expect(container2.read(gameProvider).you.faceUpExpansionCard, card);
     });
 
-    test('avvisar en andra kopia av samma unika kort (Köpmansgille)', () {
-      final firstCard = container.read(gameProvider).faceUpExpansionCards.first;
-      expect(notifier.buyFaceUpExpansion(0, BuildingRow.above, 0, firstCard),
-          isNull);
+    test('kan inte bygga motståndarens eget ansikte-upp-kort', () {
+      final opponentCard = container.read(gameProvider).opponent.faceUpExpansionCard!;
 
-      final secondCard = container.read(gameProvider).faceUpExpansionCards.first;
       final error =
-          notifier.buyFaceUpExpansion(2, BuildingRow.above, 0, secondCard);
+          notifier.buyFaceUpExpansion(0, BuildingRow.above, 0, opponentCard);
 
-      expect(error, 'Du kan bara ha en ${secondCard.name} i ditt rike.');
-      expect(container.read(gameProvider).faceUpExpansionCards, hasLength(1));
+      expect(error, isNull); // no-op, inte ett fel
+      final state = container.read(gameProvider);
+      expect(state.opponent.faceUpExpansionCard, opponentCard);
+      expect(state.you.principality.settlementAt(0)!.aboveSites[0], isNull);
     });
 
     test('en redan bebyggd plats byts ut mot det köpta kortet, det gamla hamnar i slänghögen',
@@ -126,7 +137,7 @@ void main() {
           .placeExpansion(0, BuildingRow.above, 0, const PlacedCard(card: existing));
       expect(container.read(gameProvider).discardPile, isEmpty);
 
-      final card = container.read(gameProvider).faceUpExpansionCards.first;
+      final card = container.read(gameProvider).you.faceUpExpansionCard!;
       final error = notifier.buyFaceUpExpansion(0, BuildingRow.above, 0, card);
 
       expect(error, isNull);
@@ -136,10 +147,35 @@ void main() {
       expect(state.discardPile, hasLength(1));
       expect(state.discardPile.last.id, existing.id);
     });
+
+    test(
+        'byts ett byggt Köpmansgille ut mot ett annat kort hamnar det INTE i slänghögen utan tillbaka på din egen ansikte-upp-plats',
+        () {
+      final card = container.read(gameProvider).you.faceUpExpansionCard!;
+      expect(notifier.buyFaceUpExpansion(0, BuildingRow.above, 0, card), isNull);
+      expect(container.read(gameProvider).you.faceUpExpansionCard, isNull);
+
+      // Bygg om samma plats med ett annat kort – kräver ett tema aktivt
+      // för att "byt ut"-mekaniken alls ska vara tillåten.
+      const replacement = BasicSetCards.storehouse;
+      container.read(gameProvider).you.hand.add(replacement);
+      final error =
+          notifier.dropExpansion(0, BuildingRow.above, 0, replacement);
+
+      expect(error, isNull);
+      final state = container.read(gameProvider);
+      expect(state.discardPile, isEmpty,
+          reason: 'Köpmansgille ska inte hamna i slänghögen');
+      expect(state.you.faceUpExpansionCard?.id, card.id,
+          reason: 'kortet ska ligga tillbaka på din egen plats, oplacerat');
+      expect(state.you.principality.settlementAt(0)!.aboveSites[0]!.card.id,
+          replacement.id);
+    });
   });
 
-  group('online: activeExpansions/faceUpExpansionCards synkas till gästen', () {
-    test('gästen ärver hostens temaval och ser samma ansikte-upp-hög/draghögsantal',
+  group('online: ansikte-upp-kortet synkas till gästen', () {
+    test(
+        'gästen ärver hostens temaval och får sitt eget, skilda Köpmansgille',
         () async {
       final fake = FakeGameSyncService();
       final hostContainer = ProviderContainer(
@@ -153,23 +189,28 @@ void main() {
           .read(gameProvider.notifier)
           .hostRoom('Astrid', expansions: {ExpansionSet.eraOfGold});
       await guestContainer.read(gameProvider.notifier).joinRoom(roomCode, 'Björn');
+      await pump();
 
       final hostState = hostContainer.read(gameProvider);
       final guestState = guestContainer.read(gameProvider);
 
       expect(guestState.activeExpansions, {ExpansionSet.eraOfGold});
       expect(guestState.victoryPointTarget, 12);
-      expect(guestState.faceUpExpansionCards, hasLength(2));
-      expect(
-        guestState.faceUpExpansionCards.map((c) => c.id).toSet(),
-        hostState.faceUpExpansionCards.map((c) => c.id).toSet(),
-      );
+      expect(guestState.you.faceUpExpansionCard, isNotNull);
+      expect(hostState.you.faceUpExpansionCard, isNotNull);
+      expect(guestState.you.faceUpExpansionCard!.id,
+          isNot(hostState.you.faceUpExpansionCard!.id),
+          reason: 'varsin skild fysisk kopia');
+      // Gästens syn på hostens (motståndarens) kort ska matcha vad
+      // hosten själv ser.
+      expect(guestState.opponent.faceUpExpansionCard?.id,
+          hostState.you.faceUpExpansionCard!.id);
       expect(guestState.centerStacks['draw5'], hostState.centerStacks['draw5']);
       expect(guestState.initialDrawStackSizes, [12, 12, 12, 11, 11]);
     });
 
     test(
-        'resumeRoom (Gulderan): 5 draghögar byggs om med rätt storlek, ansikte-upp-högen (även efter ett köpt kort) stämmer',
+        'resumeRoom (Gulderan): 5 draghögar byggs om med rätt storlek, ditt eget ansikte-upp-kort (även efter ett köpt kort) stämmer',
         () async {
       final fake = FakeGameSyncService();
       final host = ProviderContainer(
@@ -193,18 +234,14 @@ void main() {
       expect(hostNotifier.rollProductionDie(), isNull);
       await pump();
 
-      // Köper ett av de två Köpmansgillena innan "omladdningen" – det
-      // ska INTE räknas bort en gång till från Gulderans draghögspool
-      // (se GameNotifier._reconstructDrawStacksFromKnownCards-doc: det
-      // köpta kortet spåras via den synkade ansikte-upp-högen, inte via
-      // draghögarna).
-      final boughtCard = host.read(gameProvider).faceUpExpansionCards.first;
+      // Köper sitt eget Köpmansgille innan "omladdningen".
+      final boughtCard = host.read(gameProvider).you.faceUpExpansionCard!;
       expect(hostNotifier.buyFaceUpExpansion(0, BuildingRow.above, 0, boughtCard),
           isNull);
       await pump();
 
       final beforeState = host.read(gameProvider);
-      expect(beforeState.faceUpExpansionCards, hasLength(1));
+      expect(beforeState.you.faceUpExpansionCard, isNull);
 
       final resumed = ProviderContainer(
           overrides: [gameSyncServiceProvider.overrideWithValue(fake)]);
@@ -216,8 +253,8 @@ void main() {
       expect(error, isNull);
       final resumedState = resumed.read(gameProvider);
       expect(resumedState.activeExpansions, {ExpansionSet.eraOfGold});
-      expect(resumedState.faceUpExpansionCards.map((c) => c.id).toSet(),
-          beforeState.faceUpExpansionCards.map((c) => c.id).toSet());
+      expect(resumedState.you.faceUpExpansionCard, isNull,
+          reason: 'redan byggt, ska inte dyka upp igen efter återanslutning');
       expect(resumedState.centerStacks, beforeState.centerStacks);
 
       final resumedNotifier = resumed.read(gameProvider.notifier);

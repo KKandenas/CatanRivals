@@ -37,8 +37,9 @@ class EraOfGoldDrawDeck {
 
   static GameCard? _templateFor(String id) => _ownById[id] ?? _basicById[id];
 
-  /// De 2 Köpmansgille som sorteras ut före blandning – se
-  /// [GameState.faceUpExpansionCards].
+  /// De 2 Köpmansgille som sorteras ut före blandning, ett per spelare
+  /// (index 0 = du/host, index 1 = motståndaren/gästen, se
+  /// [GameNotifier._resetDecks]-doc) – se [Player.faceUpExpansionCard].
   static List<GameCard> faceUpCards() {
     const template = EraOfGoldCards.merchantGuild;
     return [

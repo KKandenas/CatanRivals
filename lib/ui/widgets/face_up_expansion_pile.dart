@@ -4,18 +4,18 @@ import '../../models/models.dart';
 import 'card_detail_dialog.dart';
 import 'expansion_card_view.dart';
 
-/// Den öppna "ansikte-upp"-högen (se [GameState.faceUpExpansionCards],
-/// t.ex. 2× Köpmansgille för Gulderan) – korten sorterades ut FÖRE
-/// blandning och ligger synliga för båda spelarna hela matchen, i
-/// stället för dolda i en av draghögarna. Vem som helst kan bygga
-/// direkt härifrån på sin egen tur genom att dra ut ett kort och
-/// betala byggkostnaden som vanligt (se
-/// [GameNotifier.buyFaceUpExpansion]) – ingen "kika i hög"-omväg
-/// behövs eftersom korten redan ligger uppslagna.
+/// Ditt EGET ansikte-upp-kort (se [Player.faceUpExpansionCard]-doc,
+/// t.ex. Köpmansgille för Gulderan) – sorterades ut FÖRE blandning och
+/// ligger synligt hela matchen, i stället för dolt i en av
+/// draghögarna. Bygger du det på din egen tur (se
+/// [GameNotifier.buyFaceUpExpansion]) behövs ingen "kika i hög"-omväg
+/// eftersom kortet redan ligger uppslaget. Varje spelare har sin egen,
+/// separata plats – inte en delad hög båda kan bygga från, se
+/// [Player.faceUpExpansionCard]-docen för varför.
 ///
-/// Tom lista ritar ingenting (se `if (faceUpExpansionCards.isNotEmpty)`
-/// i [CenterStacksStrip]) – bara relevant när ett tema med en sådan hög
-/// är aktivt.
+/// [cards] rymmer som mest 1 kort i praktiken (ett per spelare), men
+/// tar en lista för enkelhets skull – tom lista ritar ingenting, bara
+/// relevant när ett tema med den här mekaniken är aktivt.
 class FaceUpExpansionPile extends StatelessWidget {
   final List<GameCard> cards;
   final void Function(GameCard card)? onDragStarted;

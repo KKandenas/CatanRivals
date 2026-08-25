@@ -5,13 +5,11 @@ import 'package:catan_rivals/ui/widgets/hand_dock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Testar den delade ansikte-upp-högen (se
-/// GameState.faceUpExpansionCards, t.ex. Gulderans Köpmansgille) i
-/// [HandDock] – bara ETT kort visas, mellan handkorten och
-/// poängrutan, i samma format (72×72) som ett vanligt handkort.
-/// Motståndarens sida visar inget kort alls (se
-/// game_board_screen.dart:s `faceUpExpansionCards.first`-uppdelning –
-/// TopStatusBar har ingen sådan funktion längre).
+/// Testar ditt EGNA ansikte-upp-kort (se Player.faceUpExpansionCard,
+/// t.ex. Gulderans Köpmansgille) i [HandDock] – visas mellan
+/// handkorten och poängrutan, i samma format (72×72) som ett vanligt
+/// handkort. Motståndarens sida visar inget kort alls (varje spelare
+/// har sin egen, separata plats).
 void main() {
   const card = EraOfGoldCards.merchantGuild;
 

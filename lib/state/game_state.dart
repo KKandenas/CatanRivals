@@ -74,16 +74,6 @@ class GameState {
   /// era_of_progress_cards.dart) kan välja fritt bland alla.
   final List<GameCard> discardPile;
 
-  /// De unika kort som sorterades ut FÖRE blandning vid uppstart (se
-  /// [GameNotifier._resetDecks]/[EraOfGoldDrawDeck.faceUpCards], t.ex.
-  /// 2× Köpmansgille för Gulderan) – ligger synliga för båda spelarna
-  /// hela matchen i en öppen hög, och kan byggas av vem som helst på
-  /// sin egen tur genom att betala byggkostnaden (se
-  /// [GameNotifier.buyFaceUpExpansion]), i stället för att blandas in
-  /// bland de dolda draghögarna. Tom lista om inget temaset med en
-  /// sådan hög är aktivt.
-  final List<GameCard> faceUpExpansionCards;
-
   final SessionMode mode;
   final String? roomCode;
   final String myPlayerId;
@@ -243,7 +233,6 @@ class GameState {
     this.draggingCard,
     this.activeExpansions = const {},
     this.discardPile = const [],
-    this.faceUpExpansionCards = const [],
     this.mode = SessionMode.local,
     this.roomCode,
     this.myPlayerId = 'you',
@@ -392,7 +381,6 @@ class GameState {
     bool clearDraggingCard = false,
     Set<ExpansionSet>? activeExpansions,
     List<GameCard>? discardPile,
-    List<GameCard>? faceUpExpansionCards,
     SessionMode? mode,
     String? roomCode,
     String? myPlayerId,
@@ -454,8 +442,6 @@ class GameState {
           clearDraggingCard ? null : (draggingCard ?? this.draggingCard),
       activeExpansions: activeExpansions ?? this.activeExpansions,
       discardPile: discardPile ?? this.discardPile,
-      faceUpExpansionCards:
-          faceUpExpansionCards ?? this.faceUpExpansionCards,
       mode: mode ?? this.mode,
       roomCode: roomCode ?? this.roomCode,
       myPlayerId: myPlayerId ?? this.myPlayerId,

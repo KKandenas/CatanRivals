@@ -44,7 +44,6 @@ class GameNotifier extends Notifier<GameState> {
   StreamSubscription<TurnState>? _turnStateSub;
   StreamSubscription<FraternalFeudsRequest?>? _fraternalFeudsRequestSub;
   StreamSubscription<List<GameCard>>? _discardPileSub;
-  StreamSubscription<List<GameCard>>? _faceUpExpansionCardsSub;
   StreamSubscription<List<List<GameCard>>>? _drawStacksSub;
   StreamSubscription<List<GameCard>>? _regionDeckSub;
   StreamSubscription<List<GameCard>>? _eventDeckSub;
@@ -116,10 +115,14 @@ class GameNotifier extends Notifier<GameState> {
   }
 
   /// Bygger om alla tre lokala dragstaplar (region/drag/händelse) för
-  /// en ny match, enligt vilka temaset som är aktiva. Returnerar den
-  /// öppna ansikte-upp-högen (se [GameState.faceUpExpansionCards]) –
-  /// anroparna (`playLocally`/`hostRoom`/`joinRoom`) sätter in den i
-  /// [state] själva, eftersom `state` inte alltid är uppdaterad med
+  /// en ny match, enligt vilka temaset som är aktiva. Returnerar de
+  /// unika ansikte-upp-korten (se [Player.faceUpExpansionCard], t.ex.
+  /// 2× Köpmansgille för Gulderan, annars en tom lista) – index 0/1
+  /// motsvarar alltid respektive spelares EGET kort (du/host får 0,
+  /// motståndaren/gästen får 1), samma ordning oavsett klient eftersom
+  /// [EraOfGoldDrawDeck.faceUpCards] aldrig blandar dem. Anroparna
+  /// (`playLocally`/`hostRoom`/`joinRoom`) sätter in respektive kort på
+  /// sin [Player] själva, eftersom `state` inte alltid är uppdaterad med
   /// [expansions] ännu vid anropstillfället.
   List<GameCard> _resetDecks(Set<ExpansionSet> expansions) {
     _regionDeck = RegionDeck.shuffledRemainingDeck();
@@ -199,7 +202,6 @@ class GameNotifier extends Notifier<GameState> {
       _turnStateSub?.cancel();
       _fraternalFeudsRequestSub?.cancel();
       _discardPileSub?.cancel();
-      _faceUpExpansionCardsSub?.cancel();
       _drawStacksSub?.cancel();
       _regionDeckSub?.cancel();
       _eventDeckSub?.cancel();
@@ -230,7 +232,6 @@ class GameNotifier extends Notifier<GameState> {
     _turnStateSub?.cancel();
     _fraternalFeudsRequestSub?.cancel();
     _discardPileSub?.cancel();
-    _faceUpExpansionCardsSub?.cancel();
     _drawStacksSub?.cancel();
     _regionDeckSub?.cancel();
     _eventDeckSub?.cancel();
@@ -243,9 +244,13 @@ class GameNotifier extends Notifier<GameState> {
     // rum (host/guest) väljer varje spelare interaktivt på sin egen
     // enhet – se [hostRoom]/[joinRoom].
     final you = _dealStartingHand(
-        MockGame.buildStartingPlayer('you', 'Du', isRed: true), 0);
+        MockGame.buildStartingPlayer('you', 'Du', isRed: true).copyWith(
+            faceUpExpansionCard: faceUp.isNotEmpty ? faceUp[0] : null),
+        0);
     final opponent = _dealStartingHand(
-        MockGame.buildStartingPlayer('opponent', 'Motståndare', isRed: false),
+        MockGame.buildStartingPlayer('opponent', 'Motståndare', isRed: false)
+            .copyWith(
+                faceUpExpansionCard: faceUp.isNotEmpty ? faceUp[1] : null),
         1);
 
     // _dealStartingHand ovan har redan tagit 3 kort ur högarna 0/1 (och
@@ -257,7 +262,6 @@ class GameNotifier extends Notifier<GameState> {
       opponent: opponent,
       centerStacks: _buildCenterStacks(),
       activeExpansions: expansions,
-      faceUpExpansionCards: faceUp,
       // Röd ("du") går alltid först – samma förenkling som starthandsvalet.
       activePlayerId: 'you',
     );
@@ -273,12 +277,12 @@ class GameNotifier extends Notifier<GameState> {
   Future<String> hostRoom(String myName,
       {Set<ExpansionSet> expansions = const {}}) async {
     final roomCode = MockGame.generateRoomCode();
-    final hostPlayer =
-        MockGame.buildStartingPlayer('host', myName, isRed: true);
+    final faceUp = _resetDecks(expansions);
+    final hostPlayer = MockGame.buildStartingPlayer('host', myName, isRed: true)
+        .copyWith(faceUpExpansionCard: faceUp.isNotEmpty ? faceUp[0] : null);
     final waitingOpponent = MockGame.buildStartingPlayer(
         'guest', 'Väntar på motståndare …',
         isRed: false);
-    final faceUp = _resetDecks(expansions);
     final centerStacks = _buildCenterStacks();
 
     // Röd (host) går alltid först – samma förenkling som starthandsvalet.
@@ -288,7 +292,6 @@ class GameNotifier extends Notifier<GameState> {
           .createRoom(
               roomCode, 'host', hostPlayer, centerStacks, initialTurnState,
               activeExpansions: expansions,
-              faceUpExpansionCards: faceUp,
               drawStacks: _drawStacks,
               regionDeck: _regionDeck,
               eventDeck: _eventDeck)
@@ -303,7 +306,6 @@ class GameNotifier extends Notifier<GameState> {
       opponent: waitingOpponent,
       centerStacks: centerStacks,
       activeExpansions: expansions,
-      faceUpExpansionCards: faceUp,
       mode: SessionMode.host,
       roomCode: roomCode,
       myPlayerId: 'host',
@@ -379,8 +381,15 @@ class GameNotifier extends Notifier<GameState> {
       if (hostEventDeck.isNotEmpty) _eventDeck = hostEventDeck;
     } catch (_) {}
 
+    // Gästens eget ansikte-upp-kort (se [Player.faceUpExpansionCard]) –
+    // deterministiskt (faceUpCards() blandar aldrig), så samma index
+    // (1, hosten fick redan 0 i [hostRoom]) ger alltid samma fysiska
+    // kort oavsett klient, utan att behöva synkas separat.
+    final updatedGuestPlayer = guestPlayer.copyWith(
+        faceUpExpansionCard: faceUp.length > 1 ? faceUp[1] : null);
+
     state = GameState(
-      you: guestPlayer,
+      you: updatedGuestPlayer,
       opponent: MockGame.buildStartingPlayer('host', '…', isRed: true),
       // Lokal, tillfällig gissning tills [_subscribeToRoom]s
       // centerStacks-lyssnare hinner leverera hostens FAKTISKA (redan
@@ -388,7 +397,6 @@ class GameNotifier extends Notifier<GameState> {
       // högar när ett temaset är aktivt.
       centerStacks: _buildCenterStacks(),
       activeExpansions: expansions,
-      faceUpExpansionCards: faceUp,
       mode: SessionMode.guest,
       roomCode: roomCode,
       myPlayerId: 'guest',
@@ -399,6 +407,11 @@ class GameNotifier extends Notifier<GameState> {
       activePlayerId: 'host',
     );
     _subscribeToRoom(roomCode);
+    // Den ursprungliga _sync.joinRoom-skrivningen ovan skedde INNAN
+    // [expansions] (och därmed ansikte-upp-kortet) var känt – korrigera
+    // den redan skrivna spelarposten nu, annars skulle den (och en
+    // eventuell senare resumeRoom) sakna kortet.
+    _syncMyPlayer();
     return null;
   }
 
@@ -460,10 +473,9 @@ class GameNotifier extends Notifier<GameState> {
       } catch (_) {
         // Se joinRoom – hellre en spelbar (fast fel) uppställning.
       }
-      final faceUpExpansionCards = await _sync
-          .watchFaceUpExpansionCards(roomCode)
-          .first
-          .timeout(const Duration(seconds: 10));
+      // Ansikte-upp-kortet (se [Player.faceUpExpansionCard]) läses inte
+      // separat här – det är en del av [you]/[opponent] (redan hämtade
+      // ovan via watchPlayers), precis som handen/riket.
 
       final hasGold = expansions.contains(ExpansionSet.eraOfGold);
       // Alla tre staplar är numera riktigt synkade resurser (se
@@ -512,7 +524,6 @@ class GameNotifier extends Notifier<GameState> {
         opponent: opponent,
         centerStacks: centerStacks,
         activeExpansions: expansions,
-        faceUpExpansionCards: faceUpExpansionCards,
         mode: role == 'host' ? SessionMode.host : SessionMode.guest,
         roomCode: roomCode,
         myPlayerId: role,
@@ -587,9 +598,10 @@ class GameNotifier extends Notifier<GameState> {
   /// utplacerade på deras riken – annars skulle samma unika byggnad
   /// (t.ex. Klostret) kunna "dyka upp" igen i en dragstapel trots att
   /// den redan ligger på brädet. Köpmansgille räknas aldrig hit – de 2
-  /// fysiska kopiorna ligger alltid ansikte-upp (se
-  /// [GameState.faceUpExpansionCards], synkad separat, ingen
-  /// rekonstruktion behövs där). Resten blandas och delas upp exakt
+  /// fysiska kopiorna ligger alltid ansikte-upp, en del av respektive
+  /// spelares [Player]-objekt (se [Player.faceUpExpansionCard], redan
+  /// hämtat via `watchPlayers` – ingen rekonstruktion behövs där).
+  /// Resten blandas och delas upp exakt
   /// enligt de synkade antalen (en hög per `centerStacks['draw$i']`
   /// som faktiskt finns, 4 eller 5 beroende på [expansions]), så att
   /// högarnas STORLEK alltid stämmer (helt avgörande – annars kan
@@ -701,9 +713,6 @@ class GameNotifier extends Notifier<GameState> {
         if (state.winnerId != null) 'winnerId': state.winnerId,
         if (state.discardPile.isNotEmpty)
           'discardPile': state.discardPile.map((c) => c.toJson()).toList(),
-        if (state.faceUpExpansionCards.isNotEmpty)
-          'faceUpExpansionCards':
-              state.faceUpExpansionCards.map((c) => c.toJson()).toList(),
         'drawStacks': _drawStacks
             .map((stack) => stack.map((c) => c.toJson()).toList())
             .toList(),
@@ -750,9 +759,6 @@ class GameNotifier extends Notifier<GameState> {
       discardPile: json['discardPile'] == null
           ? const []
           : parseCards(json['discardPile']),
-      faceUpExpansionCards: json['faceUpExpansionCards'] == null
-          ? const []
-          : parseCards(json['faceUpExpansionCards']),
     );
   }
 
@@ -773,7 +779,6 @@ class GameNotifier extends Notifier<GameState> {
     _turnStateSub?.cancel();
     _fraternalFeudsRequestSub?.cancel();
     _discardPileSub?.cancel();
-    _faceUpExpansionCardsSub?.cancel();
     _drawStacksSub?.cancel();
     _regionDeckSub?.cancel();
     _eventDeckSub?.cancel();
@@ -856,21 +861,11 @@ class GameNotifier extends Notifier<GameState> {
       },
     );
 
-    _faceUpExpansionCardsSub =
-        _sync.watchFaceUpExpansionCards(roomCode).listen(
-      (cards) => state = state.copyWith(faceUpExpansionCards: cards),
-      onError: (Object e) {
-        state = state.copyWith(
-            sessionError: 'Kunde inte synka ansikte-upp-högen: $e');
-      },
-    );
-
     // Draghögarnas EXAKTA innehåll (se [_drawStacks]-doc) – till skillnad
-    // från de andra strömmarna ovan uppdaterar den här INTE [state] (bara
-    // det privata fältet), eftersom UI:t bara visar det synkade ANTALET
+    // från strömmarna ovan uppdaterar den här INTE [state] (bara det
+    // privata fältet), eftersom UI:t bara visar det synkade ANTALET
     // (centerStacks, egen ström). Eka:r tillbaka din EGEN skrivning också
-    // (precis som faceUpExpansionCards ovan) – ofarligt, samma data
-    // tilldelas bara igen.
+    // – ofarligt, samma data tilldelas bara igen.
     _drawStacksSub = _sync.watchDrawStacks(roomCode).listen(
       (stacks) {
         if (stacks.isEmpty) return;
@@ -924,13 +919,6 @@ class GameNotifier extends Notifier<GameState> {
     final roomCode = state.roomCode;
     if (roomCode == null) return;
     unawaited(_sync.writeDiscardPile(roomCode, state.discardPile));
-  }
-
-  void _syncFaceUpExpansionCards() {
-    final roomCode = state.roomCode;
-    if (roomCode == null) return;
-    unawaited(_sync.writeFaceUpExpansionCards(
-        roomCode, state.faceUpExpansionCards));
   }
 
   void _syncDrawStacks() {
@@ -2001,23 +1989,40 @@ class GameNotifier extends Notifier<GameState> {
   }
 
   /// Delad kärna för [dropExpansion]/[buyFaceUpExpansion]: placerar
-  /// [card] på byggplatsen (byter ut ett eventuellt redan liggande
-  /// kort mot slänghögen, se [_discardToPile] – eventuella poäng det
-  /// gav försvinner automatiskt eftersom det inte längre ligger i
-  /// riket), synkar ditt rike. Anroparen ansvarar själv för att ta bort
-  /// [card] från sin KÄLLA (hand respektive den delade ansikte-upp-
-  /// högen) och synka den separat, INNAN det här anropas (annars skulle
+  /// [card] på byggplatsen (byter ut ett eventuellt redan liggande kort
+  /// mot slänghögen, se [_discardToPile] – eventuella poäng det gav
+  /// försvinner automatiskt eftersom det inte längre ligger i riket),
+  /// synkar ditt rike. Anroparen ansvarar själv för att ta bort [card]
+  /// från sin KÄLLA (hand respektive ditt eget ansikte-upp-kort) och
+  /// synka den separat, INNAN det här anropas (annars skulle
   /// [recomputeTokenHolders] hinna räkna med kortet på fel ställe).
+  ///
+  /// UNDANTAG: byts ett eget ansikte-upp-kort (t.ex. Köpmansgille) ut
+  /// mot något annat, hamnar det INTE i slänghögen utan tillbaka på din
+  /// egna, separata ansikte-upp-plats (se [Player.faceUpExpansionCard]-
+  /// doc) – det är fortfarande ditt kort, bara oplacerat igen, och kan
+  /// byggas på nytt senare.
   void _placeExpansionCardAndSync(
       int column, BuildingRow row, int slotIndex, GameCard card) {
     final replaced =
         state.you.principality.removeExpansion(column, row, slotIndex);
     state.you.principality
         .placeExpansion(column, row, slotIndex, PlacedCard(card: card));
-    state = state.copyWith(you: state.you, clearDraggingCard: true);
+    final replacedFaceUpCard =
+        replaced?.card.baseId == EraOfGoldCards.merchantGuild.id
+            ? replaced!.card
+            : null;
+    state = state.copyWith(
+      you: replacedFaceUpCard != null
+          ? state.you.copyWith(faceUpExpansionCard: replacedFaceUpCard)
+          : state.you,
+      clearDraggingCard: true,
+    );
     recomputeTokenHolders();
     _syncMyPlayer();
-    if (replaced != null) _discardToPile(replaced.card);
+    if (replaced != null && replacedFaceUpCard == null) {
+      _discardToPile(replaced.card);
+    }
   }
 
   /// Bygger ett bygg-/enhets-/skeppskort FRÅN HANDEN på en byggplats.
@@ -2098,16 +2103,17 @@ class GameNotifier extends Notifier<GameState> {
     return null;
   }
 
-  /// Köper ett kort direkt från den öppna ansikte-upp-högen (se
-  /// [GameState.faceUpExpansionCards], t.ex. Gulderans Köpmansgille) –
-  /// vem som helst kan bygga härifrån på sin egen tur, precis som ett
-  /// vanligt bygge från handen (se [dropExpansion], samma byt-ut-regel
+  /// Bygger ditt EGET ansikte-upp-kort (se [Player.faceUpExpansionCard],
+  /// t.ex. Gulderans Köpmansgille) – till skillnad från en delad hög har
+  /// varje spelare sin egen, separata plats med som mest 1 kort: du kan
+  /// bara bygga DITT EGET, aldrig motståndarens (annars precis som ett
+  /// vanligt bygge från handen, se [dropExpansion], samma byt-ut-regel
   /// om platsen redan är bebyggd).
   String? buyFaceUpExpansion(
       int column, BuildingRow row, int slotIndex, GameCard card) {
     final turnError = _checkCanBuild();
     if (turnError != null) return turnError;
-    if (!state.faceUpExpansionCards.contains(card)) return null;
+    if (state.you.faceUpExpansionCard != card) return null;
     if (card.isUnique &&
         state.you.principality.hasExpansionCard(card.baseId)) {
       return 'Du kan bara ha en ${card.name} i ditt rike.';
@@ -2116,9 +2122,7 @@ class GameNotifier extends Notifier<GameState> {
     if (replaceError != null) return replaceError;
 
     state = state.copyWith(
-        faceUpExpansionCards: List.of(state.faceUpExpansionCards)
-          ..remove(card));
-    _syncFaceUpExpansionCards();
+        you: state.you.copyWith(clearFaceUpExpansionCard: true));
     _placeExpansionCardAndSync(column, row, slotIndex, card);
     return null;
   }

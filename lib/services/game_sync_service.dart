@@ -19,8 +19,6 @@ import '../models/models.dart';
 ///   activeExpansions          -> List<String> (ExpansionSet-namn),
 ///                                satt en gång vid rumsskapande, se
 ///                                [GameState.activeExpansions]
-///   faceUpExpansionCards      -> List<GameCard.toJson()>, se
-///                                [GameState.faceUpExpansionCards]
 ///   drawStacks                -> List<List<GameCard.toJson()>>, de
 ///                                delade dragstaplarnas EXAKTA innehåll
 ///                                (se [GameNotifier]s `_drawStacks`-doc)
@@ -40,7 +38,9 @@ abstract class GameSyncService {
   /// gästen läser dem via respektive `watchX` i stället för att blanda
   /// sina egna, annars skulle varje unikt kort (t.ex. en hjälte med bara
   /// 1 fysisk kopia) kunna dyka upp i BÅDA klienternas separata,
-  /// oberoende blandade högar.
+  /// oberoende blandade högar. [hostPlayer]s eget ansikte-upp-kort (se
+  /// [Player.faceUpExpansionCard]) skickas med som en del av
+  /// [hostPlayer] själv, precis som handen/riket – ingen egen kanal.
   Future<void> createRoom(
     String roomCode,
     String hostId,
@@ -48,7 +48,6 @@ abstract class GameSyncService {
     Map<String, int> centerStacks,
     TurnState turnState, {
     Set<ExpansionSet> activeExpansions = const {},
-    List<GameCard> faceUpExpansionCards = const [],
     List<List<GameCard>> drawStacks = const [],
     List<GameCard> regionDeck = const [],
     List<GameCard> eventDeck = const [],
@@ -101,14 +100,6 @@ abstract class GameSyncService {
   /// [GameNotifier.resumeRoom] läser bara det första värdet (`.first`),
   /// precis som centerStacks/turnState redan görs vid återanslutning.
   Stream<Set<ExpansionSet>> watchActiveExpansions(String roomCode);
-
-  /// Strömmar den öppna ansikte-upp-högen (se
-  /// [GameState.faceUpExpansionCards]), varje gång den ändras – delad
-  /// mellan spelarna, precis som [watchDiscardPile].
-  Stream<List<GameCard>> watchFaceUpExpansionCards(String roomCode);
-
-  Future<void> writeFaceUpExpansionCards(
-      String roomCode, List<GameCard> faceUpExpansionCards);
 
   /// Strömmar de delade dragstaplarnas EXAKTA innehåll (se
   /// [GameNotifier]s `_drawStacks`-doc), varje gång de ändras – ett drag

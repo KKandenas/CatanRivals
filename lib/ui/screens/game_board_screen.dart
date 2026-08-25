@@ -110,8 +110,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   /// korttypen faktiskt gör. Brigitta behöver ytterligare ett val
   /// (vilket tärningstal, se [showBrigittaNumberPicker]) och
   /// Omlokalisering startar en egen väljarläge (se
-  /// [RelocationInstructionBar]) – övriga (Handelskaravan/Guldsmed) är
-  /// självbevakade och behöver inget mer än att tas bort från handen.
+  /// [RelocationInstructionBar]) – Reiner härolden visar en text om att
+  /// den spelats (se [GameNotifier.useReinerTheHerald]-doc: den extra
+  /// resursen dras inte av automatiskt) – övriga (Handelskaravan/
+  /// Guldsmed) är självbevakade och behöver inget mer än att tas bort
+  /// från handen.
   void _handleUseActionCard(
       BuildContext context, GameCard card, GameNotifier notifier) {
     if (card.baseId == BasicSetCards.brigittaTheWiseWoman.id) {
@@ -127,7 +130,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
       return;
     }
     if (card.baseId == EraOfGoldCards.reinerTheHerald.id) {
-      _handleResult(context, notifier.useReinerTheHerald());
+      final playerName = ref.read(gameProvider).you.name;
+      final error = notifier.useReinerTheHerald();
+      if (error != null) {
+        _handleResult(context, error);
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              '$playerName spelade Reiner härolden och får en extra resurs.'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
       return;
     }
     _handleResult(context, notifier.discardActionCard(card));
@@ -925,7 +940,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                         onDropExpansion: (column, row, slotIndex, card) =>
                             _handleResult(
                                 context,
-                                state.faceUpExpansionCards.contains(card)
+                                state.you.faceUpExpansionCard == card
                                     ? notifier.buyFaceUpExpansion(
                                         column, row, slotIndex, card)
                                     : notifier.dropExpansion(
@@ -1001,12 +1016,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   totalVictoryPoints: youTotalVictoryPoints,
                   hasHeroToken: youHaveHeroToken,
                   hasTradeToken: youHaveTradeToken,
-                  // Bara ETT kort visas här (inte båda) – när det byggs
-                  // blir nästa kvarvarande (om något) automatiskt det nya
-                  // "första", se HandDock-doc.
-                  faceUpExpansionCard: state.faceUpExpansionCards.isNotEmpty
-                      ? state.faceUpExpansionCards.first
-                      : null,
+                  // Ditt EGET ansikte-upp-kort (se
+                  // Player.faceUpExpansionCard-doc) – en egen, separat
+                  // plats, inte en delad hög.
+                  faceUpExpansionCard: state.you.faceUpExpansionCard,
                   onFaceUpDragStarted: notifier.startDrag,
                   onFaceUpDragEnd: notifier.endDrag,
                 ),
