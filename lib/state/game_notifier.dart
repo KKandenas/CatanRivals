@@ -46,16 +46,27 @@ class GameNotifier extends Notifier<GameState> {
   StreamSubscription<List<GameCard>>? _discardPileSub;
   StreamSubscription<List<GameCard>>? _faceUpExpansionCardsSub;
   StreamSubscription<List<List<GameCard>>>? _drawStacksSub;
+  StreamSubscription<List<GameCard>>? _regionDeckSub;
+  StreamSubscription<List<GameCard>>? _eventDeckSub;
 
   /// Regionstapelns kvarvarande, blandade kort (se [RegionDeck]) – dras
-  /// från när en ny by byggs. Var spelares klient håller sin egen
-  /// blandning; det synkas inte kort-för-kort mellan host/guest än (bara
-  /// det synliga antalet i centerStacks['regions'] synkas), så exakt
-  /// vilka regioner som dras kan skilja mellan de två klienterna. Fullt
-  /// delad, synkad dragstapel är ett större steg för sig – regionkort är
-  /// aldrig unika (bara resurstyp), så en avvikelse här är ofarlig till
-  /// skillnad från [_drawStacks] nedan.
+  /// från när en ny by byggs bortom rikets nuvarande yttergräns
+  /// (regelhäftet s. 8), eller via Spejare (se [useScout]/
+  /// [pickScoutRegion]). Precis som [_drawStacks] en riktigt DELAD,
+  /// synkad resurs online (se [GameSyncService.watchRegionDeck]/
+  /// [_syncRegionDeck]) – `_setRegionDeck` är den ENDA vägen att mutera
+  /// den efter att spelet startat.
   List<GameCard> _regionDeck = RegionDeck.shuffledRemainingDeck();
+
+  /// Muterar hela regionstapeln till [cards] och synkar direkt (se
+  /// [_regionDeck]-doc) – används i stället för en rå
+  /// `_regionDeck = ...`-tilldelning överallt utom vid initial
+  /// uppsättning ([_resetDecks]/[resumeLocalSnapshot]), där hela listan
+  /// byggs om på en gång och synkas separat (se [hostRoom]).
+  void _setRegionDeck(List<GameCard> cards) {
+    _regionDeck = cards;
+    _syncRegionDeck();
+  }
 
   /// Grundspelets draghögar (36 kort, se [BasicSetDrawDeck]) – TILL
   /// SKILLNAD FRÅN [_regionDeck]/[_eventDeck] en riktigt DELAD, synkad
@@ -87,9 +98,22 @@ class GameNotifier extends Notifier<GameState> {
     _syncDrawStacks();
   }
 
-  /// Händelsekortsstapeln (Yule 4:e från botten, se [EventDeck]) – som
-  /// [_regionDeck], inte (ännu) synkad kort-för-kort.
+  /// Händelsekortsstapeln (Yule 4:e från botten, se [EventDeck]) –
+  /// precis som [_regionDeck]/[_drawStacks] en riktigt DELAD, synkad
+  /// resurs online (se [GameSyncService.watchEventDeck]/
+  /// [_syncEventDeck]) – `_setEventDeck` är den ENDA vägen att mutera
+  /// den efter att spelet startat.
   List<GameCard> _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom();
+
+  /// Muterar hela händelsekortsstapeln till [cards] och synkar direkt
+  /// (se [_eventDeck]-doc) – används i stället för en rå
+  /// `_eventDeck = ...`-tilldelning överallt utom vid initial uppsättning
+  /// ([_resetDecks]/[resumeLocalSnapshot]), där hela listan byggs om på
+  /// en gång och synkas separat (se [hostRoom]).
+  void _setEventDeck(List<GameCard> cards) {
+    _eventDeck = cards;
+    _syncEventDeck();
+  }
 
   /// Bygger om alla tre lokala dragstaplar (region/drag/händelse) för
   /// en ny match, enligt vilka temaset som är aktiva. Returnerar den
@@ -141,11 +165,18 @@ class GameNotifier extends Notifier<GameState> {
 
   List<GameCard> get eventDeck => List.unmodifiable(_eventDeck);
 
+  List<GameCard> get regionDeck => List.unmodifiable(_regionDeck);
+
   GameSyncService get _sync => ref.read(gameSyncServiceProvider);
 
   GameCard _drawRegion() {
-    if (_regionDeck.isEmpty) _regionDeck = RegionDeck.shuffledRemainingDeck();
-    return _regionDeck.removeLast();
+    if (_regionDeck.isEmpty) {
+      _setRegionDeck(RegionDeck.shuffledRemainingDeck());
+    }
+    final remaining = List<GameCard>.of(_regionDeck);
+    final card = remaining.removeLast();
+    _setRegionDeck(remaining);
+    return card;
   }
 
   /// Tar de 3 översta korten från draghög [stackIndex] och lägger dem i
@@ -170,6 +201,8 @@ class GameNotifier extends Notifier<GameState> {
       _discardPileSub?.cancel();
       _faceUpExpansionCardsSub?.cancel();
       _drawStacksSub?.cancel();
+      _regionDeckSub?.cancel();
+      _eventDeckSub?.cancel();
     });
     return GameState(
       you: MockGame.buildYou(),
@@ -199,6 +232,8 @@ class GameNotifier extends Notifier<GameState> {
     _discardPileSub?.cancel();
     _faceUpExpansionCardsSub?.cancel();
     _drawStacksSub?.cancel();
+    _regionDeckSub?.cancel();
+    _eventDeckSub?.cancel();
     final faceUp = _resetDecks(expansions);
 
     // Lokalt läge har ingen egen vy för en andra spelare att trycka
@@ -254,7 +289,9 @@ class GameNotifier extends Notifier<GameState> {
               roomCode, 'host', hostPlayer, centerStacks, initialTurnState,
               activeExpansions: expansions,
               faceUpExpansionCards: faceUp,
-              drawStacks: _drawStacks)
+              drawStacks: _drawStacks,
+              regionDeck: _regionDeck,
+              eventDeck: _eventDeck)
           .timeout(const Duration(seconds: 10));
     } on TimeoutException {
       throw Exception(
@@ -283,12 +320,13 @@ class GameNotifier extends Notifier<GameState> {
   /// skillnad från [hostRoom] väljer gästen INTE själv vilka temaset
   /// som gäller – de läses från rummet (satta av hosten vid
   /// [createRoom]) så att båda klienterna bygger upp samma
-  /// ansikte-upp-uppställning (se [_resetDecks]). Draghögarna (se
-  /// [_drawStacks]-doc) läses ORDAGRANT från hostens FAKTISKA blandning
-  /// i stället för att blandas lokalt – annars skulle den här klienten
-  /// bygga en helt egen, oberoende blandad hög (samma unika kort skulle
-  /// då kunna finnas i BÅDA klienternas separata universum, och gå att
-  /// dra av båda spelarna).
+  /// ansikte-upp-uppställning (se [_resetDecks]). Draghögarna,
+  /// regionstapeln och händelsekortsstapeln (se [_drawStacks]/
+  /// [_regionDeck]/[_eventDeck]-doc) läses ORDAGRANT från hostens
+  /// FAKTISKA blandning i stället för att blandas lokalt – annars skulle
+  /// den här klienten bygga helt egna, oberoende blandade högar (samma
+  /// unika kort skulle då kunna finnas i BÅDA klienternas separata
+  /// universum, och gå att dra av båda spelarna).
   Future<String?> joinRoom(String roomCode, String myName) async {
     final guestPlayer =
         MockGame.buildStartingPlayer('guest', myName, isRed: false);
@@ -313,19 +351,32 @@ class GameNotifier extends Notifier<GameState> {
       // (fast fel) uppställning än att hela anslutningen stupar på det.
     }
     final faceUp = _resetDecks(expansions);
-    // _resetDecks ovan blandar en egen, lokal gissning av draghögarna
-    // (behövs ändå för sina biverkningar: _regionDeck/_eventDeck) – skriv
-    // över den med hostens FAKTISKA, redan synkade blandning så fort den
-    // går att läsa. Misslyckas det (nätverksfel, eller ett gammalt rum
-    // skapat innan draghögarna synkades): behåll gissningen, hellre en
-    // spelbar (fast möjligt fel) uppställning än att låta hela
-    // anslutningen stupa på det.
+    // _resetDecks ovan blandar en egen, lokal gissning av alla tre
+    // staplar – skriv över dem med hostens FAKTISKA, redan synkade
+    // blandning så fort den går att läsa. Misslyckas det (nätverksfel,
+    // eller ett gammalt rum skapat innan staplarna synkades): behåll
+    // gissningen, hellre en spelbar (fast möjligt fel) uppställning än
+    // att låta hela anslutningen stupa på det.
     try {
       final hostDrawStacks = await _sync
           .watchDrawStacks(roomCode)
           .first
           .timeout(const Duration(seconds: 10));
       if (hostDrawStacks.isNotEmpty) _drawStacks = hostDrawStacks;
+    } catch (_) {}
+    try {
+      final hostRegionDeck = await _sync
+          .watchRegionDeck(roomCode)
+          .first
+          .timeout(const Duration(seconds: 10));
+      if (hostRegionDeck.isNotEmpty) _regionDeck = hostRegionDeck;
+    } catch (_) {}
+    try {
+      final hostEventDeck = await _sync
+          .watchEventDeck(roomCode)
+          .first
+          .timeout(const Duration(seconds: 10));
+      if (hostEventDeck.isNotEmpty) _eventDeck = hostEventDeck;
     } catch (_) {}
 
     state = GameState(
@@ -414,16 +465,15 @@ class GameNotifier extends Notifier<GameState> {
           .first
           .timeout(const Duration(seconds: 10));
 
-      _regionDeck = RegionDeck.shuffledRemainingDeck();
       final hasGold = expansions.contains(ExpansionSet.eraOfGold);
-      _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom(
-          extraCards: hasGold ? EraOfGoldDrawDeck.eventCards() : const []);
-      // Draghögarna är numera en riktigt synkad resurs (se
-      // [_drawStacks]-doc) – läs den FAKTISKA, redan synkade blandningen
-      // i stället för att gissa. Faller bara tillbaka till den gamla
-      // rekonstruktionen (se [_reconstructDrawStacksFromKnownCards]) för
-      // ett rum skapat innan draghögarna synkades (`drawStacks` saknas
-      // då helt i Firebase) eller vid ett nätverksfel.
+      // Alla tre staplar är numera riktigt synkade resurser (se
+      // [_drawStacks]/[_regionDeck]/[_eventDeck]-doc) – läs den FAKTISKA,
+      // redan synkade blandningen i stället för att gissa. Faller bara
+      // tillbaka till en fräsch, oberoende blandning (regionstapel/
+      // händelsekortsstapel) respektive den gamla rekonstruktionen (se
+      // [_reconstructDrawStacksFromKnownCards], draghögarna) för ett rum
+      // skapat innan staplarna synkades (nyckeln saknas då helt i
+      // Firebase) eller vid ett nätverksfel.
       try {
         final syncedDrawStacks = await _sync
             .watchDrawStacks(roomCode)
@@ -434,6 +484,27 @@ class GameNotifier extends Notifier<GameState> {
       } catch (_) {
         _reconstructDrawStacksFromKnownCards(
             you, opponent, centerStacks, expansions);
+      }
+      try {
+        final syncedRegionDeck = await _sync
+            .watchRegionDeck(roomCode)
+            .first
+            .timeout(const Duration(seconds: 10));
+        if (syncedRegionDeck.isEmpty) throw StateError('tomt');
+        _regionDeck = syncedRegionDeck;
+      } catch (_) {
+        _regionDeck = RegionDeck.shuffledRemainingDeck();
+      }
+      try {
+        final syncedEventDeck = await _sync
+            .watchEventDeck(roomCode)
+            .first
+            .timeout(const Duration(seconds: 10));
+        if (syncedEventDeck.isEmpty) throw StateError('tomt');
+        _eventDeck = syncedEventDeck;
+      } catch (_) {
+        _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom(
+            extraCards: hasGold ? EraOfGoldDrawDeck.eventCards() : const []);
       }
 
       state = GameState(
@@ -704,6 +775,8 @@ class GameNotifier extends Notifier<GameState> {
     _discardPileSub?.cancel();
     _faceUpExpansionCardsSub?.cancel();
     _drawStacksSub?.cancel();
+    _regionDeckSub?.cancel();
+    _eventDeckSub?.cancel();
 
     _playersSub = _sync.watchPlayers(roomCode).listen(
       (players) {
@@ -808,6 +881,31 @@ class GameNotifier extends Notifier<GameState> {
             state.copyWith(sessionError: 'Kunde inte synka draghögarna: $e');
       },
     );
+
+    // Regionstapeln (se [_regionDeck]-doc) och händelsekortsstapeln (se
+    // [_eventDeck]-doc) – samma "eka:r tillbaka din egen skrivning,
+    // ofarligt"-mönster som draghögarna ovan.
+    _regionDeckSub = _sync.watchRegionDeck(roomCode).listen(
+      (deck) {
+        if (deck.isEmpty) return;
+        _regionDeck = deck;
+      },
+      onError: (Object e) {
+        state = state.copyWith(
+            sessionError: 'Kunde inte synka regionstapeln: $e');
+      },
+    );
+
+    _eventDeckSub = _sync.watchEventDeck(roomCode).listen(
+      (deck) {
+        if (deck.isEmpty) return;
+        _eventDeck = deck;
+      },
+      onError: (Object e) {
+        state = state.copyWith(
+            sessionError: 'Kunde inte synka händelsekortsstapeln: $e');
+      },
+    );
   }
 
   void _syncMyPlayer() {
@@ -839,6 +937,18 @@ class GameNotifier extends Notifier<GameState> {
     final roomCode = state.roomCode;
     if (roomCode == null) return;
     unawaited(_sync.writeDrawStacks(roomCode, _drawStacks));
+  }
+
+  void _syncRegionDeck() {
+    final roomCode = state.roomCode;
+    if (roomCode == null) return;
+    unawaited(_sync.writeRegionDeck(roomCode, _regionDeck));
+  }
+
+  void _syncEventDeck() {
+    final roomCode = state.roomCode;
+    if (roomCode == null) return;
+    unawaited(_sync.writeEventDeck(roomCode, _eventDeck));
   }
 
   /// Lägger [card] överst i slänghögen (se [GameState.discardPile]) och
@@ -1009,12 +1119,17 @@ class GameNotifier extends Notifier<GameState> {
   /// kommer efter.
   GameCard? _drawEventCardResolvingYule() {
     if (_eventDeck.isEmpty) return null;
-    var card = _eventDeck.removeAt(0);
+    var remaining = List<GameCard>.of(_eventDeck);
+    var card = remaining.removeAt(0);
     while (card.id == BasicSetCards.yule.id) {
-      _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom();
-      if (_eventDeck.isEmpty) return null;
-      card = _eventDeck.removeAt(0);
+      remaining = EventDeck.shuffledWithYuleFourthFromBottom();
+      if (remaining.isEmpty) {
+        _setEventDeck(remaining);
+        return null;
+      }
+      card = remaining.removeAt(0);
     }
+    _setEventDeck(remaining);
     return card;
   }
 
@@ -2096,7 +2211,7 @@ class GameNotifier extends Notifier<GameState> {
     if (state.scoutChoices == null) return null;
     if (!_regionDeck.contains(card)) return null;
 
-    _regionDeck = List.of(_regionDeck)..remove(card);
+    _setRegionDeck(List.of(_regionDeck)..remove(card));
     final picked = [...state.pendingRegions, card];
 
     if (picked.length < 2) {
@@ -2107,7 +2222,7 @@ class GameNotifier extends Notifier<GameState> {
       return null;
     }
 
-    _regionDeck = List.of(_regionDeck)..shuffle();
+    _setRegionDeck(List.of(_regionDeck)..shuffle());
     GameCard? scoutCard;
     for (final c in state.you.hand) {
       if (c.baseId == BasicSetCards.scout.id) {

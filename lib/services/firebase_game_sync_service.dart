@@ -21,6 +21,8 @@ class FirebaseGameSyncService implements GameSyncService {
     Set<ExpansionSet> activeExpansions = const {},
     List<GameCard> faceUpExpansionCards = const [],
     List<List<GameCard>> drawStacks = const [],
+    List<GameCard> regionDeck = const [],
+    List<GameCard> eventDeck = const [],
   }) async {
     await _roomRef(roomCode).set({
       'createdAt': ServerValue.timestamp,
@@ -36,6 +38,10 @@ class FirebaseGameSyncService implements GameSyncService {
         'drawStacks': drawStacks
             .map((stack) => stack.map((c) => c.toJson()).toList())
             .toList(),
+      if (regionDeck.isNotEmpty)
+        'regionDeck': regionDeck.map((c) => c.toJson()).toList(),
+      if (eventDeck.isNotEmpty)
+        'eventDeck': eventDeck.map((c) => c.toJson()).toList(),
     });
   }
 
@@ -194,5 +200,43 @@ class FirebaseGameSyncService implements GameSyncService {
     return _roomRef(roomCode).child('drawStacks').set(drawStacks
         .map((stack) => stack.map((c) => c.toJson()).toList())
         .toList());
+  }
+
+  @override
+  Stream<List<GameCard>> watchRegionDeck(String roomCode) {
+    return _roomRef(roomCode).child('regionDeck').onValue.map((event) {
+      final raw = event.snapshot.value;
+      if (raw is! List) return const <GameCard>[];
+      return raw
+          .whereType<Object>()
+          .map((c) => GameCard.fromJson(Map<String, dynamic>.from(c as Map)))
+          .toList();
+    });
+  }
+
+  @override
+  Future<void> writeRegionDeck(String roomCode, List<GameCard> regionDeck) {
+    return _roomRef(roomCode)
+        .child('regionDeck')
+        .set(regionDeck.map((c) => c.toJson()).toList());
+  }
+
+  @override
+  Stream<List<GameCard>> watchEventDeck(String roomCode) {
+    return _roomRef(roomCode).child('eventDeck').onValue.map((event) {
+      final raw = event.snapshot.value;
+      if (raw is! List) return const <GameCard>[];
+      return raw
+          .whereType<Object>()
+          .map((c) => GameCard.fromJson(Map<String, dynamic>.from(c as Map)))
+          .toList();
+    });
+  }
+
+  @override
+  Future<void> writeEventDeck(String roomCode, List<GameCard> eventDeck) {
+    return _roomRef(roomCode)
+        .child('eventDeck')
+        .set(eventDeck.map((c) => c.toJson()).toList());
   }
 }

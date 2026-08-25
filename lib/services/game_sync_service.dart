@@ -24,6 +24,10 @@ import '../models/models.dart';
 ///   drawStacks                -> List<List<GameCard.toJson()>>, de
 ///                                delade dragstaplarnas EXAKTA innehåll
 ///                                (se [GameNotifier]s `_drawStacks`-doc)
+///   regionDeck                -> List<GameCard.toJson()>, se
+///                                [GameNotifier]s `_regionDeck`-doc
+///   eventDeck                 -> List<GameCard.toJson()>, se
+///                                [GameNotifier]s `_eventDeck`-doc
 /// ```
 abstract class GameSyncService {
   /// Skapar ett nytt rum med given kod och sätter värden-spelaren som
@@ -31,11 +35,12 @@ abstract class GameSyncService {
   /// genereras slumpmässigt av anroparen). [activeExpansions] sätts en
   /// gång här och ändras aldrig sedan (se [GameState.activeExpansions])
   /// – gästen läser det via [watchActiveExpansions] i stället för att
-  /// välja själv. [drawStacks] är hostens FAKTISKT hopblandade
-  /// dragstaplar (se [GameNotifier._resetDecks]) – gästen läser dem via
-  /// [watchDrawStacks] i stället för att blanda sina egna, annars skulle
-  /// varje unikt kort (t.ex. en hjälte med bara 1 fysisk kopia) kunna
-  /// dyka upp i BÅDA klienternas separata, oberoende blandade högar.
+  /// välja själv. [drawStacks]/[regionDeck]/[eventDeck] är hostens
+  /// FAKTISKT hopblandade staplar (se [GameNotifier._resetDecks]) –
+  /// gästen läser dem via respektive `watchX` i stället för att blanda
+  /// sina egna, annars skulle varje unikt kort (t.ex. en hjälte med bara
+  /// 1 fysisk kopia) kunna dyka upp i BÅDA klienternas separata,
+  /// oberoende blandade högar.
   Future<void> createRoom(
     String roomCode,
     String hostId,
@@ -45,6 +50,8 @@ abstract class GameSyncService {
     Set<ExpansionSet> activeExpansions = const {},
     List<GameCard> faceUpExpansionCards = const [],
     List<List<GameCard>> drawStacks = const [],
+    List<GameCard> regionDeck = const [],
+    List<GameCard> eventDeck = const [],
   });
 
   /// Går med i ett befintligt rum. Returnerar `null` vid lyckat
@@ -113,4 +120,20 @@ abstract class GameSyncService {
 
   Future<void> writeDrawStacks(
       String roomCode, List<List<GameCard>> drawStacks);
+
+  /// Strömmar regionstapelns EXAKTA, kvarvarande innehåll (se
+  /// [GameNotifier]s `_regionDeck`-doc), varje gång den ändras – t.ex.
+  /// när en by byggs bortom rikets nuvarande yttergräns (regelhäftet s.
+  /// 8) eller Spejare används, av ENDERA spelaren.
+  Stream<List<GameCard>> watchRegionDeck(String roomCode);
+
+  Future<void> writeRegionDeck(String roomCode, List<GameCard> regionDeck);
+
+  /// Strömmar händelsekortsstapelns EXAKTA, kvarvarande innehåll (se
+  /// [GameNotifier]s `_eventDeck`-doc), varje gång den ändras – ett drag
+  /// av ENDERA spelaren (eller en Jul-omblandning, se
+  /// [GameNotifier._drawEventCardResolvingYule]).
+  Stream<List<GameCard>> watchEventDeck(String roomCode);
+
+  Future<void> writeEventDeck(String roomCode, List<GameCard> eventDeck);
 }

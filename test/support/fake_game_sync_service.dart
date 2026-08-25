@@ -17,6 +17,8 @@ class FakeGameSyncService implements GameSyncService {
   final Map<String, Set<ExpansionSet>> _activeExpansions = {};
   final Map<String, List<GameCard>> _faceUpExpansionCards = {};
   final Map<String, List<List<GameCard>>> _drawStacks = {};
+  final Map<String, List<GameCard>> _regionDecks = {};
+  final Map<String, List<GameCard>> _eventDecks = {};
   final Map<String, StreamController<Map<String, Player>>> _playerControllers = {};
   final Map<String, StreamController<Map<String, int>>> _centerStackControllers = {};
   final Map<String, StreamController<TurnState>> _turnStateControllers = {};
@@ -29,6 +31,8 @@ class FakeGameSyncService implements GameSyncService {
       _faceUpExpansionCardsControllers = {};
   final Map<String, StreamController<List<List<GameCard>>>>
       _drawStacksControllers = {};
+  final Map<String, StreamController<List<GameCard>>> _regionDeckControllers = {};
+  final Map<String, StreamController<List<GameCard>>> _eventDeckControllers = {};
 
   StreamController<Map<String, Player>> _playersController(String roomCode) =>
       _playerControllers.putIfAbsent(roomCode, () => StreamController.broadcast());
@@ -63,6 +67,14 @@ class FakeGameSyncService implements GameSyncService {
       _drawStacksControllers.putIfAbsent(
           roomCode, () => StreamController.broadcast());
 
+  StreamController<List<GameCard>> _regionDeckController(String roomCode) =>
+      _regionDeckControllers.putIfAbsent(
+          roomCode, () => StreamController.broadcast());
+
+  StreamController<List<GameCard>> _eventDeckController(String roomCode) =>
+      _eventDeckControllers.putIfAbsent(
+          roomCode, () => StreamController.broadcast());
+
   @override
   Future<void> createRoom(
     String roomCode,
@@ -73,6 +85,8 @@ class FakeGameSyncService implements GameSyncService {
     Set<ExpansionSet> activeExpansions = const {},
     List<GameCard> faceUpExpansionCards = const [],
     List<List<GameCard>> drawStacks = const [],
+    List<GameCard> regionDeck = const [],
+    List<GameCard> eventDeck = const [],
   }) async {
     _players[roomCode] = {hostId: hostPlayer};
     _centerStacks[roomCode] = Map.of(centerStacks);
@@ -81,6 +95,8 @@ class FakeGameSyncService implements GameSyncService {
     _activeExpansions[roomCode] = Set.of(activeExpansions);
     _faceUpExpansionCards[roomCode] = List.of(faceUpExpansionCards);
     _drawStacks[roomCode] = drawStacks.map(List<GameCard>.of).toList();
+    _regionDecks[roomCode] = List.of(regionDeck);
+    _eventDecks[roomCode] = List.of(eventDeck);
     _playersController(roomCode).add(Map.of(_players[roomCode]!));
     _centerStacksController(roomCode).add(Map.of(_centerStacks[roomCode]!));
     _turnStateController(roomCode).add(turnState);
@@ -89,6 +105,8 @@ class FakeGameSyncService implements GameSyncService {
     _faceUpExpansionCardsController(roomCode)
         .add(List.of(faceUpExpansionCards));
     _drawStacksController(roomCode).add(List.of(_drawStacks[roomCode]!));
+    _regionDeckController(roomCode).add(List.of(regionDeck));
+    _eventDeckController(roomCode).add(List.of(eventDeck));
   }
 
   @override
@@ -234,5 +252,37 @@ class FakeGameSyncService implements GameSyncService {
     _drawStacks[roomCode] = drawStacks.map(List<GameCard>.of).toList();
     _drawStacksController(roomCode)
         .add(_drawStacks[roomCode]!.map(List<GameCard>.of).toList());
+  }
+
+  @override
+  Stream<List<GameCard>> watchRegionDeck(String roomCode) {
+    final existing = _regionDecks[roomCode];
+    final controller = _regionDeckController(roomCode);
+    if (existing != null) {
+      return controller.stream.transform(_replayLatest(List.of(existing)));
+    }
+    return controller.stream;
+  }
+
+  @override
+  Future<void> writeRegionDeck(String roomCode, List<GameCard> regionDeck) async {
+    _regionDecks[roomCode] = List.of(regionDeck);
+    _regionDeckController(roomCode).add(List.of(regionDeck));
+  }
+
+  @override
+  Stream<List<GameCard>> watchEventDeck(String roomCode) {
+    final existing = _eventDecks[roomCode];
+    final controller = _eventDeckController(roomCode);
+    if (existing != null) {
+      return controller.stream.transform(_replayLatest(List.of(existing)));
+    }
+    return controller.stream;
+  }
+
+  @override
+  Future<void> writeEventDeck(String roomCode, List<GameCard> eventDeck) async {
+    _eventDecks[roomCode] = List.of(eventDeck);
+    _eventDeckController(roomCode).add(List.of(eventDeck));
   }
 }
