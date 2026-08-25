@@ -2010,6 +2010,107 @@ class GameNotifier extends Notifier<GameState> {
   }
 
   // ---------------------------------------------------------------------
+  // Guido ambassadören/Gustav bibliotekarien (Utvecklingens tid): "Du
+  // får välja 1 kort från kasserade kort" – slänghögen ([discardPile])
+  // är redan en delad, fullt synkad resurs (varje kort, inte bara det
+  // översta, se [_discardToPile]-doc), så till skillnad från Bågskytt/
+  // Pyroman/Förrädare krävs ingen synkad förfrågan: du har redan
+  // skrivrätt till både din egen hand OCH den delade slänghögen. Det
+  // spelade kortet läggs INTE i slänghögen förrän EFTER att du valt –
+  // annars skulle du kunna välja tillbaka ditt eget nyss spelade kort.
+  // ---------------------------------------------------------------------
+
+  /// Delad hjälpare för [useGuidoTheAmbassador]/[useGustavTheLibrarian]:
+  /// hittar [template]s fysiska kopia på handen, kollar kravet
+  /// (dubbelkontroll, se hand_dock.dart:_actionCardBlockedReason), och
+  /// öppnar sedan slänghögsväljaren – eller, om slänghögen är tom (inget
+  /// att välja bland), avslutar kortet direkt utan effekt (samma "inget
+  /// giltigt mål"-mönster som Bågskytt/Pyroman).
+  String? _useDiscardPilePick(GameCard template, String? requirementError) {
+    final turnError = _checkCanBuild();
+    if (turnError != null) return turnError;
+    GameCard? card;
+    for (final c in state.you.hand) {
+      if (c.baseId == template.id) {
+        card = c;
+        break;
+      }
+    }
+    if (card == null) return null;
+    if (requirementError != null) return requirementError;
+
+    if (state.discardPile.isEmpty) {
+      state = state.copyWith(
+        you: state.you.copyWith(hand: List.of(state.you.hand)..remove(card)),
+      );
+      _syncMyPlayer();
+      _discardToPile(card);
+      return null;
+    }
+    state = state.copyWith(discardPilePicking: true, discardPileSourceCard: card);
+    return null;
+  }
+
+  /// Spelar Guido ambassadören: kräver Rådhus, eller färre segerpoäng
+  /// än motståndaren.
+  String? useGuidoTheAmbassador() {
+    final requirementError = state.you.principality
+                .hasExpansionCard(EraOfProgressCards.townHall.id) ||
+            state.totalVictoryPointsFor(state.you) <
+                state.totalVictoryPointsFor(state.opponent)
+        ? null
+        : 'Kräver Rådhus, eller färre segerpoäng än motståndaren.';
+    return _useDiscardPilePick(
+        EraOfProgressCards.guidoTheAmbassador, requirementError);
+  }
+
+  /// Spelar Gustav bibliotekarien: kräver Bibliotek, eller färre
+  /// segerpoäng än motståndaren.
+  String? useGustavTheLibrarian() {
+    final requirementError = state.you.principality
+                .hasExpansionCard(EraOfProgressCards.library.id) ||
+            state.totalVictoryPointsFor(state.you) <
+                state.totalVictoryPointsFor(state.opponent)
+        ? null
+        : 'Kräver Bibliotek, eller färre segerpoäng än motståndaren.';
+    return _useDiscardPilePick(
+        EraOfProgressCards.gustavTheLibrarian, requirementError);
+  }
+
+  /// Avbryter slänghögsväljaren utan att göra något – till skillnad från
+  /// Bågskytt/Pyroman/Förrädare (redan spelade och slängda) ligger
+  /// Guido/Gustav fortfarande kvar på handen tills ett val gjorts (se
+  /// [_useDiscardPilePick]-doc), så ett avbrott lämnar kortet helt orört.
+  String? cancelDiscardPilePick() {
+    state = state.copyWith(
+        discardPilePicking: false, clearDiscardPileSourceCard: true);
+    return null;
+  }
+
+  /// Väljer [card] ur slänghögen och lägger den till din hand, sedan
+  /// läggs Guido/Gustav (det spelade kortet, se [discardPileSourceCard])
+  /// underst i slänghögen – i den ordningen, se [_useDiscardPilePick]-
+  /// doc för varför.
+  String? pickFromDiscardPile(GameCard card) {
+    if (!state.discardPilePicking) return null;
+    final sourceCard = state.discardPileSourceCard;
+    if (sourceCard == null) return null;
+    if (!state.discardPile.contains(card)) return null;
+
+    state = state.copyWith(
+      you: state.you.copyWith(
+          hand: [...List.of(state.you.hand)..remove(sourceCard), card]),
+      discardPile: List.of(state.discardPile)..remove(card),
+      discardPilePicking: false,
+      clearDiscardPileSourceCard: true,
+    );
+    _syncMyPlayer();
+    _syncDiscardPile();
+    _discardToPile(sourceCard);
+    return null;
+  }
+
+  // ---------------------------------------------------------------------
   // Piratskepp: motståndaren väljer bort ett eget handelsskepp, se
   // [_maybeTriggerPirateShip]/[TurnState.pirateShipDiscardPending]-doc.
   // Precis som Fejd tar den DRABBADE spelaren bort sitt EGET kort på sin
@@ -2743,7 +2844,8 @@ class GameNotifier extends Notifier<GameState> {
         state.fraternalFeudsPicking ||
         state.riotsUnitPickActive ||
         state.attackCardPickedUnit != null ||
-        state.traitorPicking) {
+        state.traitorPicking ||
+        state.discardPilePicking) {
       return 'Avsluta händelsekortet innan du bygger vidare.';
     }
     if (state.pendingRegions.isNotEmpty) {
@@ -2908,6 +3010,9 @@ class GameNotifier extends Notifier<GameState> {
     }
     final replaceError = _checkReplaceAllowed(column, row, slotIndex);
     if (replaceError != null) return replaceError;
+    final blockedReason =
+        buildRequirementBlockedReason(card, state.you.principality, column, row);
+    if (blockedReason != null) return blockedReason;
 
     state = state.copyWith(
         you: state.you.copyWith(clearFaceUpExpansionCard: true));

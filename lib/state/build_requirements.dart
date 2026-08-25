@@ -1,4 +1,6 @@
+import '../data/basic_set_cards.dart';
 import '../data/era_of_gold_cards.dart';
+import '../data/era_of_progress_cards.dart';
 import '../models/models.dart';
 
 /// Returnerar en förklarande text om [card] inte får byggas/placeras på
@@ -34,6 +36,12 @@ String? buildRequirementBlockedReason(
   if (card.baseId == EraOfGoldCards.stapleHouse.id) {
     if (!board.hasExpansionCard(EraOfGoldCards.merchantGuild.id)) {
       return 'Stapelhus kräver Köpmansgille i ditt rike.';
+    }
+  }
+  if (card.baseId == EraOfProgressCards.university.id) {
+    if (!board.hasExpansionCard(BasicSetCards.abbey.id) &&
+        !board.hasExpansionCard(EraOfProgressCards.library.id)) {
+      return 'Universitet kräver Kloster eller Bibliotek i ditt rike.';
     }
   }
   return null;

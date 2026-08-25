@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/basic_set_cards.dart';
 import '../../data/era_of_gold_cards.dart';
+import '../../data/era_of_progress_cards.dart';
 import '../../data/era_of_turmoil_cards.dart';
 import '../../models/models.dart';
 import '../theme/catan_colors.dart';
@@ -24,11 +25,18 @@ import 'score_summary.dart';
 /// funktionen är den faktiska spärren): styrkeövertag, 3 handelspoäng
 /// eller stad, ett utplacerat Köpmansgille, respektive ett utplacerat
 /// Värdshus.
-/// [hasStrengthAdvantage] måste skickas in separat eftersom den kräver
-/// att jämföra BÅDA spelarnas styrkepoäng ([GameState.strengthAdvantagePlayerId]),
-/// inte något som går att räkna ut från bara [player].
+/// Utvecklingens tids Doktorn/Malmbrytning/Trevångsbruk kräver
+/// respektive utplacerat kort (Badhus/Universitet); Guido ambassadören/
+/// Gustav bibliotekarien kräver Rådhus respektive Bibliotek ELLER färre
+/// segerpoäng än motståndaren (se [hasFewerVictoryPointsThanOpponent]).
+/// [hasStrengthAdvantage]/[hasFewerVictoryPointsThanOpponent] måste
+/// skickas in separat eftersom de kräver att jämföra BÅDA spelarnas
+/// styrkepoäng respektive segerpoäng ([GameState.strengthAdvantagePlayerId]/
+/// [GameState.totalVictoryPointsFor]), inte något som går att räkna ut
+/// från bara [player].
 String? _actionCardBlockedReason(GameCard card, Player player,
-    {required bool hasStrengthAdvantage}) {
+    {required bool hasStrengthAdvantage,
+    required bool hasFewerVictoryPointsThanOpponent}) {
   if (card.baseId == BasicSetCards.merchantCaravan.id) {
     if (player.totalResourceCount < 2) {
       return 'Du behöver minst 2 resurser för att kunna använda det här kortet.';
@@ -65,6 +73,29 @@ String? _actionCardBlockedReason(GameCard card, Player player,
   }
   if (card.baseId == EraOfTurmoilCards.voyageOfPlunder.id) {
     if (!hasStrengthAdvantage) return 'Kräver styrkeövertag.';
+  }
+  if (card.baseId == EraOfProgressCards.doctor.id) {
+    if (!player.principality.hasExpansionCard(EraOfProgressCards.bathHouse.id)) {
+      return 'Kräver Badhus i ditt rike.';
+    }
+  }
+  if (card.baseId == EraOfProgressCards.guidoTheAmbassador.id) {
+    if (!player.principality.hasExpansionCard(EraOfProgressCards.townHall.id) &&
+        !hasFewerVictoryPointsThanOpponent) {
+      return 'Kräver Rådhus, eller färre segerpoäng än motståndaren.';
+    }
+  }
+  if (card.baseId == EraOfProgressCards.gustavTheLibrarian.id) {
+    if (!player.principality.hasExpansionCard(EraOfProgressCards.library.id) &&
+        !hasFewerVictoryPointsThanOpponent) {
+      return 'Kräver Bibliotek, eller färre segerpoäng än motståndaren.';
+    }
+  }
+  if (card.baseId == EraOfProgressCards.mineralMining.id ||
+      card.baseId == EraOfProgressCards.threeFieldSystem.id) {
+    if (!player.principality.hasExpansionCard(EraOfProgressCards.university.id)) {
+      return 'Kräver Universitet i ditt rike.';
+    }
   }
   return null;
 }
@@ -129,6 +160,12 @@ class HandDock extends StatelessWidget {
   /// styrkepoäng, inte bara [player]s egna.
   final bool hasStrengthAdvantage;
 
+  /// Om [player] just nu har färre segerpoäng än motståndaren – Guido
+  /// ambassadören/Gustav bibliotekarien kräver det som alternativ till
+  /// sitt byggnadskrav (se [_actionCardBlockedReason]). Måste skickas in
+  /// förberäknad härifrån av samma skäl som [hasStrengthAdvantage].
+  final bool hasFewerVictoryPointsThanOpponent;
+
   /// Handjustering i slutet av action-fasen (se [HandAdjustmentPhase.
   /// discarding]): om satt går varje handkort (oavsett kategori) att
   /// trycka på för att välja det att slänga i stället för att förstora
@@ -162,6 +199,7 @@ class HandDock extends StatelessWidget {
     this.diceRolled = false,
     this.canBuild = true,
     this.hasStrengthAdvantage = false,
+    this.hasFewerVictoryPointsThanOpponent = false,
     this.selectedDiscardCard,
     this.onSelectForDiscard,
     required this.totalVictoryPoints,
@@ -216,6 +254,8 @@ class HandDock extends StatelessWidget {
                             diceRolled: diceRolled,
                             canBuild: canBuild,
                             hasStrengthAdvantage: hasStrengthAdvantage,
+                            hasFewerVictoryPointsThanOpponent:
+                                hasFewerVictoryPointsThanOpponent,
                             selected: player.hand[i] == selectedDiscardCard,
                             onSelectForDiscard: onSelectForDiscard == null
                                 ? null
@@ -259,6 +299,7 @@ class _HandCard extends StatelessWidget {
   final bool diceRolled;
   final bool canBuild;
   final bool hasStrengthAdvantage;
+  final bool hasFewerVictoryPointsThanOpponent;
   final bool selected;
   final VoidCallback? onSelectForDiscard;
 
@@ -272,6 +313,7 @@ class _HandCard extends StatelessWidget {
     this.diceRolled = false,
     this.canBuild = true,
     this.hasStrengthAdvantage = false,
+    this.hasFewerVictoryPointsThanOpponent = false,
     this.selected = false,
     this.onSelectForDiscard,
   });
@@ -310,7 +352,9 @@ class _HandCard extends StatelessWidget {
 
     final blockedReason = isUsableAction
         ? _actionCardBlockedReason(card, player,
-            hasStrengthAdvantage: hasStrengthAdvantage)
+            hasStrengthAdvantage: hasStrengthAdvantage,
+            hasFewerVictoryPointsThanOpponent:
+                hasFewerVictoryPointsThanOpponent)
         : null;
     final useActionTap = isUsableAction && onUseActionCard != null
         ? () => showCardDetail(context, card,

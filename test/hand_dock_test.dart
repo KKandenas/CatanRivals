@@ -1,5 +1,6 @@
 import 'package:catan_rivals/data/basic_set_cards.dart';
 import 'package:catan_rivals/data/era_of_gold_cards.dart';
+import 'package:catan_rivals/data/era_of_progress_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/ui/widgets/hand_dock.dart';
 import 'package:flutter/material.dart';
@@ -36,6 +37,7 @@ void main() {
     bool diceRolled = false,
     bool canBuild = true,
     bool hasStrengthAdvantage = false,
+    bool hasFewerVictoryPointsThanOpponent = false,
     RealmBoard? principality,
     Size viewSize = const Size(1200, 300),
   }) async {
@@ -57,6 +59,7 @@ void main() {
           diceRolled: diceRolled,
           canBuild: canBuild,
           hasStrengthAdvantage: hasStrengthAdvantage,
+          hasFewerVictoryPointsThanOpponent: hasFewerVictoryPointsThanOpponent,
         ),
       ),
     ));
@@ -457,6 +460,194 @@ void main() {
           viewSize: const Size(1200, 1600));
 
       await tester.tap(find.text('Handelsmästare'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Vill du använda kortet?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Använd kortet'));
+      await tester.pumpAndSettle();
+      expect(used, isTrue);
+    });
+  });
+
+  group('Doktorn/Guido/Gustav/Malmbrytning/Trevångsbruk – Utvecklingens tids kravspärrar', () {
+    testWidgets(
+        'Doktorn: utan Badhus visas en förklarande text i stället för "Använd kortet"',
+        (tester) async {
+      var used = false;
+      await pumpDock(tester,
+          hand: [EraOfProgressCards.doctor],
+          onUseActionCard: (_) => used = true,
+          principality: RealmBoard(ownerId: 'you'));
+
+      await tester.tap(find.text('Doktorn'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Kräver Badhus i ditt rike.'), findsOneWidget);
+      expect(used, isFalse);
+    });
+
+    testWidgets('Doktorn: med Badhus utplacerat visas "Använd kortet"',
+        (tester) async {
+      var used = false;
+      final board = RealmBoard(ownerId: 'you');
+      board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+      board.placeExpansion(0, BuildingRow.above, 0,
+          const PlacedCard(card: EraOfProgressCards.bathHouse));
+      await pumpDock(tester,
+          hand: [EraOfProgressCards.doctor],
+          onUseActionCard: (_) => used = true,
+          principality: board,
+          viewSize: const Size(1200, 1600));
+
+      await tester.tap(find.text('Doktorn'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Vill du använda kortet?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Använd kortet'));
+      await tester.pumpAndSettle();
+      expect(used, isTrue);
+    });
+
+    testWidgets(
+        'Malmbrytning/Trevångsbruk: utan Universitet visas en förklarande text',
+        (tester) async {
+      await pumpDock(tester,
+          hand: [
+            EraOfProgressCards.mineralMining,
+            EraOfProgressCards.threeFieldSystem
+          ],
+          onUseActionCard: (_) {},
+          principality: RealmBoard(ownerId: 'you'));
+
+      await tester.tap(find.text('Malmbrytning'));
+      await tester.pumpAndSettle();
+      expect(find.text('Kräver Universitet i ditt rike.'), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Trevångsbruk'));
+      await tester.pumpAndSettle();
+      expect(find.text('Kräver Universitet i ditt rike.'), findsOneWidget);
+    });
+
+    testWidgets('Malmbrytning: med Universitet utplacerat visas "Använd kortet"',
+        (tester) async {
+      var used = false;
+      final board = RealmBoard(ownerId: 'you');
+      board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+      board.placeExpansion(0, BuildingRow.above, 0,
+          const PlacedCard(card: EraOfProgressCards.university));
+      await pumpDock(tester,
+          hand: [EraOfProgressCards.mineralMining],
+          onUseActionCard: (_) => used = true,
+          principality: board,
+          viewSize: const Size(1200, 1600));
+
+      await tester.tap(find.text('Malmbrytning'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Vill du använda kortet?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Använd kortet'));
+      await tester.pumpAndSettle();
+      expect(used, isTrue);
+    });
+
+    testWidgets(
+        'Guido: utan Rådhus och utan färre segerpoäng visas en förklarande text',
+        (tester) async {
+      var used = false;
+      await pumpDock(tester,
+          hand: [EraOfProgressCards.guidoTheAmbassador],
+          onUseActionCard: (_) => used = true,
+          hasFewerVictoryPointsThanOpponent: false,
+          principality: RealmBoard(ownerId: 'you'));
+
+      await tester.tap(find.text('Guido ambassadören'));
+      await tester.pumpAndSettle();
+
+      expect(
+          find.text('Kräver Rådhus, eller färre segerpoäng än motståndaren.'),
+          findsOneWidget);
+      expect(used, isFalse);
+    });
+
+    testWidgets('Guido: med färre segerpoäng än motståndaren räcker, utan Rådhus',
+        (tester) async {
+      var used = false;
+      await pumpDock(tester,
+          hand: [EraOfProgressCards.guidoTheAmbassador],
+          onUseActionCard: (_) => used = true,
+          hasFewerVictoryPointsThanOpponent: true,
+          principality: RealmBoard(ownerId: 'you'),
+          viewSize: const Size(1200, 1600));
+
+      await tester.tap(find.text('Guido ambassadören'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Vill du använda kortet?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Använd kortet'));
+      await tester.pumpAndSettle();
+      expect(used, isTrue);
+    });
+
+    testWidgets('Guido: med Rådhus räcker, även utan färre segerpoäng',
+        (tester) async {
+      var used = false;
+      final board = RealmBoard(ownerId: 'you');
+      board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+      board.placeExpansion(0, BuildingRow.above, 0,
+          const PlacedCard(card: EraOfProgressCards.townHall));
+      await pumpDock(tester,
+          hand: [EraOfProgressCards.guidoTheAmbassador],
+          onUseActionCard: (_) => used = true,
+          hasFewerVictoryPointsThanOpponent: false,
+          principality: board,
+          viewSize: const Size(1200, 1600));
+
+      await tester.tap(find.text('Guido ambassadören'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Vill du använda kortet?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Använd kortet'));
+      await tester.pumpAndSettle();
+      expect(used, isTrue);
+    });
+
+    testWidgets(
+        'Gustav: utan Bibliotek och utan färre segerpoäng visas en förklarande text',
+        (tester) async {
+      var used = false;
+      await pumpDock(tester,
+          hand: [EraOfProgressCards.gustavTheLibrarian],
+          onUseActionCard: (_) => used = true,
+          hasFewerVictoryPointsThanOpponent: false,
+          principality: RealmBoard(ownerId: 'you'));
+
+      await tester.tap(find.text('Gustav bibliotekarien'));
+      await tester.pumpAndSettle();
+
+      expect(
+          find.text(
+              'Kräver Bibliotek, eller färre segerpoäng än motståndaren.'),
+          findsOneWidget);
+      expect(used, isFalse);
+    });
+
+    testWidgets('Gustav: med Bibliotek räcker, även utan färre segerpoäng',
+        (tester) async {
+      var used = false;
+      final board = RealmBoard(ownerId: 'you');
+      board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+      board.placeExpansion(0, BuildingRow.above, 0,
+          const PlacedCard(card: EraOfProgressCards.library));
+      await pumpDock(tester,
+          hand: [EraOfProgressCards.gustavTheLibrarian],
+          onUseActionCard: (_) => used = true,
+          hasFewerVictoryPointsThanOpponent: false,
+          principality: board,
+          viewSize: const Size(1200, 1600));
+
+      await tester.tap(find.text('Gustav bibliotekarien'));
       await tester.pumpAndSettle();
 
       expect(find.text('Vill du använda kortet?'), findsOneWidget);

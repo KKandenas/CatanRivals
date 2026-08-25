@@ -99,6 +99,12 @@ void main() {
       notifier = container.read(gameProvider.notifier);
       notifier.playLocally(expansions: {ExpansionSet.eraOfProgress});
       notifier.rollProductionDie();
+      // Universitet kräver en stad (cityExpansion, se
+      // build_requirements.dart) OCH Kloster eller Bibliotek utplacerat.
+      container.read(gameProvider).you.principality
+          .upgradeToCity(0, const PlacedCard(card: BasicSetCards.city));
+      container.read(gameProvider).you.principality.placeExpansion(
+          0, BuildingRow.below, 0, const PlacedCard(card: BasicSetCards.abbey));
     });
     tearDown(() => container.dispose());
 

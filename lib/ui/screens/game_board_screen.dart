@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/basic_set_cards.dart';
 import '../../data/era_of_gold_cards.dart';
+import '../../data/era_of_progress_cards.dart';
 import '../../data/era_of_turmoil_cards.dart';
 import '../../models/models.dart';
 import '../../state/event_die_resolution.dart';
@@ -207,6 +208,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     }
     if (card.baseId == EraOfTurmoilCards.traitor.id) {
       _handleResult(context, notifier.useTraitor());
+      return;
+    }
+    if (card.baseId == EraOfProgressCards.guidoTheAmbassador.id) {
+      _handleResult(context, notifier.useGuidoTheAmbassador());
+      return;
+    }
+    if (card.baseId == EraOfProgressCards.gustavTheLibrarian.id) {
+      _handleResult(context, notifier.useGustavTheLibrarian());
       return;
     }
     if (card.baseId == EraOfTurmoilCards.voyageOfPlunder.id) {
@@ -1036,6 +1045,26 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           ),
                         ),
                       ),
+                    // Guido ambassadören/Gustav bibliotekarien (se
+                    // GameNotifier._useDiscardPilePick/pickFromDiscardPile):
+                    // slänghögen öppen, kortet läggs direkt till din egen
+                    // hand – rent lokalt, ingen synk krävs (se
+                    // discardPilePicking-doc i GameState).
+                    if (state.discardPilePicking)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          padding: const EdgeInsets.all(12),
+                          child: FraternalFeudsHandPicker(
+                            hand: state.discardPile,
+                            label:
+                                'Välj 1 kort från slänghögen att lägga till din '
+                                'egen hand (tryck för att förstora)',
+                            onPick: (card) => _handleResult(
+                                context, notifier.pickFromDiscardPile(card)),
+                          ),
+                        ),
+                      ),
                     // Vakttorn (se GameNotifier.rollLookoutTowerDefense/
                     // pendingDefenseRollCard-doc): bara FÖRSVARAREN (den
                     // som har Vakttorn, inte den som spelade attackkortet)
@@ -1332,6 +1361,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   canBuild: canBuildRightNow,
                   hasStrengthAdvantage:
                       state.strengthAdvantagePlayerId == state.myPlayerId,
+                  hasFewerVictoryPointsThanOpponent:
+                      state.totalVictoryPointsFor(state.you) <
+                          state.totalVictoryPointsFor(state.opponent),
                   selectedDiscardCard:
                       isDiscarding ? _selectedDiscardCard : null,
                   onSelectForDiscard: isDiscarding

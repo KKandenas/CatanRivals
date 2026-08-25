@@ -79,6 +79,12 @@ void main() {
       notifier = container.read(gameProvider.notifier);
       notifier.playLocally(expansions: {ExpansionSet.eraOfGold});
       notifier.rollProductionDie();
+      // Köpmansgille är en stadsutbyggnad (CardCategory.cityExpansion)
+      // precis som alla andra ansikte-upp-kort (Värdshus/Universitet) –
+      // kräver alltså en STAD, inte bara en by (se
+      // build_requirements.dart).
+      container.read(gameProvider).you.principality
+          .upgradeToCity(0, const PlacedCard(card: BasicSetCards.city));
     });
     tearDown(() => container.dispose());
 
@@ -233,6 +239,11 @@ void main() {
       await pump();
       expect(hostNotifier.rollProductionDie(), isNull);
       await pump();
+
+      // Köpmansgille kräver en stad (se setUp-kommentaren ovan för
+      // samma resonemang i det lokala testfallet).
+      host.read(gameProvider).you.principality
+          .upgradeToCity(0, const PlacedCard(card: BasicSetCards.city));
 
       // Köper sitt eget Köpmansgille innan "omladdningen".
       final boughtCard = host.read(gameProvider).you.faceUpExpansionCard!;

@@ -1,5 +1,6 @@
 import 'package:catan_rivals/data/basic_set_cards.dart';
 import 'package:catan_rivals/data/era_of_gold_cards.dart';
+import 'package:catan_rivals/data/era_of_progress_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/state/build_requirements.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -96,6 +97,40 @@ void main() {
 
     final reason = buildRequirementBlockedReason(
         EraOfGoldCards.stapleHouse, board, 0, BuildingRow.above);
+
+    expect(reason, isNull);
+  });
+
+  test('Universitet utan Kloster eller Bibliotek avvisas', () {
+    final board = RealmBoard(ownerId: 'you');
+    board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+
+    final reason = buildRequirementBlockedReason(
+        EraOfProgressCards.university, board, 0, BuildingRow.above);
+
+    expect(reason, 'Universitet kräver Kloster eller Bibliotek i ditt rike.');
+  });
+
+  test('Universitet med Kloster utplacerat godkänns', () {
+    final board = RealmBoard(ownerId: 'you');
+    board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+    board.placeExpansion(
+        0, BuildingRow.below, 0, const PlacedCard(card: BasicSetCards.abbey));
+
+    final reason = buildRequirementBlockedReason(
+        EraOfProgressCards.university, board, 0, BuildingRow.above);
+
+    expect(reason, isNull);
+  });
+
+  test('Universitet med Bibliotek utplacerat godkänns', () {
+    final board = RealmBoard(ownerId: 'you');
+    board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+    board.placeExpansion(0, BuildingRow.below, 0,
+        const PlacedCard(card: EraOfProgressCards.library));
+
+    final reason = buildRequirementBlockedReason(
+        EraOfProgressCards.university, board, 0, BuildingRow.above);
 
     expect(reason, isNull);
   });

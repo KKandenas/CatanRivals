@@ -260,6 +260,21 @@ class GameState {
   /// avgör om du faktiskt får gå vidare hit.
   final bool traitorPicking;
 
+  /// Guido ambassadören/Gustav bibliotekarien (Utvecklingens tid,
+  /// regelhäftet: "Du får välja 1 kort från kasserade kort") – rent
+  /// lokalt UI-state (till skillnad från [traitorPicking] finns ingen
+  /// Vakttorns-liknande försvarsmekanik här, och [discardPile] är redan
+  /// en delad, synkad resurs båda spelarna ser i sin helhet, se
+  /// [GameNotifier._discardToPile]-doc – ingen synkad förfrågan behövs).
+  /// [discardPileSourceCard] är det spelade handlingskortet, kvar på
+  /// handen tills ett kort faktiskt valts (se
+  /// [GameNotifier.pickFromDiscardPile]) – då läggs det underst i
+  /// slänghögen precis som andra spelade handlingskort, EFTER att
+  /// valet gjorts, så att spelaren aldrig kan välja tillbaka sitt eget
+  /// nyss spelade kort.
+  final bool discardPilePicking;
+  final GameCard? discardPileSourceCard;
+
   /// Starthandsutdelningen (regelhäftet s. 6) när ett tema är aktivt (se
   /// [GameNotifier.startHandDraft]/[GameNotifier.pickHandDraftCard]):
   /// spelaren väljer en av de tre grundspelshögarna, ser ALLA dess kort
@@ -335,6 +350,8 @@ class GameState {
     this.fraternalFeudsPicked = const [],
     this.fraternalFeudsPickedStacks = const [],
     this.traitorPicking = false,
+    this.discardPilePicking = false,
+    this.discardPileSourceCard,
     this.startingHandDraftStackIndex,
     this.startingHandDraftPool,
     this.startingHandDraftPicked = const [],
@@ -520,6 +537,9 @@ class GameState {
     List<GameCard>? fraternalFeudsPicked,
     List<int>? fraternalFeudsPickedStacks,
     bool? traitorPicking,
+    bool? discardPilePicking,
+    GameCard? discardPileSourceCard,
+    bool clearDiscardPileSourceCard = false,
     int? startingHandDraftStackIndex,
     bool clearStartingHandDraftStackIndex = false,
     List<GameCard>? startingHandDraftPool,
@@ -612,6 +632,10 @@ class GameState {
       fraternalFeudsPickedStacks:
           fraternalFeudsPickedStacks ?? this.fraternalFeudsPickedStacks,
       traitorPicking: traitorPicking ?? this.traitorPicking,
+      discardPilePicking: discardPilePicking ?? this.discardPilePicking,
+      discardPileSourceCard: clearDiscardPileSourceCard
+          ? null
+          : (discardPileSourceCard ?? this.discardPileSourceCard),
       startingHandDraftStackIndex: clearStartingHandDraftStackIndex
           ? null
           : (startingHandDraftStackIndex ?? this.startingHandDraftStackIndex),
