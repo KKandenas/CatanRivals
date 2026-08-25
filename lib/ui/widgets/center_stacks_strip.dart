@@ -76,12 +76,19 @@ class CenterStacksStrip extends StatelessWidget {
   /// Om det handkort som just nu är valt att slängas (i vilken som
   /// helst av [hasSelectedDiscardCard]/[hasSelectedExchangeCard]s tre
   /// lägen – samma lokala val, se game_board_screen.dart-doc) hör till
-  /// Gulderans egna högar eller grundspelets – styr vilka högar som
-  /// faktiskt går att slänga det i (se [_isGoldStack]/
+  /// det aktiva temasetets egna högar eller grundspelets – styr vilka
+  /// högar som faktiskt går att slänga det i (se [_isThemeStack]/
   /// [GameNotifier._checkStackMatchesCardOrigin]): en grundspelskort
-  /// får bara läggas i en grundspelshög, ett Gulderan-kort bara i en av
-  /// Gulderans. `null` när inget kort är valt.
-  final bool? selectedDiscardCardIsGold;
+  /// får bara läggas i en grundspelshög, ett temakort bara i en av
+  /// temasetets egna. `null` när inget kort är valt.
+  final bool? selectedDiscardCardIsThemeCard;
+
+  /// Vilket tema som är aktivt (se [GameState.activeExpansions]) –
+  /// avgör vilken kortbaksbild [_backAssetFor] visar för temasetets
+  /// EGNA högar (Gulderan/Oroligheternas tid har olika baksidor, se
+  /// [CatanAssets.backEraGold]/[CatanAssets.backEraTurmoil]). Bara ETT
+  /// tema är någonsin aktivt åt gången (se [LobbyScreen]).
+  final Set<ExpansionSet> activeExpansions;
 
   /// Kortbytesfasen (regelhäftet s. 9) – se [TradePhase]. Under
   /// [TradePhase.exchangeDiscard] eller [TradePhase.peekDiscard] går
@@ -125,7 +132,8 @@ class CenterStacksStrip extends StatelessWidget {
     this.onDrawStack,
     this.onDiscardToStack,
     this.hasSelectedDiscardCard = false,
-    this.selectedDiscardCardIsGold,
+    this.selectedDiscardCardIsThemeCard,
+    this.activeExpansions = const {},
     this.tradePhase = TradePhase.none,
     this.onExchangeDiscardToStack,
     this.onExchangeDrawStack,
@@ -187,16 +195,21 @@ class CenterStacksStrip extends StatelessWidget {
     );
   }
 
-  /// Om draghög [index] är en av Gulderans EGNA högar (de sista 2 av 5,
-  /// se [GameState.initialDrawStackSizes]/[GameNotifier._isGoldStackIndex])
-  /// – styr både vilken kortbaksbild som visas ([_backAssetFor]) och
-  /// (tillsammans med [selectedDiscardCardIsGold]) vilka högar som går
-  /// att slänga ett valt handkort i.
-  bool _isGoldStack(int index) =>
+  /// Om draghög [index] är en av det aktiva temasetets EGNA högar (de
+  /// sista 2 av 5, se [GameState.initialDrawStackSizes]/
+  /// [GameNotifier._isThemeStackIndex]) – styr både vilken kortbaksbild
+  /// som visas ([_backAssetFor]) och (tillsammans med
+  /// [selectedDiscardCardIsThemeCard]) vilka högar som går att slänga
+  /// ett valt handkort i.
+  bool _isThemeStack(int index) =>
       initialStackSizes.length == 5 && index >= initialStackSizes.length - 2;
 
-  String _backAssetFor(int index) =>
-      _isGoldStack(index) ? CatanAssets.backEraGold : CatanAssets.backBasicSet;
+  String _backAssetFor(int index) {
+    if (!_isThemeStack(index)) return CatanAssets.backBasicSet;
+    return activeExpansions.contains(ExpansionSet.eraOfTurmoil)
+        ? CatanAssets.backEraTurmoil
+        : CatanAssets.backEraGold;
+  }
 
   Widget _drawStackPile(int index) {
     final count = stackCounts['draw${index + 1}'] ?? 0;
@@ -222,7 +235,7 @@ class CenterStacksStrip extends StatelessWidget {
       // matchande högen highlightas/går att trycka på, i stället för
       // att gå att trycka och sedan mötas av ett felmeddelande.
       final tappable = hasSelectedDiscardCard &&
-          selectedDiscardCardIsGold == _isGoldStack(index);
+          selectedDiscardCardIsThemeCard == _isThemeStack(index);
       return _StackPile(
         asset: asset,
         count: count,
@@ -235,7 +248,7 @@ class CenterStacksStrip extends StatelessWidget {
     if (tradePhase == TradePhase.exchangeDiscard ||
         tradePhase == TradePhase.peekDiscard) {
       final tappable = hasSelectedExchangeCard &&
-          selectedDiscardCardIsGold == _isGoldStack(index);
+          selectedDiscardCardIsThemeCard == _isThemeStack(index);
       return _StackPile(
         asset: asset,
         count: count,
@@ -270,16 +283,18 @@ class CenterStacksStrip extends StatelessWidget {
       );
     }
 
-    // Gulderans egna högar hör aldrig till starthanden (se
+    // Temasetets egna högar hör aldrig till starthanden (se
     // GameNotifier.startHandDraft-doc) – bara grundspelets 3 (eller,
     // utan tema, alla 4) går att välja.
-    final tappable =
-        isChoosingHand && isMyTurnToChooseHand && !claimed && !_isGoldStack(index);
+    final tappable = isChoosingHand &&
+        isMyTurnToChooseHand &&
+        !claimed &&
+        !_isThemeStack(index);
     return _StackPile(
       asset: asset,
       count: count,
       width: 48,
-      dimmed: isChoosingHand && (claimed || _isGoldStack(index)),
+      dimmed: isChoosingHand && (claimed || _isThemeStack(index)),
       highlighted: tappable,
       peeking: peeking,
       onTap: tappable ? () => onChooseStack?.call(index) : null,

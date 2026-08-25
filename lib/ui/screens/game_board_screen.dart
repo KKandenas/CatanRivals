@@ -801,6 +801,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
               CenterStacksStrip(
                 stackCounts: state.centerStacks,
                 initialStackSizes: state.initialDrawStackSizes,
+                activeExpansions: state.activeExpansions,
                 onDragStarted: notifier.startDrag,
                 onDragEnd: notifier.endDrag,
                 canBuild: canBuildRightNow,
@@ -820,8 +821,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 hasSelectedDiscardCard: state.handAdjustmentPhase ==
                         HandAdjustmentPhase.discarding &&
                     _selectedDiscardCard != null,
-                selectedDiscardCardIsGold:
-                    _selectedDiscardCard?.id.contains('-gold-draw-'),
+                selectedDiscardCardIsThemeCard: _selectedDiscardCard == null
+                    ? null
+                    : (_selectedDiscardCard!.id.contains('-gold-draw-') ||
+                        _selectedDiscardCard!.id.contains('-turmoil-draw-')),
                 onDiscardToStack: (index) {
                   final card = _selectedDiscardCard;
                   if (card == null) return;

@@ -17,11 +17,6 @@ class CatanAssets {
   static const String lobbyBackground = '$_ui/lobby_background.webp';
   static const String boardBackground = '$_ui/board_background.webp';
 
-  /// Omslagsbild för temavalet i lobbyn (se [LobbyScreen]) – Gulderan
-  /// har ingen motsvarande egen bild ännu, den rutan visar bara en
-  /// guldfärgad platta i stället.
-  static const String eraTurmoilCover = '$_ui/era_turmoil_cover.jpg';
-
   /// Händelsetärningens sex sidor (se [EventDieFace]) – de fem
   /// symbolerna från regelhäftets referenskort.
   static const String eventDieBrigandAttack =
@@ -44,6 +39,11 @@ class CatanAssets {
   static const String backCities = '$_backs/cities.webp';
   static const String backRegions = '$_backs/regions.webp';
   static const String backEvent = '$_backs/event.webp';
+
+  /// Draghögarnas kortbaksidor, EN källa till sanning som används både
+  /// i själva spelet (se [CenterStacksStrip]) och som omslagsbild för
+  /// temavalet i lobbyn (se [LobbyScreen]) – exakt samma bild på båda
+  /// ställena, så att lobbyns val syns igen i den faktiska draghögen.
   static const String backBasicSet = '$_backs/basic_set.webp';
   static const String backEraGold = '$_backs/era_gold.webp';
   static const String backEraTurmoil = '$_backs/era_turmoil.webp';

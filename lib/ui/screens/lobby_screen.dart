@@ -166,58 +166,41 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     );
   }
 
-  /// En tryckbar temaruta i temavals-raden (se [_selectedTheme]) –
-  /// antingen med en bakgrundsbild ([backgroundImage], t.ex.
-  /// Oroligheternas tids omslag) eller en enfärgad platta
-  /// ([accentColor], t.ex. Gulderans guldfärg) om ingen bild finns än.
-  /// Den valda rutan får en tjockare träfärgad ram, samma träfärg som
-  /// resten av lobbyns ram (se [CatanColors.woodFrame]).
+  /// En tryckbar temaruta i temavals-raden (se [_selectedTheme]) – visar
+  /// samma kortbaksbild som draghögarna faktiskt använder i spelet (se
+  /// [CatanAssets.backBasicSet]/[backEraGold]/[backEraTurmoil]/
+  /// [CenterStacksStrip]), ingen egen text ovanpå eftersom bilderna
+  /// redan har temanamnet inbakat. Den valda rutan får en tjockare
+  /// träfärgad ram (samma träfärg som resten av lobbyns ram, se
+  /// [CatanColors.woodFrame]) och full ljusstyrka; de andra dämpas lite
+  /// för att tydligt sticka ut mot den valda.
   Widget _themeOption({
-    required String label,
     required ExpansionSet? value,
-    Color? accentColor,
-    String? backgroundImage,
+    required String backgroundImage,
+    required Key optionKey,
   }) {
     final selected = _selectedTheme == value;
-    final hasDarkBackground = accentColor != null || backgroundImage != null;
     return Expanded(
       child: GestureDetector(
+        key: optionKey,
         onTap:
             _busy ? null : () => setState(() => _selectedTheme = value),
         child: Container(
-          height: 88,
+          height: 96,
           margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-            color: backgroundImage == null
-                ? (accentColor ?? CatanColors.parchmentDark)
-                : null,
-            image: backgroundImage == null
-                ? null
-                : DecorationImage(
-                    image: AssetImage(backgroundImage),
-                    fit: BoxFit.cover,
-                    colorFilter: ColorFilter.mode(
-                        Colors.black.withValues(alpha: selected ? 0.15 : 0.5),
-                        BlendMode.darken),
-                  ),
+            image: DecorationImage(
+              image: AssetImage(backgroundImage),
+              fit: BoxFit.cover,
+              colorFilter: selected
+                  ? null
+                  : ColorFilter.mode(
+                      Colors.black.withValues(alpha: 0.35), BlendMode.darken),
+            ),
             border: Border.all(
               color: selected ? CatanColors.woodFrame : Colors.black26,
               width: selected ? 3 : 1,
-            ),
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: hasDarkBackground ? Colors.white : CatanColors.ink,
-              fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-              fontSize: 13,
-              shadows: hasDarkBackground
-                  ? const [Shadow(color: Colors.black87, blurRadius: 4)]
-                  : null,
             ),
           ),
         ),
@@ -290,17 +273,21 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            _themeOption(label: 'Inget tema', value: null),
                             _themeOption(
-                              label: 'Gulderan',
-                              value: ExpansionSet.eraOfGold,
-                              accentColor:
-                                  CatanColors.resource[ResourceType.gold],
+                              optionKey: const ValueKey('theme-option-none'),
+                              value: null,
+                              backgroundImage: CatanAssets.backBasicSet,
                             ),
                             _themeOption(
-                              label: 'Oroligheternas tid',
+                              optionKey: const ValueKey('theme-option-gold'),
+                              value: ExpansionSet.eraOfGold,
+                              backgroundImage: CatanAssets.backEraGold,
+                            ),
+                            _themeOption(
+                              optionKey:
+                                  const ValueKey('theme-option-turmoil'),
                               value: ExpansionSet.eraOfTurmoil,
-                              backgroundImage: CatanAssets.eraTurmoilCover,
+                              backgroundImage: CatanAssets.backEraTurmoil,
                             ),
                           ],
                         ),

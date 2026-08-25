@@ -33,7 +33,7 @@ void main() {
     expect(find.text('Spela lokalt (utan synk)'), findsOneWidget);
   });
 
-  testWidgets('temarutan "Gulderan" skickas med till playLocally',
+  testWidgets('temarutan för Gulderan skickas med till playLocally',
       (tester) async {
     tester.view.physicalSize = const Size(1200, 2000);
     tester.view.devicePixelRatio = 1.0;
@@ -44,7 +44,7 @@ void main() {
     final container =
         ProviderScope.containerOf(tester.element(find.byType(LobbyScreen)));
 
-    await tester.tap(find.text('Gulderan'));
+    await tester.tap(find.byKey(const ValueKey('theme-option-gold')));
     await tester.pump();
     await tester.tap(find.text('Spela lokalt (utan synk)'));
     await tester.pumpAndSettle();
@@ -54,7 +54,7 @@ void main() {
     expect(container.read(gameProvider).victoryPointTarget, 12);
   });
 
-  testWidgets('temarutan "Oroligheternas tid" skickas med till playLocally',
+  testWidgets('temarutan för Oroligheternas tid skickas med till playLocally',
       (tester) async {
     tester.view.physicalSize = const Size(1200, 2000);
     tester.view.devicePixelRatio = 1.0;
@@ -65,7 +65,7 @@ void main() {
     final container =
         ProviderScope.containerOf(tester.element(find.byType(LobbyScreen)));
 
-    await tester.tap(find.text('Oroligheternas tid'));
+    await tester.tap(find.byKey(const ValueKey('theme-option-turmoil')));
     await tester.pump();
     await tester.tap(find.text('Spela lokalt (utan synk)'));
     await tester.pumpAndSettle();
@@ -87,9 +87,9 @@ void main() {
     final container =
         ProviderScope.containerOf(tester.element(find.byType(LobbyScreen)));
 
-    await tester.tap(find.text('Gulderan'));
+    await tester.tap(find.byKey(const ValueKey('theme-option-gold')));
     await tester.pump();
-    await tester.tap(find.text('Oroligheternas tid'));
+    await tester.tap(find.byKey(const ValueKey('theme-option-turmoil')));
     await tester.pump();
     await tester.tap(find.text('Spela lokalt (utan synk)'));
     await tester.pumpAndSettle();

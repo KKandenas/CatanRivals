@@ -25,7 +25,7 @@ void main() {
 
   Widget buildStrip({
     required bool hasSelectedDiscardCard,
-    required bool? selectedDiscardCardIsGold,
+    required bool? selectedDiscardCardIsThemeCard,
     required void Function(int) onDiscardToStack,
   }) {
     return MaterialApp(
@@ -35,7 +35,7 @@ void main() {
           initialStackSizes: const [5, 6, 7, 8, 9],
           handAdjustmentPhase: HandAdjustmentPhase.discarding,
           hasSelectedDiscardCard: hasSelectedDiscardCard,
-          selectedDiscardCardIsGold: selectedDiscardCardIsGold,
+          selectedDiscardCardIsThemeCard: selectedDiscardCardIsThemeCard,
           onDiscardToStack: onDiscardToStack,
         ),
       ),
@@ -54,7 +54,7 @@ void main() {
     final tapped = <int>[];
     await tester.pumpWidget(buildStrip(
       hasSelectedDiscardCard: true,
-      selectedDiscardCardIsGold: false,
+      selectedDiscardCardIsThemeCard: false,
       onDiscardToStack: tapped.add,
     ));
 
@@ -74,7 +74,7 @@ void main() {
     final tapped = <int>[];
     await tester.pumpWidget(buildStrip(
       hasSelectedDiscardCard: true,
-      selectedDiscardCardIsGold: true,
+      selectedDiscardCardIsThemeCard: true,
       onDiscardToStack: tapped.add,
     ));
 
@@ -91,7 +91,7 @@ void main() {
   testWidgets('inget kort valt: ingen hög går att trycka på', (tester) async {
     await tester.pumpWidget(buildStrip(
       hasSelectedDiscardCard: false,
-      selectedDiscardCardIsGold: null,
+      selectedDiscardCardIsThemeCard: null,
       onDiscardToStack: (_) {},
     ));
 
