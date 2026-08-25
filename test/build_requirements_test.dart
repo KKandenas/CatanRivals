@@ -135,6 +135,96 @@ void main() {
     expect(reason, isNull);
   });
 
+  test('Kanonmästare utan Universitet avvisas', () {
+    final board = RealmBoard(ownerId: 'you');
+    board.placeSettlement(0, const PlacedCard(card: BasicSetCards.settlement));
+
+    final reason = buildRequirementBlockedReason(
+        EraOfProgressCards.chiefCannoneer, board, 0, BuildingRow.above);
+
+    expect(reason, 'Kanonmästare kräver Universitet i ditt rike.');
+  });
+
+  test('Kanonmästare med Universitet utplacerat godkänns', () {
+    final board = RealmBoard(ownerId: 'you');
+    board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+    board.placeExpansion(0, BuildingRow.above, 0,
+        const PlacedCard(card: EraOfProgressCards.university));
+
+    final reason = buildRequirementBlockedReason(
+        EraOfProgressCards.chiefCannoneer, board, 0, BuildingRow.below);
+
+    expect(reason, isNull);
+  });
+
+  test('Byggkran utan Universitet avvisas', () {
+    final board = RealmBoard(ownerId: 'you');
+    board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+
+    final reason = buildRequirementBlockedReason(
+        EraOfProgressCards.buildingCrane, board, 0, BuildingRow.above);
+
+    expect(reason, 'Byggkran kräver Universitet i ditt rike.');
+  });
+
+  test('Parlament kräver minst 2 framstegspoäng: avvisas utan det', () {
+    final board = RealmBoard(ownerId: 'you');
+    board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+    board.placeExpansion(
+        0,
+        BuildingRow.above,
+        0,
+        PlacedCard(card: BasicSetCards.storehouse.copyWith(progressPoints: 1)));
+
+    final reason = buildRequirementBlockedReason(
+        EraOfProgressCards.parliament, board, 0, BuildingRow.below);
+
+    expect(reason, 'Parlament kräver minst 2 framstegspoäng i ditt rike.');
+  });
+
+  test('Parlament med 2 framstegspoäng godkänns', () {
+    final board = RealmBoard(ownerId: 'you');
+    board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+    board.placeSettlement(2, const PlacedCard(card: BasicSetCards.city));
+    board.placeExpansion(
+        0,
+        BuildingRow.above,
+        0,
+        PlacedCard(card: BasicSetCards.storehouse.copyWith(progressPoints: 1)));
+    board.placeExpansion(
+        2,
+        BuildingRow.above,
+        0,
+        PlacedCard(card: BasicSetCards.abbey.copyWith(progressPoints: 1)));
+
+    final reason = buildRequirementBlockedReason(
+        EraOfProgressCards.parliament, board, 0, BuildingRow.below);
+
+    expect(reason, isNull);
+  });
+
+  test('Rådhus utan Församlingshus avvisas', () {
+    final board = RealmBoard(ownerId: 'you');
+    board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+
+    final reason = buildRequirementBlockedReason(
+        EraOfProgressCards.townHall, board, 0, BuildingRow.above);
+
+    expect(reason, 'Rådhus kräver Församlingshus i ditt rike.');
+  });
+
+  test('Rådhus med Församlingshus utplacerat godkänns', () {
+    final board = RealmBoard(ownerId: 'you');
+    board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+    board.placeExpansion(0, BuildingRow.above, 0,
+        const PlacedCard(card: BasicSetCards.parishHall));
+
+    final reason = buildRequirementBlockedReason(
+        EraOfProgressCards.townHall, board, 0, BuildingRow.above);
+
+    expect(reason, isNull);
+  });
+
   test('vanliga byggkort utan särskilt krav godkänns alltid', () {
     final board = RealmBoard(ownerId: 'you');
     board.placeSettlement(0, const PlacedCard(card: BasicSetCards.settlement));

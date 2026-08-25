@@ -44,5 +44,21 @@ String? buildRequirementBlockedReason(
       return 'Universitet kräver Kloster eller Bibliotek i ditt rike.';
     }
   }
+  if (card.baseId == EraOfProgressCards.chiefCannoneer.id ||
+      card.baseId == EraOfProgressCards.buildingCrane.id) {
+    if (!board.hasExpansionCard(EraOfProgressCards.university.id)) {
+      return '${card.name} kräver Universitet i ditt rike.';
+    }
+  }
+  if (card.baseId == EraOfProgressCards.parliament.id) {
+    if (board.totalProgressPoints < 2) {
+      return 'Parlament kräver minst 2 framstegspoäng i ditt rike.';
+    }
+  }
+  if (card.baseId == EraOfProgressCards.townHall.id) {
+    if (!board.hasExpansionCard(BasicSetCards.parishHall.id)) {
+      return 'Rådhus kräver Församlingshus i ditt rike.';
+    }
+  }
   return null;
 }

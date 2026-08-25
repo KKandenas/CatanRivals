@@ -25,6 +25,12 @@ class TurnActionPill extends StatelessWidget {
   final int handLimit;
   final VoidCallback? onEndTurn;
 
+  /// Bibliotek (se [GameState.libraryDrawPending]): döljer "Avsluta
+  /// action-fas" och visar en etikett i stället, precis som
+  /// [handAdjustmentPhase] – draghögarna är tryckbara i
+  /// [CenterStacksStrip] under tiden.
+  final bool libraryDrawPending;
+
   /// Vilken draghög (0–3) MOTSTÅNDAREN just nu kikar i (se
   /// [GameState.peekingStackIndex]) – bara meningsfullt att visa på
   /// din egen tur (annars ser den kikande spelaren redan hela högen i
@@ -44,18 +50,23 @@ class TurnActionPill extends StatelessWidget {
     this.handLimit = 3,
     this.onEndTurn,
     this.peekingStackIndex,
+    this.libraryDrawPending = false,
   });
 
   @override
   Widget build(BuildContext context) {
     if (isYourTurn && diceRolled && !isChoosingHand) {
       if (handAdjustmentPhase == HandAdjustmentPhase.none &&
-          tradePhase == TradePhase.none) {
+          tradePhase == TradePhase.none &&
+          !libraryDrawPending) {
         return _EndTurnButton(onTap: onEndTurn);
       }
       if (handAdjustmentPhase != HandAdjustmentPhase.none) {
         return _HandAdjustmentLabel(
             phase: handAdjustmentPhase, count: handCount, limit: handLimit);
+      }
+      if (libraryDrawPending) {
+        return const _SimplePillLabel(label: 'Dra ett bibliotekskort');
       }
       return const SizedBox.shrink();
     }
@@ -89,6 +100,35 @@ class _EndTurnButton extends StatelessWidget {
           style: TextStyle(
               color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
         ),
+      ),
+    );
+  }
+}
+
+/// Enkel grön etikett utan räknare – används i stället för
+/// "Avsluta action-fas" när något annat kräver spelarens
+/// uppmärksamhet just nu men inte behöver visa en räknare som
+/// [_HandAdjustmentLabel] (t.ex. Bibliotekets kortdragning).
+class _SimplePillLabel extends StatelessWidget {
+  final String label;
+
+  const _SimplePillLabel({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFF7CBF6A),
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: const [
+          BoxShadow(color: Colors.black38, blurRadius: 4, offset: Offset(0, 2)),
+        ],
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+            color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }

@@ -275,6 +275,18 @@ class GameState {
   final bool discardPilePicking;
   final GameCard? discardPileSourceCard;
 
+  /// Bibliotek (Utvecklingens tid): "När du bygger Biblioteket får du
+  /// omedelbart välja ett kort från en draghög" – till skillnad från
+  /// [discardPilePicking] ovan rör det här en riktig draghög (samma
+  /// resurs som handjusteringen/kortbytesfasens gratisbyte redan
+  /// använder, se [GameNotifier.drawLibraryCard]), så draghögarna görs
+  /// tryckbara i [CenterStacksStrip] precis som under de lägena i
+  /// stället för att öppna en egen väljar-overlay. Rent lokalt
+  /// UI-state, aldrig synkat – motståndaren behöver aldrig veta att man
+  /// står och väljer, bara se antalet i högen ändras när kortet väl är
+  /// draget.
+  final bool libraryDrawPending;
+
   /// Starthandsutdelningen (regelhäftet s. 6) när ett tema är aktivt (se
   /// [GameNotifier.startHandDraft]/[GameNotifier.pickHandDraftCard]):
   /// spelaren väljer en av de tre grundspelshögarna, ser ALLA dess kort
@@ -352,6 +364,7 @@ class GameState {
     this.traitorPicking = false,
     this.discardPilePicking = false,
     this.discardPileSourceCard,
+    this.libraryDrawPending = false,
     this.startingHandDraftStackIndex,
     this.startingHandDraftPool,
     this.startingHandDraftPicked = const [],
@@ -389,7 +402,8 @@ class GameState {
       !awaitingScoutDecision &&
       !relocationActive &&
       handAdjustmentPhase == HandAdjustmentPhase.none &&
-      tradePhase == TradePhase.none;
+      tradePhase == TradePhase.none &&
+      !libraryDrawPending;
 
   /// Spelar-id:t för den som just nu har flest styrkepoäng (styrke-
   /// övertaget, regelhäftets krav på flera handlings-/händelsekort som
@@ -540,6 +554,7 @@ class GameState {
     bool? discardPilePicking,
     GameCard? discardPileSourceCard,
     bool clearDiscardPileSourceCard = false,
+    bool? libraryDrawPending,
     int? startingHandDraftStackIndex,
     bool clearStartingHandDraftStackIndex = false,
     List<GameCard>? startingHandDraftPool,
@@ -636,6 +651,7 @@ class GameState {
       discardPileSourceCard: clearDiscardPileSourceCard
           ? null
           : (discardPileSourceCard ?? this.discardPileSourceCard),
+      libraryDrawPending: libraryDrawPending ?? this.libraryDrawPending,
       startingHandDraftStackIndex: clearStartingHandDraftStackIndex
           ? null
           : (startingHandDraftStackIndex ?? this.startingHandDraftStackIndex),

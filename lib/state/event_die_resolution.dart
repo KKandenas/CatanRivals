@@ -1,5 +1,6 @@
 import '../data/basic_set_cards.dart';
 import '../data/era_of_gold_cards.dart';
+import '../data/era_of_progress_cards.dart';
 import '../models/models.dart';
 import 'game_state.dart';
 
@@ -178,9 +179,33 @@ String? resolveEventCard(GameCard card, GameState state) {
       return _resolveYearOfPlenty(state);
     case 'event-gift-for-the-prince':
       return _resolveGiftForThePrince(state);
+    case 'event-plague':
+      return _resolvePlague(state);
     default:
       return null;
   }
+}
+
+/// Pest (Utvecklingens tid): "Varje region som gränsar till en stad
+/// förlorar 1 resurs" – ren text, precis som övriga händelsekort ovan
+/// (appen flyttar inga resurser). Nämner Badhus (skyddar sin egen stads
+/// 4 grannregioner helt från förlusten) och Apotek (ger 1 valfri resurs
+/// ändå, oavsett om spelaren förlorat något eller inte) bara för den
+/// spelare som faktiskt har kortet.
+String? _resolvePlague(GameState state) {
+  final lines = <String>[];
+  for (final player in [state.you, state.opponent]) {
+    final board = player.principality;
+    if (board.hasExpansionCard(EraOfProgressCards.bathHouse.id)) {
+      lines.add(
+          '${player.name}s Badhus skyddar sin stads 4 grannregioner mot Pesten.');
+    }
+    if (board.hasExpansionCard(EraOfProgressCards.pharmacy.id)) {
+      lines.add('${player.name} har Apotek och får 1 valfri resurs ändå.');
+    }
+  }
+  if (lines.isEmpty) return null;
+  return lines.join('\n');
 }
 
 /// Uppfinning: "Varje spelare får 1 valfri resurs för varje byggnad med

@@ -1,4 +1,5 @@
 import 'package:catan_rivals/data/basic_set_cards.dart';
+import 'package:catan_rivals/data/era_of_progress_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/state/game_notifier.dart';
 import 'package:catan_rivals/state/game_state.dart';
@@ -15,7 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// obekräftad regeltext på kortet.
 void main() {
   Future<ProviderContainer> setup(WidgetTester tester,
-      {bool withParishHall = false}) async {
+      {bool withParishHall = false, bool withTownHall = false}) async {
     tester.view.physicalSize = const Size(1200, 2600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -43,6 +44,15 @@ void main() {
           PlacedCard(
               card: BasicSetCards.parishHall
                   .copyWith(id: 'building-parish-hall-draw-0')));
+    }
+    if (withTownHall) {
+      container.read(gameProvider).you.principality.upgradeToCity(
+          0, const PlacedCard(card: BasicSetCards.city));
+      container.read(gameProvider).you.principality.placeExpansion(
+          0,
+          BuildingRow.above,
+          0,
+          const PlacedCard(card: EraOfProgressCards.townHall));
     }
 
     await tester.pumpAndSettle();
@@ -80,5 +90,23 @@ void main() {
         find.text(
             'Betala 1 valfri resurs genom att trycka − på valfria regioner.'),
         findsOneWidget);
+  });
+
+  testWidgets(
+      'med Rådhus i riket kostar det inget att kika, och betalningssteget hoppas över helt',
+      (tester) async {
+    final container = await setup(tester, withTownHall: true);
+
+    expect(find.text('Kika (gratis)'), findsOneWidget);
+    expect(find.text('Kika (2 resurser)'), findsNothing);
+
+    await tester.tap(find.text('Kika (gratis)'));
+    await tester.pumpAndSettle();
+
+    // Rådhus: "I slutet av din tur betalar du inte längre för att välja
+    // ett kort" – peekPaying-fasen (med Betala-texten/Betalt-knappen)
+    // ska aldrig visas alls, rakt till peekDiscard.
+    expect(container.read(gameProvider).tradePhase, TradePhase.peekDiscard);
+    expect(find.textContaining('Betala'), findsNothing);
   });
 }

@@ -104,6 +104,14 @@ class CenterStacksStrip extends StatelessWidget {
   final void Function(int stackIndex)? onPeekStack;
   final bool hasSelectedExchangeCard;
 
+  /// Bibliotek (Utvecklingens tid, se [GameState.libraryDrawPending]):
+  /// draghögarna görs tryckbara för att dra ett kort, precis som under
+  /// [HandAdjustmentPhase.drawing]/[TradePhase.exchangeDraw] – samma
+  /// mönster, egen flagga eftersom det kan hända mitt i den vanliga
+  /// bygg-/action-fasen (inte bara i handjusteringen/kortbytesfasen).
+  final bool libraryDrawPending;
+  final void Function(int stackIndex)? onLibraryDrawStack;
+
   /// Händelsekortsstapeln (se [EventDieFace.eventCard]) går att trycka
   /// på för att dra det översta kortet ([onDrawEventCard]) bara när
   /// tärningen just visade "?" och inget redan är draget den här
@@ -139,6 +147,8 @@ class CenterStacksStrip extends StatelessWidget {
     this.onExchangeDrawStack,
     this.onPeekStack,
     this.hasSelectedExchangeCard = false,
+    this.libraryDrawPending = false,
+    this.onLibraryDrawStack,
     this.canDrawEventCard = false,
     this.onDrawEventCard,
     this.peekingStackIndex,
@@ -260,6 +270,18 @@ class CenterStacksStrip extends StatelessWidget {
         highlighted: tappable,
         peeking: peeking,
         onTap: tappable ? () => onExchangeDiscardToStack?.call(index) : null,
+      );
+    }
+    if (libraryDrawPending) {
+      final tappable = count > 0;
+      return _StackPile(
+        asset: asset,
+        count: count,
+        width: 48,
+        dimmed: !tappable,
+        highlighted: tappable,
+        peeking: peeking,
+        onTap: tappable ? () => onLibraryDrawStack?.call(index) : null,
       );
     }
     if (tradePhase == TradePhase.exchangeDraw) {

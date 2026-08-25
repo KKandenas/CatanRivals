@@ -2557,13 +2557,20 @@ class GameNotifier extends Notifier<GameState> {
   }
 
   /// Startar köpet av att få kika i en hel draghög (regelhäftet s. 9):
-  /// 2 valfria resurser. Precis som byggkostnader håller appen inte
-  /// koll på om spelaren har råd – kostnaden visas bara i
+  /// 2 valfria resurser (1 med Församlingshus, se [TradePhaseCard.peekCost]
+  /// i game_board_screen.dart). Precis som byggkostnader håller appen
+  /// inte koll på om spelaren har råd – kostnaden visas bara i
   /// bekräftelserutan, och spelaren betalar själv genom att trycka −
   /// på valfria regioner innan hen bekräftar (se [confirmPeekPayment]).
+  /// Med Rådhus (Utvecklingens tid: "I slutet av din tur betalar du
+  /// inte längre för att välja ett kort") kostar det ingenting alls –
+  /// betalningssteget hoppas då över helt, rakt till [TradePhase.peekDiscard].
   String? startPeek() {
     if (state.tradePhase != TradePhase.choosing) return null;
-    state = state.copyWith(tradePhase: TradePhase.peekPaying);
+    final free =
+        state.you.principality.hasExpansionCard(EraOfProgressCards.townHall.id);
+    state = state.copyWith(
+        tradePhase: free ? TradePhase.peekDiscard : TradePhase.peekPaying);
     return null;
   }
 
@@ -2848,6 +2855,9 @@ class GameNotifier extends Notifier<GameState> {
         state.discardPilePicking) {
       return 'Avsluta händelsekortet innan du bygger vidare.';
     }
+    if (state.libraryDrawPending) {
+      return 'Dra ett kort från Biblioteket innan du bygger vidare.';
+    }
     if (state.pendingRegions.isNotEmpty) {
       return 'Välj plats för de nya regionkorten innan du bygger vidare.';
     }
@@ -2939,6 +2949,34 @@ class GameNotifier extends Notifier<GameState> {
         you: state.you.copyWith(hand: List.of(state.you.hand)..remove(card)));
     _placeExpansionCardAndSync(column, row, slotIndex, card);
     _maybeTriggerPirateShip(card);
+    _maybeTriggerLibraryDraw(card);
+    return null;
+  }
+
+  /// När [card] är Biblioteket och bygget lyckats: "Du får omedelbart
+  /// välja ett kort från en draghög" – till skillnad från övriga
+  /// byggeffekter (som bara är självbevakade textpåminnelser, se
+  /// [_maybeTriggerPirateShip]s grannar i UI:t) rör det här riktig
+  /// korthantering appen redan kan göra åt spelaren (precis som
+  /// handjustering/kortbytesfasens gratisbyte), så det blir en riktig
+  /// väntande-flagga i stället för bara text – se
+  /// [GameState.libraryDrawPending]/[drawLibraryCard].
+  void _maybeTriggerLibraryDraw(GameCard card) {
+    if (card.baseId != EraOfProgressCards.library.id) return;
+    state = state.copyWith(libraryDrawPending: true);
+  }
+
+  /// Drar det översta kortet från draghög [stackIndex] åt spelaren som
+  /// just byggde Biblioteket (se [_maybeTriggerLibraryDraw]) – samma
+  /// underliggande logik som [exchangeDraw]/[drawHandCard], bara vem
+  /// som får anropa den och vad som händer efteråt skiljer (här: bygg-
+  /// fasen fortsätter som vanligt, ingen turövergång).
+  String? drawLibraryCard(int stackIndex) {
+    if (!state.libraryDrawPending) return null;
+    final card = _drawCardFromStack(stackIndex);
+    if (card == null) return 'Den högen är tom.';
+
+    state = state.copyWith(libraryDrawPending: false);
     return null;
   }
 

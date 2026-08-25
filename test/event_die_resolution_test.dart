@@ -1,5 +1,6 @@
 import 'package:catan_rivals/data/basic_set_cards.dart';
 import 'package:catan_rivals/data/era_of_gold_cards.dart';
+import 'package:catan_rivals/data/era_of_progress_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/state/event_die_resolution.dart';
 import 'package:catan_rivals/state/game_state.dart';
@@ -705,6 +706,82 @@ void main() {
           resolveEventCard(EraOfGoldCards.giftForThePrince, state),
           'Astrid har 1 enhet med styrkepoäng och får 1 guld.\n'
           'Björn har 2 enheter med styrkepoäng och får 2 guld.');
+    });
+  });
+
+  group('resolveEventCard: Pest', () {
+    test('ingen spelare har Badhus eller Apotek: ingen text', () {
+      final state = GameState(
+        you: buildPlayer('you', 'Astrid'),
+        opponent: buildPlayer('opponent', 'Björn'),
+        centerStacks: const {},
+      );
+
+      expect(resolveEventCard(EraOfProgressCards.plague, state), isNull);
+    });
+
+    test('du har Badhus: nämner att din stads grannregioner skyddas', () {
+      final board = RealmBoard(ownerId: 'you');
+      board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+      board.placeExpansion(0, BuildingRow.above, 0,
+          const PlacedCard(card: EraOfProgressCards.bathHouse));
+      final state = GameState(
+        you: Player(id: 'you', name: 'Astrid', principality: board),
+        opponent: buildPlayer('opponent', 'Björn'),
+        centerStacks: const {},
+      );
+
+      expect(resolveEventCard(EraOfProgressCards.plague, state),
+          'Astrids Badhus skyddar sin stads 4 grannregioner mot Pesten.');
+    });
+
+    test('du har Apotek: nämner den fria resursen', () {
+      final board = RealmBoard(ownerId: 'you');
+      board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+      board.placeExpansion(0, BuildingRow.above, 0,
+          const PlacedCard(card: EraOfProgressCards.pharmacy));
+      final state = GameState(
+        you: Player(id: 'you', name: 'Astrid', principality: board),
+        opponent: buildPlayer('opponent', 'Björn'),
+        centerStacks: const {},
+      );
+
+      expect(resolveEventCard(EraOfProgressCards.plague, state),
+          'Astrid har Apotek och får 1 valfri resurs ändå.');
+    });
+
+    test('du har både Badhus och Apotek: båda raderna visas', () {
+      final board = RealmBoard(ownerId: 'you');
+      board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+      board.placeExpansion(0, BuildingRow.above, 0,
+          const PlacedCard(card: EraOfProgressCards.bathHouse));
+      board.placeExpansion(0, BuildingRow.below, 0,
+          const PlacedCard(card: EraOfProgressCards.pharmacy));
+      final state = GameState(
+        you: Player(id: 'you', name: 'Astrid', principality: board),
+        opponent: buildPlayer('opponent', 'Björn'),
+        centerStacks: const {},
+      );
+
+      expect(
+          resolveEventCard(EraOfProgressCards.plague, state),
+          'Astrids Badhus skyddar sin stads 4 grannregioner mot Pesten.\n'
+          'Astrid har Apotek och får 1 valfri resurs ändå.');
+    });
+
+    test('motståndaren har Apotek: bara motståndarens rad visas', () {
+      final oppBoard = RealmBoard(ownerId: 'opponent');
+      oppBoard.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+      oppBoard.placeExpansion(0, BuildingRow.above, 0,
+          const PlacedCard(card: EraOfProgressCards.pharmacy));
+      final state = GameState(
+        you: buildPlayer('you', 'Astrid'),
+        opponent: Player(id: 'opponent', name: 'Björn', principality: oppBoard),
+        centerStacks: const {},
+      );
+
+      expect(resolveEventCard(EraOfProgressCards.plague, state),
+          'Björn har Apotek och får 1 valfri resurs ändå.');
     });
   });
 }

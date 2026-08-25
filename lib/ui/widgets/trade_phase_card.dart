@@ -15,8 +15,9 @@ import '../theme/catan_colors.dart';
 /// - [TradePhase.exchangeDiscard]/[exchangeDraw]: en instruktionsrad –
 ///   själva högarna (tryckbara) sitter i [CenterStacksStrip].
 /// - [TradePhase.peekPaying]: kostnaden (2 valfria resurser – 1 om
-///   spelaren har byggt Församlingshus, se [peekCost] – självbevakat
-///   precis som byggkostnader) + Betalt/Avbryt.
+///   spelaren har byggt Församlingshus, 0 (och fasen hoppas över helt,
+///   se [GameNotifier.startPeek]) med Rådhus, se [peekCost] –
+///   självbevakat precis som byggkostnader) + Betalt/Avbryt.
 /// - [TradePhase.peekDiscard]: en instruktionsrad – man slänger ett
 ///   kort innan man kikar, precis som det gratis bytet (annars skulle
 ///   handen bara växa).
@@ -63,7 +64,10 @@ class TradePhaseCard extends StatelessWidget {
             _ActionButton(label: 'Behåll handen', onTap: onSkip),
             _ActionButton(label: 'Byt ett kort', onTap: onStartExchange),
             _ActionButton(
-                label: 'Kika ($peekCost $resourceWord)', onTap: onStartPeek),
+                label: peekCost == 0
+                    ? 'Kika (gratis)'
+                    : 'Kika ($peekCost $resourceWord)',
+                onTap: onStartPeek),
           ],
         );
       case TradePhase.exchangeDiscard:

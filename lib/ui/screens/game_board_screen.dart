@@ -353,6 +353,29 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
           );
         },
       );
+      return;
+    }
+    // Byggkran: "Varje stadsutbyggnad du bygger som kostar mer än 4
+    // resurser kostar 1 resurs mindre." – ren påminnelsetext precis som
+    // övriga byggeffekter ovan (appen drar aldrig av kostnaden
+    // automatiskt); gäller ALLA stadsutbyggnader, inte bara
+    // Utvecklingens tids egna.
+    if (builtCard != null &&
+        builtCard.category == CardCategory.cityExpansion &&
+        builtCard.buildingCost.values.fold(0, (a, b) => a + b) > 4 &&
+        ref
+            .read(gameProvider)
+            .you
+            .principality
+            .hasExpansionCard(EraOfProgressCards.buildingCrane.id)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Du har Byggkran: betala 1 resurs mindre för stadsutbyggnaden.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
     }
   }
 
@@ -432,6 +455,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
       if (state.handAdjustmentPhase == HandAdjustmentPhase.discarding) {
         return 'släng kort';
       }
+      if (state.libraryDrawPending) return 'dra bibliotekskort';
       if (state.tradePhase != TradePhase.none) return 'byt kort';
       if (_dismissedDiceRollKey != diceRollKey) return 'fyll på resurser';
       return 'utför actions';
@@ -577,6 +601,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                                     peekingStackIndex: state.isMyTurn
                                         ? null
                                         : state.peekingStackIndex,
+                                    libraryDrawPending:
+                                        state.libraryDrawPending,
                                   ),
                                 ],
                               ),
@@ -663,9 +689,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 onCancelPeek: () =>
                     _handleResult(context, notifier.cancelPeek()),
                 peekCost: state.you.principality
-                        .hasExpansionCard(BasicSetCards.parishHall.id)
-                    ? 1
-                    : 2,
+                        .hasExpansionCard(EraOfProgressCards.townHall.id)
+                    ? 0
+                    : state.you.principality
+                            .hasExpansionCard(BasicSetCards.parishHall.id)
+                        ? 1
+                        : 2,
               ),
               Expanded(
                 flex: 4,
@@ -1192,6 +1221,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                     _handleResult(context, notifier.exchangeDraw(index)),
                 onPeekStack: (index) =>
                     _handleResult(context, notifier.choosePeekStack(index)),
+                libraryDrawPending: state.libraryDrawPending,
+                onLibraryDrawStack: (index) =>
+                    _handleResult(context, notifier.drawLibraryCard(index)),
                 canDrawEventCard:
                     state.eventDieFace == EventDieFace.eventCard &&
                         state.diceRolled &&
