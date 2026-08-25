@@ -401,6 +401,94 @@ void main() {
     });
   });
 
+  group('RealmBoard – Gulderans villkorade poängbonusar (Hamn/Handelsplats/Saltsilo)', () {
+    void placeTradeShip(RealmBoard board, int column, BuildingRow row) {
+      board.placeExpansion(
+          column, row, 0, const PlacedCard(card: BasicSetCards.largeTradeShip));
+    }
+
+    test('Hamn utan minst 3 handelsskepp ger ingen extra segerpoäng', () {
+      final board = StarterCards.buildStartingPrincipality('p1');
+      board.placeExpansion(
+          0, BuildingRow.above, 0, const PlacedCard(card: EraOfGoldCards.harbor));
+      placeTradeShip(board, 0, BuildingRow.below);
+      placeTradeShip(board, 2, BuildingRow.above);
+
+      expect(board.totalVictoryPoints, 2 + EraOfGoldCards.harbor.victoryPoints);
+    });
+
+    test('Hamn med minst 3 handelsskepp är värd 1 extra segerpoäng', () {
+      final board = StarterCards.buildStartingPrincipality('p1');
+      board.placeExpansion(
+          0, BuildingRow.above, 0, const PlacedCard(card: EraOfGoldCards.harbor));
+      placeTradeShip(board, 0, BuildingRow.below);
+      placeTradeShip(board, 2, BuildingRow.above);
+      placeTradeShip(board, 2, BuildingRow.below);
+
+      expect(
+          board.totalVictoryPoints, 2 + EraOfGoldCards.harbor.victoryPoints + 1);
+    });
+
+    test('3 handelsskepp utan Hamn ger ingen extra segerpoäng', () {
+      final board = StarterCards.buildStartingPrincipality('p1');
+      placeTradeShip(board, 0, BuildingRow.above);
+      placeTradeShip(board, 0, BuildingRow.below);
+      placeTradeShip(board, 2, BuildingRow.above);
+
+      expect(board.totalVictoryPoints, 2);
+    });
+
+    test('Handelsplats ger Marknadsplats och Hamn 1 extra handelspoäng var', () {
+      final board = StarterCards.buildStartingPrincipality('p1');
+      board.placeExpansion(0, BuildingRow.above, 0,
+          const PlacedCard(card: EraOfGoldCards.tradingBase));
+      board.placeExpansion(
+          0, BuildingRow.below, 0, const PlacedCard(card: BasicSetCards.marketplace));
+      board.placeExpansion(
+          2, BuildingRow.above, 0, const PlacedCard(card: EraOfGoldCards.harbor));
+
+      final expected = EraOfGoldCards.tradingBase.commercePoints +
+          BasicSetCards.marketplace.commercePoints +
+          EraOfGoldCards.harbor.commercePoints +
+          2; // 1 extra var
+      expect(board.totalCommercePoints, expected);
+    });
+
+    test('Marknadsplats/Hamn utan Handelsplats: ingen extra bonus', () {
+      final board = StarterCards.buildStartingPrincipality('p1');
+      board.placeExpansion(
+          0, BuildingRow.below, 0, const PlacedCard(card: BasicSetCards.marketplace));
+      board.placeExpansion(
+          2, BuildingRow.above, 0, const PlacedCard(card: EraOfGoldCards.harbor));
+
+      final expected = BasicSetCards.marketplace.commercePoints +
+          EraOfGoldCards.harbor.commercePoints;
+      expect(board.totalCommercePoints, expected);
+    });
+
+    test('Saltsilo ger 1 extra handelspoäng per handelsskepp', () {
+      final board = StarterCards.buildStartingPrincipality('p1');
+      board.placeExpansion(
+          0, BuildingRow.above, 0, const PlacedCard(card: EraOfGoldCards.saltSilo));
+      placeTradeShip(board, 0, BuildingRow.below);
+      placeTradeShip(board, 2, BuildingRow.above);
+
+      final expected = EraOfGoldCards.saltSilo.commercePoints +
+          2 * BasicSetCards.largeTradeShip.commercePoints +
+          2; // 1 extra per skepp
+      expect(board.totalCommercePoints, expected);
+    });
+
+    test('handelsskepp utan Saltsilo: ingen extra bonus', () {
+      final board = StarterCards.buildStartingPrincipality('p1');
+      placeTradeShip(board, 0, BuildingRow.above);
+      placeTradeShip(board, 2, BuildingRow.below);
+
+      final expected = 2 * BasicSetCards.largeTradeShip.commercePoints;
+      expect(board.totalCommercePoints, expected);
+    });
+  });
+
   group('RealmBoard – landskapsutbyggnad (Guldgömma)', () {
     test('placeRegionExpansion kräver en region på platsen', () {
       final board = StarterCards.buildStartingPrincipality('p1', isRed: true);

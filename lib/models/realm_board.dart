@@ -1,3 +1,5 @@
+import '../data/basic_set_cards.dart';
+import '../data/era_of_gold_cards.dart';
 import 'game_card.dart';
 
 /// Var (ovanför eller nedanför en by/stad) ett bygg-/enhetskort sitter.
@@ -627,11 +629,47 @@ class RealmBoard {
       ? 0
       : _settlements.keys.reduce((a, b) => a > b ? a : b);
 
-  int get totalVictoryPoints => _sumPoints((card) => card.victoryPoints);
+  int get totalVictoryPoints =>
+      _sumPoints((card) => card.victoryPoints) + _harborVictoryBonus;
   int get totalStrengthPoints => _sumPoints((card) => card.strengthPoints);
-  int get totalCommercePoints => _sumPoints((card) => card.commercePoints);
+  int get totalCommercePoints =>
+      _sumPoints((card) => card.commercePoints) +
+      _tradingBaseBonus +
+      _saltSiloBonus;
   int get totalSkillPoints => _sumPoints((card) => card.skillPoints);
   int get totalProgressPoints => _sumPoints((card) => card.progressPoints);
+
+  /// Antal utplacerade handelsskepp – underlag för [_harborVictoryBonus]/
+  /// [_saltSiloBonus] (Hamn/Saltsilo, se respektive doc).
+  int get _tradeShipCount => placedExpansionCards
+      .where((c) => c.expansionKind == ExpansionKind.tradeShip)
+      .length;
+
+  /// Hamn: "Om du har minst 3 handelsskepp i ditt rike är Hamnen värd 1
+  /// extra segerpoäng." Bara byggnaden själv (`victoryPoints`) räcker
+  /// inte till att uttrycka det här, eftersom villkoret beror på VAD MER
+  /// som finns i riket – se [totalVictoryPoints].
+  int get _harborVictoryBonus =>
+      hasExpansionCard(EraOfGoldCards.harbor.id) && _tradeShipCount >= 3
+          ? 1
+          : 0;
+
+  /// Handelsplats: "Om du har lagt ut Handelsplatsen ger Marknadsplatsen
+  /// och Hamnen 1 extra handelspoäng var." Samma anledning som
+  /// [_harborVictoryBonus] till varför det inte kan uttryckas som en
+  /// vanlig kort-egenskap.
+  int get _tradingBaseBonus {
+    if (!hasExpansionCard(EraOfGoldCards.tradingBase.id)) return 0;
+    var bonus = 0;
+    if (hasExpansionCard(BasicSetCards.marketplace.id)) bonus += 1;
+    if (hasExpansionCard(EraOfGoldCards.harbor.id)) bonus += 1;
+    return bonus;
+  }
+
+  /// Saltsilo: "Vart och ett av dina handelsskepp är värt 1 extra
+  /// handelspoäng."
+  int get _saltSiloBonus =>
+      hasExpansionCard(EraOfGoldCards.saltSilo.id) ? _tradeShipCount : 0;
 
   /// Summerar en poängtyp (VP, styrka, handel, färdighet eller
   /// framsteg) över alla utplacerade kort: byar/städer, bygg-/
