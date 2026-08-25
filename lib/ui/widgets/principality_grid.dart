@@ -149,6 +149,17 @@ class PrincipalityGrid extends StatelessWidget {
   final void Function(int column, BuildingRow row, int slotIndex)?
       onSelectPirateShipDiscard;
 
+  /// Upplopp (se [GameNotifier.selectRiotsUnit]): om aktiv blir egna,
+  /// ockuperade byggplatser med EN ENHET (byggnad, skepp ELLER hjälte –
+  /// bredare kriterium än Fejd, som bara gäller byggnader) med styrke-
+  /// eller handelspoäng tryckbara – markerade med en gul ram efter
+  /// valet, tills draghögen väljs (se [RiotsResolutionCard]/
+  /// StackChoiceOverlay i game_board_screen.dart).
+  final bool riotsUnitPickActive;
+  final RelocationSelection? riotsPickedUnit;
+  final void Function(int column, BuildingRow row, int slotIndex)?
+      onSelectRiotsUnit;
+
   const PrincipalityGrid({
     super.key,
     required this.board,
@@ -178,6 +189,9 @@ class PrincipalityGrid extends StatelessWidget {
     this.onSelectStartingRegionRearrangementTarget,
     this.pirateShipDiscardActive = false,
     this.onSelectPirateShipDiscard,
+    this.riotsUnitPickActive = false,
+    this.riotsPickedUnit,
+    this.onSelectRiotsUnit,
   });
 
   bool get _draggingRoad => draggingCard?.category == CardCategory.road;
@@ -637,6 +651,10 @@ class PrincipalityGrid extends StatelessWidget {
         interactive &&
         onSelectPirateShipDiscard != null &&
         placed.card.expansionKind == ExpansionKind.tradeShip;
+    final canPickForRiots = riotsUnitPickActive &&
+        interactive &&
+        onSelectRiotsUnit != null &&
+        (placed.card.strengthPoints > 0 || placed.card.commercePoints > 0);
     // Se kommentaren i _roadSlot – en ny utbyggnad på en tidigare tom
     // byggplats byter widget-typ här och toppas därför korrekt in.
     final view = PopIn(
@@ -650,7 +668,9 @@ class PrincipalityGrid extends StatelessWidget {
                 ? () => onSelectFeudBuilding!(column, row, slotIndex)
                 : canPickForPirateShip
                     ? () => onSelectPirateShipDiscard!(column, row, slotIndex)
-                    : null,
+                    : canPickForRiots
+                        ? () => onSelectRiotsUnit!(column, row, slotIndex)
+                        : null,
       ),
     );
     final selected = (relocationActive &&
@@ -661,7 +681,11 @@ class PrincipalityGrid extends StatelessWidget {
         (feudBuildingPickActive &&
             feudPickedBuilding?.column == column &&
             feudPickedBuilding?.row == row &&
-            feudPickedBuilding?.slotIndex == slotIndex);
+            feudPickedBuilding?.slotIndex == slotIndex) ||
+        (riotsUnitPickActive &&
+            riotsPickedUnit?.column == column &&
+            riotsPickedUnit?.row == row &&
+            riotsPickedUnit?.slotIndex == slotIndex);
     return selected ? _withSelectionRing(view) : view;
   }
 

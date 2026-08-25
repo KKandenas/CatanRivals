@@ -154,6 +154,25 @@ class GameState {
   /// DiceRollSummaryBanner-popupen om vem som spelade kortet.
   final bool reinerHeraldUsed;
 
+  /// Vilka spelar-id:n som redan avslutat sin egen Upplopp-hantering
+  /// för det just nu uppslagna händelsekortet, se
+  /// [TurnState.riotsResolvedPlayerIds] – synkat via [TurnState] av
+  /// samma skäl som [pirateShipDiscardPending].
+  final Set<String> riotsResolvedPlayerIds;
+
+  /// Upplopp (regelhäftet: "must remove one of these units") när du
+  /// inte betalar guldet – riket blir tryckbart: tryck på en av dina
+  /// egna enheter med styrke- eller handelspoäng (byggnad, skepp eller
+  /// hjälte) för att ta bort den (se
+  /// [GameNotifier.selectRiotsUnit]/[riotsQualifyingUnitCount]). Rent
+  /// lokalt UI-state, precis som [feudBuildingPickActive] – bara den
+  /// egna klienten som faktiskt väljer behöver veta om det.
+  /// [riotsPickedUnit] är den valda platsen, `null` tills något
+  /// tryckts – då väntar bara valet av vilken draghög den ska läggas
+  /// underst i (se [GameNotifier.resolveRiotsUnitRemoval]).
+  final bool riotsUnitPickActive;
+  final RelocationSelection? riotsPickedUnit;
+
   /// Händelsekortet som just nu ligger uppslaget för alla att läsa,
   /// draget när händelsetärningen visade "?" (se [EventDieFace.eventCard]
   /// och [GameNotifier.drawEventCard]) – synkas till båda spelarna,
@@ -262,6 +281,9 @@ class GameState {
     this.winnerId,
     this.pirateShipDiscardPending = false,
     this.reinerHeraldUsed = false,
+    this.riotsResolvedPlayerIds = const {},
+    this.riotsUnitPickActive = false,
+    this.riotsPickedUnit,
     this.drawnEventCard,
     this.awaitingScoutDecision = false,
     this.scoutChoices,
@@ -426,6 +448,10 @@ class GameState {
     String? winnerId,
     bool? pirateShipDiscardPending,
     bool? reinerHeraldUsed,
+    Set<String>? riotsResolvedPlayerIds,
+    bool? riotsUnitPickActive,
+    RelocationSelection? riotsPickedUnit,
+    bool clearRiotsPickedUnit = false,
     GameCard? drawnEventCard,
     bool clearDrawnEventCard = false,
     bool? awaitingScoutDecision,
@@ -492,6 +518,12 @@ class GameState {
       pirateShipDiscardPending:
           pirateShipDiscardPending ?? this.pirateShipDiscardPending,
       reinerHeraldUsed: reinerHeraldUsed ?? this.reinerHeraldUsed,
+      riotsResolvedPlayerIds:
+          riotsResolvedPlayerIds ?? this.riotsResolvedPlayerIds,
+      riotsUnitPickActive: riotsUnitPickActive ?? this.riotsUnitPickActive,
+      riotsPickedUnit: clearRiotsPickedUnit
+          ? null
+          : (riotsPickedUnit ?? this.riotsPickedUnit),
       drawnEventCard: clearDrawnEventCard
           ? null
           : (drawnEventCard ?? this.drawnEventCard),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/basic_set_cards.dart';
 import '../../data/era_of_gold_cards.dart';
+import '../../data/era_of_turmoil_cards.dart';
 import '../../models/models.dart';
 import '../../state/event_die_resolution.dart';
 import '../../state/game_notifier.dart';
@@ -29,6 +30,8 @@ import '../widgets/pill_banner.dart';
 import '../widgets/pirate_ship_discard_bar.dart';
 import '../widgets/principality_grid.dart';
 import '../widgets/relocation_instruction_bar.dart';
+import '../widgets/riots_resolution_card.dart';
+import '../widgets/riots_unit_instruction_bar.dart';
 import '../widgets/rules_button.dart';
 import '../widgets/scout_prompt_card.dart';
 import '../widgets/scout_region_picker.dart';
@@ -300,6 +303,17 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
         !state.feudBuildingPickActive &&
         !state.fraternalFeudsPicking;
     if (!state.fraternalFeudsPicking) _pendingFraternalFeudsCard = null;
+
+    // Upplopp (Oroligheternas tid, se RiotsResolutionCard-doc): ersätter
+    // också den vanliga EventCardRevealCard, men till skillnad från
+    // Fejd/Brödrafejd (bara EN sida agerar) kan BÅDA spelarna behöva
+    // agera oberoende av varandra – `showRiotsResolution` är sant tills
+    // just DU markerat dig klar (se riotsResolvedPlayerIds-doc), inte
+    // bara under ett gemensamt "vem agerar"-steg.
+    final isRiotsCard = drawnEventBaseId == EraOfTurmoilCards.riots.id;
+    final showRiotsResolution = isRiotsCard &&
+        !state.riotsResolvedPlayerIds.contains(state.myPlayerId) &&
+        !state.riotsUnitPickActive;
 
     // Hero Token/Trade Token (se GameNotifier.recomputeTokenHolders) –
     // räknas ut en gång här och delas mellan ScoreSummary-rutorna och
@@ -648,7 +662,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                     // att veta vem som har styrkeövertaget.
                     if (state.drawnEventCard != null &&
                         !isFeudCard &&
-                        !isFraternalFeudsCard)
+                        !isFraternalFeudsCard &&
+                        !isRiotsCard)
                       Positioned.fill(
                         child: Container(
                           color: Colors.black.withValues(alpha: 0.55),
@@ -684,6 +699,45 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                                 context, notifier.startFeudBuildingPick()),
                             onStartFraternalFeudsPick: () => _handleResult(
                                 context, notifier.startFraternalFeudsPick()),
+                          ),
+                        ),
+                      ),
+                    if (showRiotsResolution)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          padding: const EdgeInsets.all(12),
+                          child: RiotsResolutionCard(
+                            card: state.drawnEventCard!,
+                            unitCount: riotsQualifyingUnitCount(state.you),
+                            goldOwed: riotsGoldOwed(
+                                riotsQualifyingUnitCount(state.you)),
+                            onPay: () => _handleResult(
+                                context, notifier.resolveRiotsPay()),
+                            onCannotPay: () => _handleResult(
+                                context, notifier.startRiotsUnitPick()),
+                          ),
+                        ),
+                      ),
+                    // Upplopp: efter att en egen enhet valts (se
+                    // PrincipalityGrid.onSelectRiotsUnit nedan) väntar
+                    // bara valet av vilken draghög den ska läggas underst
+                    // i.
+                    if (state.riotsUnitPickActive &&
+                        state.riotsPickedUnit != null)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          padding: const EdgeInsets.all(12),
+                          child: StackChoiceOverlay(
+                            title:
+                                'Vilken draghög ska enheten läggas underst i?',
+                            stackCount: state.initialDrawStackSizes.length,
+                            activeExpansions: state.activeExpansions,
+                            onChooseStack: (index) => _handleResult(context,
+                                notifier.resolveRiotsUnitRemoval(index)),
+                            onCancel: () => _handleResult(
+                                context, notifier.cancelRiotsUnitPick()),
                           ),
                         ),
                       ),
@@ -887,6 +941,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   onCancel: () =>
                       _handleResult(context, notifier.cancelFeudBuildingPick()),
                 ),
+              if (state.riotsUnitPickActive)
+                RiotsUnitInstructionBar(
+                  onCancel: () =>
+                      _handleResult(context, notifier.cancelRiotsUnitPick()),
+                ),
               // Bara den DRABBADE spelaren (inte den som byggde
               // Piratskeppet) ska se väljaren – se
               // GameNotifier.resolvePirateShipDiscard-doc.
@@ -983,6 +1042,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                                 context,
                                 notifier.resolvePirateShipDiscard(
                                     column, row, slot)),
+                        riotsUnitPickActive: state.riotsUnitPickActive,
+                        riotsPickedUnit: state.riotsPickedUnit,
+                        onSelectRiotsUnit: (column, row, slot) =>
+                            _handleResult(context,
+                                notifier.selectRiotsUnit(column, row, slot)),
                       ),
                     ),
                   ),

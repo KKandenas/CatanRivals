@@ -17,6 +17,7 @@ import '../services/game_sync_providers.dart';
 import '../services/game_sync_service.dart';
 import '../services/session_storage.dart';
 import 'build_requirements.dart';
+import 'event_die_resolution.dart';
 import 'game_state.dart';
 
 /// Spelets state-provider. Läs med `ref.watch(gameProvider)` och mutera
@@ -614,6 +615,7 @@ class GameNotifier extends Notifier<GameState> {
         winnerId: turnState.winnerId,
         pirateShipDiscardPending: turnState.pirateShipDiscardPending,
         reinerHeraldUsed: turnState.reinerHeraldUsed,
+        riotsResolvedPlayerIds: turnState.riotsResolvedPlayerIds,
         discardPile: discardPile,
       );
 
@@ -920,6 +922,7 @@ class GameNotifier extends Notifier<GameState> {
           winnerId: turnState.winnerId,
           pirateShipDiscardPending: turnState.pirateShipDiscardPending,
           reinerHeraldUsed: turnState.reinerHeraldUsed,
+          riotsResolvedPlayerIds: turnState.riotsResolvedPlayerIds,
         );
       },
       onError: (Object e) {
@@ -1065,6 +1068,7 @@ class GameNotifier extends Notifier<GameState> {
         winnerId: state.winnerId,
         pirateShipDiscardPending: state.pirateShipDiscardPending,
         reinerHeraldUsed: state.reinerHeraldUsed,
+        riotsResolvedPlayerIds: state.riotsResolvedPlayerIds,
       ),
     ));
   }
@@ -1188,6 +1192,9 @@ class GameNotifier extends Notifier<GameState> {
     state = state.copyWith(
       drawnEventCard: card,
       centerStacks: Map.of(state.centerStacks)..['event'] = _eventDeck.length,
+      // Ett NYTT kort kan aldrig ärva en föregående Upplopp-hanterings
+      // redan-klar-status (se riotsResolvedPlayerIds-doc).
+      riotsResolvedPlayerIds: const {},
     );
     _syncCenterStacks();
     _syncTurnState();
@@ -1343,6 +1350,137 @@ class GameNotifier extends Notifier<GameState> {
     _syncCenterStacks();
     _syncTurnState();
     return null;
+  }
+
+  // ---------------------------------------------------------------------
+  // Upplopp (Oroligheternas tid, EraOfTurmoilCards.riots): till skillnad
+  // från Fejd/Brödrafejd (bara EN sida agerar) kontrollerar VARJE
+  // spelare sina EGNA enheter med styrke-/handelspoäng oberoende av
+  // varandra – antingen betalar man guldet (bara en påminnelse, precis
+  // som andra byggkostnader – dras inte av automatiskt) eller väljer
+  // bort en av dem och lägger den underst i en matchande draghög (samma
+  // tvåstegs bygg-väljare + StackChoiceOverlay-mönster som Fejd, men med
+  // ett bredare urvalskriterium: alla enheter, inte bara byggnader). Se
+  // [TurnState.riotsResolvedPlayerIds]-doc för hur det delade
+  // händelsekortet hålls öppet tills BÅDA spelarna är klara.
+  // ---------------------------------------------------------------------
+
+  /// Markerar att DU är klar med din egen Upplopp-hantering – oavsett om
+  /// du faktiskt hade något att betala (se [riotsQualifyingUnitCount]).
+  /// "Betalt"-knappen (eller "OK" om du inte har några kvalificerande
+  /// enheter, se [RiotsResolutionCard]).
+  String? resolveRiotsPay() {
+    final card = state.drawnEventCard;
+    if (card == null || card.baseId != EraOfTurmoilCards.riots.id) {
+      return null;
+    }
+    if (state.riotsResolvedPlayerIds.contains(state.myPlayerId)) return null;
+    _finishRiotsForMe();
+    return null;
+  }
+
+  /// Startar väljaren för att ta bort en av dina egna kvalificerande
+  /// enheter (se [riotsQualifyingUnitCount]) i stället för att betala –
+  /// "Kan inte betala"-knappen. No-op utan uppslaget Upplopp-kort, om du
+  /// redan är klar, eller om du inte har någon kvalificerande enhet att
+  /// välja mellan.
+  String? startRiotsUnitPick() {
+    final card = state.drawnEventCard;
+    if (card == null || card.baseId != EraOfTurmoilCards.riots.id) {
+      return null;
+    }
+    if (state.riotsResolvedPlayerIds.contains(state.myPlayerId)) return null;
+    if (riotsQualifyingUnitCount(state.you) == 0) return null;
+    state = state.copyWith(
+        riotsUnitPickActive: true, clearRiotsPickedUnit: true);
+    return null;
+  }
+
+  /// Avbryter enhetsväljaren utan att göra något.
+  String? cancelRiotsUnitPick() {
+    state = state.copyWith(
+        riotsUnitPickActive: false, clearRiotsPickedUnit: true);
+    return null;
+  }
+
+  /// Väljer vilken av dina egna enheter (byggnad, skepp eller hjälte –
+  /// vad som helst med styrke- eller handelspoäng, till skillnad från
+  /// Fejd som bara gäller byggnader) som ska bort. Nästa steg är att
+  /// välja vilken draghög den ska läggas underst i (se
+  /// [resolveRiotsUnitRemoval]).
+  String? selectRiotsUnit(int column, BuildingRow row, int slotIndex) {
+    if (!state.riotsUnitPickActive) return null;
+    final placed =
+        _expansionAt(state.you.principality, column, row, slotIndex);
+    if (placed == null) return null;
+    if (placed.card.strengthPoints <= 0 && placed.card.commercePoints <= 0) {
+      return 'Upplopp gäller bara enheter med styrke- eller handelspoäng.';
+    }
+    state = state.copyWith(
+      riotsPickedUnit: RelocationSelection(
+          kind: RelocationTargetKind.expansion,
+          column: column,
+          row: row,
+          slotIndex: slotIndex),
+    );
+    return null;
+  }
+
+  /// Tar bort den valda enheten och lägger den underst i draghög
+  /// [stackIndex] – avslutar din egen Upplopp-hantering (se
+  /// [_finishRiotsForMe]).
+  String? resolveRiotsUnitRemoval(int stackIndex) {
+    final picked = state.riotsPickedUnit;
+    if (picked == null) return null;
+    // Peek:ar kortet (utan att ta bort det) för att kunna avvisa fel
+    // hög INNAN enheten faktiskt plockas bort – samma resonemang som
+    // resolveFeudBuildingRemoval.
+    final peeked = state.you.principality
+        .expansionAt(picked.column, picked.row, picked.slotIndex);
+    if (peeked == null) return null;
+    final originError = _checkStackMatchesCardOrigin(peeked.card, stackIndex);
+    if (originError != null) return originError;
+
+    final removed = state.you.principality
+        .removeExpansion(picked.column, picked.row, picked.slotIndex);
+    if (removed == null) return null;
+
+    _setDrawStack(stackIndex, [..._drawStacks[stackIndex], removed.card]);
+    state = state.copyWith(
+      you: state.you,
+      centerStacks: Map.of(state.centerStacks)
+        ..update('draw${stackIndex + 1}', (v) => v + 1),
+      riotsUnitPickActive: false,
+      clearRiotsPickedUnit: true,
+    );
+    // Till skillnad från Fejd (bara byggnader) kan en borttagen Upplopp-
+    // enhet vara en hjälte/handelsskepp – recomputeTokenHolders() ser
+    // till att Hero Token/Trade Token flyttas om det ändrar vem som har
+    // flest styrke-/handelspoäng.
+    recomputeTokenHolders();
+    _syncMyPlayer();
+    _syncCenterStacks();
+    _finishRiotsForMe();
+    return null;
+  }
+
+  /// Markerar dig som klar med Upplopp (se
+  /// [TurnState.riotsResolvedPlayerIds]-doc) och synkar – det delade
+  /// händelsekortet stängs helt (för båda klienterna, `drawnEventCard`
+  /// rensas) först när MOTSTÅNDAREN också redan är klar.
+  void _finishRiotsForMe() {
+    final updated = {...state.riotsResolvedPlayerIds, state.myPlayerId};
+    // Lokalt läge har ingen egen vy för "motståndaren" att agera i (se
+    // playLocally-doc) – bara DU spelar över huvud taget, så din egen
+    // hantering räcker för att stänga kortet helt. Online väntar den
+    // fortfarande in att motståndarens klient också är klar.
+    final bothDone =
+        !state.isOnline || updated.contains(state.opponentPlayerId);
+    state = state.copyWith(
+      riotsResolvedPlayerIds: updated,
+      clearDrawnEventCard: bothDone,
+    );
+    _syncTurnState();
   }
 
   // ---------------------------------------------------------------------
@@ -1599,6 +1737,9 @@ class GameNotifier extends Notifier<GameState> {
       clearProductionRoll: true,
       clearDrawnEventCard: true,
       reinerHeraldUsed: false,
+      riotsResolvedPlayerIds: const {},
+      riotsUnitPickActive: false,
+      clearRiotsPickedUnit: true,
       handAdjustmentPhase: HandAdjustmentPhase.none,
       tradePhase: TradePhase.none,
       clearPeekStackIndex: true,
@@ -2063,7 +2204,9 @@ class GameNotifier extends Notifier<GameState> {
     if (state.relocationActive) {
       return 'Avsluta Omlokaliseringen innan du bygger vidare.';
     }
-    if (state.feudBuildingPickActive || state.fraternalFeudsPicking) {
+    if (state.feudBuildingPickActive ||
+        state.fraternalFeudsPicking ||
+        state.riotsUnitPickActive) {
       return 'Avsluta händelsekortet innan du bygger vidare.';
     }
     if (state.pendingRegions.isNotEmpty) {

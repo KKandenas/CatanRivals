@@ -309,3 +309,26 @@ String? _resolveYearOfPlenty(GameState state) {
   if (lines.isEmpty) return null;
   return lines.join('\n');
 }
+
+/// Antal av [player]s egna enheter med styrke- ELLER handelspoäng
+/// (byggnad, skepp eller hjälte – region-/regionutbyggnadskort som
+/// Guldgömma har alltid 0 av båda, så de räknas aldrig med här) – se
+/// Oroligheternas tids Upplopp (EraOfTurmoilCards.riots): avgör hur
+/// mycket guld spelaren ska betala ([riotsGoldOwed]), eller om Upplopp
+/// inte berör hen alls (0 enheter). Handlingskortet Riots hanteras helt
+/// separat (se [RiotsResolutionCard]/[GameNotifier.resolveRiotsPay]) –
+/// inte via [resolveEventCard] som övriga händelsekort, eftersom det
+/// kräver ett riktigt val (betala eller välj bort ett kort), inte bara
+/// en informationsrad.
+int riotsQualifyingUnitCount(Player player) => player.principality
+    .placedExpansionCards
+    .where((c) => c.strengthPoints > 0 || c.commercePoints > 0)
+    .length;
+
+/// Hur mycket guld Upplopp kräver för [unitCount] kvalificerande
+/// enheter (se [riotsQualifyingUnitCount]) – regelhäftet: 1 guld vid
+/// 1–2 enheter, 2 guld vid fler, 0 om spelaren inte har någon alls.
+int riotsGoldOwed(int unitCount) {
+  if (unitCount == 0) return 0;
+  return unitCount <= 2 ? 1 : 2;
+}

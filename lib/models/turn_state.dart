@@ -51,6 +51,18 @@ class TurnState {
   /// [pirateShipDiscardPending].
   final bool reinerHeraldUsed;
 
+  /// Vilka spelar-id:n som redan avslutat sin egen Upplopp-hantering
+  /// (betalat eller valt bort en enhet, se
+  /// [GameNotifier.resolveRiotsPay]/[resolveRiotsUnitRemoval]) för det
+  /// just nu uppslagna händelsekortet. Till skillnad från Fejd/
+  /// Brödrafejd (bara EN sida agerar, se `strengthAdvantagePlayerId`)
+  /// kan BÅDA spelarna behöva agera oberoende av varandra – var och en
+  /// utifrån sin egen enhetsräkning. Kortet stängs (drawnEventCard
+  /// rensas) först när båda id:na finns här, se
+  /// [GameNotifier._finishRiotsForMe]. Nollställs (tom mängd) varje
+  /// gång ett nytt händelsekort dras.
+  final Set<String> riotsResolvedPlayerIds;
+
   const TurnState({
     required this.activePlayerId,
     this.diceRolled = false,
@@ -61,6 +73,7 @@ class TurnState {
     this.winnerId,
     this.pirateShipDiscardPending = false,
     this.reinerHeraldUsed = false,
+    this.riotsResolvedPlayerIds = const {},
   });
 
   Map<String, dynamic> toJson() => {
@@ -73,6 +86,8 @@ class TurnState {
         if (winnerId != null) 'winnerId': winnerId,
         if (pirateShipDiscardPending) 'pirateShipDiscardPending': true,
         if (reinerHeraldUsed) 'reinerHeraldUsed': true,
+        if (riotsResolvedPlayerIds.isNotEmpty)
+          'riotsResolvedPlayerIds': riotsResolvedPlayerIds.toList(),
       };
 
   factory TurnState.fromJson(Map<String, dynamic> json) => TurnState(
@@ -91,5 +106,8 @@ class TurnState {
         pirateShipDiscardPending:
             json['pirateShipDiscardPending'] as bool? ?? false,
         reinerHeraldUsed: json['reinerHeraldUsed'] as bool? ?? false,
+        riotsResolvedPlayerIds: json['riotsResolvedPlayerIds'] == null
+            ? const {}
+            : Set<String>.from(json['riotsResolvedPlayerIds'] as List),
       );
 }
