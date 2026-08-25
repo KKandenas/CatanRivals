@@ -87,9 +87,42 @@ void main() {
       expect(state.eventDieFace, EventDieFace.celebration);
       expect(state.productionRoll, inInclusiveRange(1, 6));
       expect(state.diceRolled, isTrue);
+      expect(state.reinerHeraldUsed, isTrue);
       expect(
           state.you.hand.any((c) => c.id == EraOfGoldCards.reinerTheHerald.id),
           isFalse);
+    });
+
+    test(
+        'lägger kortet i slänghögen (med ett tema aktivt), och reinerHeraldUsed nollställs när turen lämnas',
+        () {
+      final notifier = container.read(gameProvider.notifier);
+      // playLocally med Gulderan aktivt ger en färsk starthand på exakt
+      // handLimit (3) kort (se trade_test.dart:s readyContainer-doc) så
+      // handjusteringen hoppas över nedan – och slänghögen är bara
+      // synlig/aktiv med minst ett tema aktivt (se
+      // GameNotifier._discardToPile-doc).
+      notifier.playLocally(expansions: {ExpansionSet.eraOfGold});
+      notifier.state = notifier.state.copyWith(
+          you: notifier.state.you.copyWith(
+              hand: [...notifier.state.you.hand, EraOfGoldCards.reinerTheHerald]));
+
+      final error = notifier.useReinerTheHerald();
+
+      expect(error, isNull);
+      final afterPlay = container.read(gameProvider);
+      expect(afterPlay.reinerHeraldUsed, isTrue);
+      expect(
+          afterPlay.discardPile
+              .any((c) => c.id == EraOfGoldCards.reinerTheHerald.id),
+          isTrue);
+
+      // Lämnar turen – reinerHeraldUsed är en engångsflagga för DEN HÄR
+      // omgången och ska inte läcka till nästa spelares tur.
+      notifier.endActionPhase();
+      notifier.skipTrade();
+
+      expect(container.read(gameProvider).reinerHeraldUsed, isFalse);
     });
 
     test('går inte att använda efter att tärningen redan slagits', () {

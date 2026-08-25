@@ -116,12 +116,25 @@ String _resolveTrade(GameState state) {
 String _resolveCelebration(GameState state) {
   final youSkill = state.you.principality.totalSkillPoints;
   final oppSkill = state.opponent.principality.totalSkillPoints;
+  final lines = <String>[];
   if (youSkill == oppSkill) {
-    return 'Båda spelarna har lika många kunskapspoäng. Båda spelarna får 1 valfri resurs var.';
+    lines.add(
+        'Båda spelarna har lika många kunskapspoäng. Båda spelarna får 1 valfri resurs var.');
+  } else {
+    final winnerName =
+        youSkill > oppSkill ? state.you.name : state.opponent.name;
+    lines.add('$winnerName har flest kunskapspoäng och får 1 valfri resurs.');
   }
-  final winnerName =
-      youSkill > oppSkill ? state.you.name : state.opponent.name;
-  return '$winnerName har flest kunskapspoäng och får 1 valfri resurs.';
+  // Reiner härolden tvingar fram Fest-utfallet i stället för att slå
+  // händelsetärningen (se [TurnState.reinerHeraldUsed]) – spelaren som
+  // spelade kortet är alltid den aktiva spelaren (GameNotifier.
+  // useReinerTheHerald kräver att det är dennes tur).
+  if (state.reinerHeraldUsed) {
+    final player = state.activePlayerIsMe ? state.you : state.opponent;
+    lines.add(
+        '${player.name} spelade Reiner härolden och får en extra resurs.');
+  }
+  return lines.join('\n');
 }
 
 String? _resolvePlentifulHarvest(GameState state) {

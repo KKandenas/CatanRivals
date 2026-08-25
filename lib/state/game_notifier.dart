@@ -537,6 +537,7 @@ class GameNotifier extends Notifier<GameState> {
         peekingStackIndex: turnState.peekingStackIndex,
         winnerId: turnState.winnerId,
         pirateShipDiscardPending: turnState.pirateShipDiscardPending,
+        reinerHeraldUsed: turnState.reinerHeraldUsed,
         discardPile: discardPile,
       );
 
@@ -828,6 +829,7 @@ class GameNotifier extends Notifier<GameState> {
           clearPeekingStackIndex: turnState.peekingStackIndex == null,
           winnerId: turnState.winnerId,
           pirateShipDiscardPending: turnState.pirateShipDiscardPending,
+          reinerHeraldUsed: turnState.reinerHeraldUsed,
         );
       },
       onError: (Object e) {
@@ -972,6 +974,7 @@ class GameNotifier extends Notifier<GameState> {
         peekingStackIndex: state.peekingStackIndex,
         winnerId: state.winnerId,
         pirateShipDiscardPending: state.pirateShipDiscardPending,
+        reinerHeraldUsed: state.reinerHeraldUsed,
       ),
     ));
   }
@@ -1067,9 +1070,11 @@ class GameNotifier extends Notifier<GameState> {
       productionRoll: roll,
       eventDieFace: EventDieFace.celebration,
       diceRolled: true,
+      reinerHeraldUsed: true,
     );
     _syncMyPlayer();
     _syncTurnState();
+    _discardToPile(card);
     return null;
   }
 
@@ -1499,6 +1504,7 @@ class GameNotifier extends Notifier<GameState> {
       diceRolled: false,
       clearProductionRoll: true,
       clearDrawnEventCard: true,
+      reinerHeraldUsed: false,
       handAdjustmentPhase: HandAdjustmentPhase.none,
       tradePhase: TradePhase.none,
       clearPeekStackIndex: true,

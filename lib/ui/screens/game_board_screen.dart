@@ -110,9 +110,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   /// korttypen faktiskt gör. Brigitta behöver ytterligare ett val
   /// (vilket tärningstal, se [showBrigittaNumberPicker]) och
   /// Omlokalisering startar en egen väljarläge (se
-  /// [RelocationInstructionBar]) – Reiner härolden visar en text om att
-  /// den spelats (se [GameNotifier.useReinerTheHerald]-doc: den extra
-  /// resursen dras inte av automatiskt) – övriga (Handelskaravan/
+  /// [RelocationInstructionBar]) – Reiner härolden visar sin text om vem
+  /// som spelat kortet inne i DiceRollSummaryBanner-popupen i stället
+  /// (se `_resolveCelebration` i event_die_resolution.dart), eftersom
+  /// kortet alltid tvingar fram Fest-utfallet – övriga (Handelskaravan/
   /// Guldsmed) är självbevakade och behöver inget mer än att tas bort
   /// från handen.
   void _handleUseActionCard(
@@ -130,19 +131,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
       return;
     }
     if (card.baseId == EraOfGoldCards.reinerTheHerald.id) {
-      final playerName = ref.read(gameProvider).you.name;
-      final error = notifier.useReinerTheHerald();
-      if (error != null) {
-        _handleResult(context, error);
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              '$playerName spelade Reiner härolden och får en extra resurs.'),
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      _handleResult(context, notifier.useReinerTheHerald());
       return;
     }
     _handleResult(context, notifier.discardActionCard(card));

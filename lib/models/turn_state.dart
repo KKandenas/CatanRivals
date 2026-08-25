@@ -40,6 +40,17 @@ class TurnState {
   /// på egen hand, så en riktig synkad signal behövs.
   final bool pirateShipDiscardPending;
 
+  /// Om Reiner härolden spelades för att framtvinga den här omgångens
+  /// Fest-utfall (regelhäftet: kortets egen effekt sätter
+  /// händelsetärningen till Fest), se [GameNotifier.useReinerTheHerald].
+  /// Läses av [resolveEventDieFace]/`_resolveCelebration` för att lägga
+  /// till en extra rad i popupen om vem som spelade kortet – annars
+  /// finns inget sätt att skilja ett Reiner-framtvingat Fest-utfall från
+  /// ett vanligt tärningsslag. Nollställs varje ny omgång (se
+  /// [GameNotifier._advanceToNextPlayer]), precis som
+  /// [pirateShipDiscardPending].
+  final bool reinerHeraldUsed;
+
   const TurnState({
     required this.activePlayerId,
     this.diceRolled = false,
@@ -49,6 +60,7 @@ class TurnState {
     this.peekingStackIndex,
     this.winnerId,
     this.pirateShipDiscardPending = false,
+    this.reinerHeraldUsed = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -60,6 +72,7 @@ class TurnState {
         if (peekingStackIndex != null) 'peekingStackIndex': peekingStackIndex,
         if (winnerId != null) 'winnerId': winnerId,
         if (pirateShipDiscardPending) 'pirateShipDiscardPending': true,
+        if (reinerHeraldUsed) 'reinerHeraldUsed': true,
       };
 
   factory TurnState.fromJson(Map<String, dynamic> json) => TurnState(
@@ -77,5 +90,6 @@ class TurnState {
         winnerId: json['winnerId'] as String?,
         pirateShipDiscardPending:
             json['pirateShipDiscardPending'] as bool? ?? false,
+        reinerHeraldUsed: json['reinerHeraldUsed'] as bool? ?? false,
       );
 }

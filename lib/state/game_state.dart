@@ -147,6 +147,13 @@ class GameState {
   /// som motståndarens klient inte kan räkna ut på egen hand.
   final bool pirateShipDiscardPending;
 
+  /// Om Reiner härolden spelades för att framtvinga den här omgångens
+  /// Fest-utfall, se [TurnState.reinerHeraldUsed] – synkat via
+  /// [TurnState] av samma skäl som [pirateShipDiscardPending]. Läses av
+  /// `_resolveCelebration` för att lägga till en rad i
+  /// DiceRollSummaryBanner-popupen om vem som spelade kortet.
+  final bool reinerHeraldUsed;
+
   /// Händelsekortet som just nu ligger uppslaget för alla att läsa,
   /// draget när händelsetärningen visade "?" (se [EventDieFace.eventCard]
   /// och [GameNotifier.drawEventCard]) – synkas till båda spelarna,
@@ -254,6 +261,7 @@ class GameState {
     this.peekingStackIndex,
     this.winnerId,
     this.pirateShipDiscardPending = false,
+    this.reinerHeraldUsed = false,
     this.drawnEventCard,
     this.awaitingScoutDecision = false,
     this.scoutChoices,
@@ -411,6 +419,7 @@ class GameState {
     bool clearPeekingStackIndex = false,
     String? winnerId,
     bool? pirateShipDiscardPending,
+    bool? reinerHeraldUsed,
     GameCard? drawnEventCard,
     bool clearDrawnEventCard = false,
     bool? awaitingScoutDecision,
@@ -476,6 +485,7 @@ class GameState {
       winnerId: winnerId ?? this.winnerId,
       pirateShipDiscardPending:
           pirateShipDiscardPending ?? this.pirateShipDiscardPending,
+      reinerHeraldUsed: reinerHeraldUsed ?? this.reinerHeraldUsed,
       drawnEventCard: clearDrawnEventCard
           ? null
           : (drawnEventCard ?? this.drawnEventCard),

@@ -331,6 +331,25 @@ void main() {
       expect(resolveEventDieFace(EventDieFace.celebration, state),
           'Astrid har flest kunskapspoäng och får 1 valfri resurs.');
     });
+
+    test(
+        'reinerHeraldUsed: en extra rad om vem som spelade kortet läggs till sist',
+        () {
+      final state =
+          stateWithSkill(2, 2).copyWith(reinerHeraldUsed: true);
+
+      expect(
+          resolveEventDieFace(EventDieFace.celebration, state),
+          'Båda spelarna har lika många kunskapspoäng. Båda spelarna får 1 valfri resurs var.\n'
+          'Astrid spelade Reiner härolden och får en extra resurs.');
+    });
+
+    test('utan reinerHeraldUsed: ingen extra rad', () {
+      final state = stateWithSkill(2, 2);
+
+      expect(resolveEventDieFace(EventDieFace.celebration, state),
+          isNot(contains('Reiner härolden')));
+    });
   });
 
   group('resolveEventDieFace: Riklig skörd', () {
