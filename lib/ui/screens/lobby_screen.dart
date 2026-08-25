@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/models.dart';
+import '../../services/firebase_bootstrap.dart';
 import '../../services/session_storage.dart';
 import '../../state/game_notifier.dart';
 import '../theme/catan_assets.dart';
@@ -79,6 +80,12 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         return;
       }
     } else if (session['kind'] == 'online') {
+      // main.dart startar Firebase i bakgrunden utan att vänta in den
+      // (se firebase_bootstrap.dart-doc) – just den här återanslutningen
+      // sker automatiskt vid kallstart, ofta INNAN webb-SDK:t hunnit bli
+      // klart, så den måste vänta in det uttryckligen innan resumeRoom
+      // rör Firebase (annars kastar FirebaseDatabase.instance direkt).
+      await ensureFirebaseInitialized();
       final error = await notifier.resumeRoom(
         session['roomCode'] as String,
         session['mode'] as String,

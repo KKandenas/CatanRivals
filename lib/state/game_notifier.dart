@@ -342,12 +342,30 @@ class GameNotifier extends Notifier<GameState> {
     }
     if (error != null) return error;
 
+    // Startar de fyra återstående läsningarna SAMTIDIGT (se resumeRoom-
+    // doc för samma resonemang) – kan inte starta dem FÖRE _sync.joinRoom
+    // ovan (den skrivningen måste ske ordnat, innan vi läser tillbaka
+    // rummets data), men sinsemellan är de fyra helt oberoende.
+    final expansionsFuture = _sync
+        .watchActiveExpansions(roomCode)
+        .first
+        .timeout(const Duration(seconds: 10));
+    final drawStacksFuture = _sync
+        .watchDrawStacks(roomCode)
+        .first
+        .timeout(const Duration(seconds: 10));
+    final regionDeckFuture = _sync
+        .watchRegionDeck(roomCode)
+        .first
+        .timeout(const Duration(seconds: 10));
+    final eventDeckFuture = _sync
+        .watchEventDeck(roomCode)
+        .first
+        .timeout(const Duration(seconds: 10));
+
     var expansions = const <ExpansionSet>{};
     try {
-      expansions = await _sync
-          .watchActiveExpansions(roomCode)
-          .first
-          .timeout(const Duration(seconds: 10));
+      expansions = await expansionsFuture;
     } catch (_) {
       // Antar rent grundspel om det här misslyckas – hellre en spelbar
       // (fast fel) uppställning än att hela anslutningen stupar på det.
@@ -360,24 +378,15 @@ class GameNotifier extends Notifier<GameState> {
     // gissningen, hellre en spelbar (fast möjligt fel) uppställning än
     // att låta hela anslutningen stupa på det.
     try {
-      final hostDrawStacks = await _sync
-          .watchDrawStacks(roomCode)
-          .first
-          .timeout(const Duration(seconds: 10));
+      final hostDrawStacks = await drawStacksFuture;
       if (hostDrawStacks.isNotEmpty) _drawStacks = hostDrawStacks;
     } catch (_) {}
     try {
-      final hostRegionDeck = await _sync
-          .watchRegionDeck(roomCode)
-          .first
-          .timeout(const Duration(seconds: 10));
+      final hostRegionDeck = await regionDeckFuture;
       if (hostRegionDeck.isNotEmpty) _regionDeck = hostRegionDeck;
     } catch (_) {}
     try {
-      final hostEventDeck = await _sync
-          .watchEventDeck(roomCode)
-          .first
-          .timeout(const Duration(seconds: 10));
+      final hostEventDeck = await eventDeckFuture;
       if (hostEventDeck.isNotEmpty) _eventDeck = hostEventDeck;
     } catch (_) {}
 
@@ -441,10 +450,64 @@ class GameNotifier extends Notifier<GameState> {
     if (role != 'host' && role != 'guest') return 'Okänd spelarroll.';
     final opponentRole = role == 'host' ? 'guest' : 'host';
     try {
-      final players = await _sync
+      // Startar ALLA läsningar SAMTIDIGT (Dart-Futures är giriga – de
+      // börjar köra så fort de skapas, inte först vid `await`) i stället
+      // för i turordning – de är sinsemellan oberoende Firebase-
+      // sökvägar, så att köra dem en och en staplade var och ens egen
+      // 10-sekunders timeout ovanpå varandra i värsta fall (åtta
+      // sekventiella anrop kunde tidigare ta upp till 80s totalt), vilket
+      // gjorde en trög/skakig återanslutning (t.ex. direkt efter en
+      // kallstart från en hemskärmssparad PWA) onödigt långsam. Var och
+      // ens `await` nedan väntar bara in ett redan pågående anrop.
+      final playersFuture = _sync
           .watchPlayers(roomCode)
           .first
           .timeout(const Duration(seconds: 10));
+      // .ignore() på de sju nedan: om rummet inte finns kastar
+      // playersFuture (awaitad direkt nedan) och funktionen returnerar
+      // tidigt UTAN att någonsin awaita de här – utan .ignore() skulle
+      // Dart då rapportera dem som obehandlade fel (en läckt
+      // TimeoutException per stapel) så fort DERAS egna timeout slår
+      // till, oavsett att testet redan avslutats. .ignore() markerar
+      // bara felet som "sett" – stör inte den vanliga try/await/catch
+      // nedan om funktionen FAKTISKT når fram till att läsa dem.
+      final centerStacksFuture = _sync
+          .watchCenterStacks(roomCode)
+          .first
+          .timeout(const Duration(seconds: 10))
+        ..ignore();
+      final turnStateFuture = _sync
+          .watchTurnState(roomCode)
+          .first
+          .timeout(const Duration(seconds: 10))
+        ..ignore();
+      final discardPileFuture = _sync
+          .watchDiscardPile(roomCode)
+          .first
+          .timeout(const Duration(seconds: 10))
+        ..ignore();
+      final expansionsFuture = _sync
+          .watchActiveExpansions(roomCode)
+          .first
+          .timeout(const Duration(seconds: 10))
+        ..ignore();
+      final drawStacksFuture = _sync
+          .watchDrawStacks(roomCode)
+          .first
+          .timeout(const Duration(seconds: 10))
+        ..ignore();
+      final regionDeckFuture = _sync
+          .watchRegionDeck(roomCode)
+          .first
+          .timeout(const Duration(seconds: 10))
+        ..ignore();
+      final eventDeckFuture = _sync
+          .watchEventDeck(roomCode)
+          .first
+          .timeout(const Duration(seconds: 10))
+        ..ignore();
+
+      final players = await playersFuture;
       final you = players[role];
       if (you == null) {
         return 'Rummet finns inte längre. Kontrollera koden.';
@@ -452,24 +515,12 @@ class GameNotifier extends Notifier<GameState> {
       final opponent = players[opponentRole] ??
           MockGame.buildStartingPlayer(opponentRole, '…',
               isRed: opponentRole == 'host');
-      final centerStacks = await _sync
-          .watchCenterStacks(roomCode)
-          .first
-          .timeout(const Duration(seconds: 10));
-      final turnState = await _sync
-          .watchTurnState(roomCode)
-          .first
-          .timeout(const Duration(seconds: 10));
-      final discardPile = await _sync
-          .watchDiscardPile(roomCode)
-          .first
-          .timeout(const Duration(seconds: 10));
+      final centerStacks = await centerStacksFuture;
+      final turnState = await turnStateFuture;
+      final discardPile = await discardPileFuture;
       var expansions = const <ExpansionSet>{};
       try {
-        expansions = await _sync
-            .watchActiveExpansions(roomCode)
-            .first
-            .timeout(const Duration(seconds: 10));
+        expansions = await expansionsFuture;
       } catch (_) {
         // Se joinRoom – hellre en spelbar (fast fel) uppställning.
       }
@@ -487,10 +538,7 @@ class GameNotifier extends Notifier<GameState> {
       // skapat innan staplarna synkades (nyckeln saknas då helt i
       // Firebase) eller vid ett nätverksfel.
       try {
-        final syncedDrawStacks = await _sync
-            .watchDrawStacks(roomCode)
-            .first
-            .timeout(const Duration(seconds: 10));
+        final syncedDrawStacks = await drawStacksFuture;
         if (syncedDrawStacks.isEmpty) throw StateError('tomt');
         _drawStacks = syncedDrawStacks;
       } catch (_) {
@@ -498,20 +546,14 @@ class GameNotifier extends Notifier<GameState> {
             you, opponent, centerStacks, expansions);
       }
       try {
-        final syncedRegionDeck = await _sync
-            .watchRegionDeck(roomCode)
-            .first
-            .timeout(const Duration(seconds: 10));
+        final syncedRegionDeck = await regionDeckFuture;
         if (syncedRegionDeck.isEmpty) throw StateError('tomt');
         _regionDeck = syncedRegionDeck;
       } catch (_) {
         _regionDeck = RegionDeck.shuffledRemainingDeck();
       }
       try {
-        final syncedEventDeck = await _sync
-            .watchEventDeck(roomCode)
-            .first
-            .timeout(const Duration(seconds: 10));
+        final syncedEventDeck = await eventDeckFuture;
         if (syncedEventDeck.isEmpty) throw StateError('tomt');
         _eventDeck = syncedEventDeck;
       } catch (_) {

@@ -1,8 +1,9 @@
-import 'package:firebase_core/firebase_core.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'firebase_options.dart';
+import 'services/firebase_bootstrap.dart';
 import 'services/session_storage.dart';
 import 'state/game_notifier.dart';
 import 'state/game_state.dart';
@@ -10,22 +11,12 @@ import 'ui/screens/lobby_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  try {
-    // .timeout() är kritiskt här: om Firebase-webb-SDK:t (som laddas
-    // dynamiskt från gstatic.com) hänger sig – t.ex. vid ett
-    // nätverksavbrott mitt i inläsningen – löser den underliggande
-    // JS-promisen sig aldrig, och utan timeout skulle await:en aldrig
-    // returnera. Då skulle runApp() nedan aldrig köras och sidan
-    // fastna helt blank/oresponsiv, utan att vårt catch-block ens
-    // hinner köras.
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)
-        .timeout(const Duration(seconds: 8));
-  } catch (e) {
-    // Om Firebase inte går att nå ska appen ändå starta – "spela
-    // lokalt" fungerar utan nätverk, och skapa/gå med-rum-knapparna
-    // visar då bara ett felmeddelande.
-    debugPrint('Firebase.initializeApp misslyckades eller tog för lång tid: $e');
-  }
+  // Startas i bakgrunden UTAN att vänta in den (se
+  // firebase_bootstrap.dart-doc) – runApp() nedan ska köras direkt så
+  // att t.ex. "spela lokalt" alltid går att nå omedelbart, i stället
+  // för att hela appen hänger blank tills det ofta trögladdade
+  // Firebase-webb-SDK:t svarar.
+  unawaited(ensureFirebaseInitialized());
   runApp(const ProviderScope(child: CatanRivalsApp()));
 }
 
