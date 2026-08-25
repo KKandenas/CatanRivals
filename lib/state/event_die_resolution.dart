@@ -1,4 +1,5 @@
 import '../data/basic_set_cards.dart';
+import '../data/era_of_gold_cards.dart';
 import '../models/models.dart';
 import 'game_state.dart';
 
@@ -100,11 +101,16 @@ String _resolveTrade(GameState state) {
   if (youCommerce == oppCommerce) {
     return 'Ingen spelare har flest handelspoäng just nu. Inget händer.';
   }
-  final winnerName =
-      youCommerce > oppCommerce ? state.you.name : state.opponent.name;
-  final otherName =
-      youCommerce > oppCommerce ? state.opponent.name : state.you.name;
-  return '$winnerName har flest handelspoäng och får 1 valfri resurs från $otherName.';
+  final winner = youCommerce > oppCommerce ? state.you : state.opponent;
+  final other = youCommerce > oppCommerce ? state.opponent : state.you;
+  // Ockrare: "Vid handelsövertag: den spelare som har handelsövertaget
+  // får ta 2 (i stället för 1) valfria resurser från motståndaren."
+  final hasMoneylender =
+      winner.principality.hasExpansionCard(EraOfGoldCards.moneylender.id);
+  if (hasMoneylender) {
+    return '${winner.name} har flest handelspoäng och Ockrare, och får 2 valfria resurser från ${other.name}.';
+  }
+  return '${winner.name} har flest handelspoäng och får 1 valfri resurs från ${other.name}.';
 }
 
 String _resolveCelebration(GameState state) {
@@ -119,6 +125,7 @@ String _resolveCelebration(GameState state) {
 }
 
 String? _resolvePlentifulHarvest(GameState state) {
+  final lines = <String>[];
   for (final player in [state.you, state.opponent]) {
     final hasTollBridge = player.principality
         .expansionLocations(BasicSetCards.tollBridge.id)
@@ -126,10 +133,20 @@ String? _resolvePlentifulHarvest(GameState state) {
     // Bara 1 fysisk Tullbro finns i hela spelet (supplyCounts), så den
     // kan aldrig ligga hos båda spelarna samtidigt.
     if (hasTollBridge) {
-      return '${player.name} har lagt ut Tullbro och får dessutom 2 guld.';
+      lines.add('${player.name} har lagt ut Tullbro och får dessutom 2 guld.');
+    }
+    // Piratskepp: "Riklig skörd: Du får 1 guld." – till skillnad från
+    // Tullbro finns flera fysiska Piratskepp (se supplyCounts), så
+    // båda spelarna kan i teorin ha lagt ut varsitt.
+    final hasPirateShip = player.principality
+        .expansionLocations(EraOfGoldCards.pirateShip.id)
+        .isNotEmpty;
+    if (hasPirateShip) {
+      lines.add('${player.name} har lagt Piratskepp och får 1 guld.');
     }
   }
-  return null;
+  if (lines.isEmpty) return null;
+  return lines.join('\n');
 }
 
 /// Räknar ut den FAKTISKA uträkningen av ett draget händelsekorts effekt
@@ -146,6 +163,8 @@ String? resolveEventCard(GameCard card, GameState state) {
       return _resolveTradeShipsRace(state);
     case 'event-year-of-plenty':
       return _resolveYearOfPlenty(state);
+    case 'event-gift-for-the-prince':
+      return _resolveGiftForThePrince(state);
     default:
       return null;
   }
@@ -166,6 +185,26 @@ String? _resolveInvention(GameState state) {
     final resourceWord = awarded == 1 ? 'valfri resurs' : 'valfria resurser';
     lines.add(
         '${player.name} har $buildingsWithProgress $buildingWord med framstegspoäng och får ta $awarded $resourceWord.');
+  }
+  if (lines.isEmpty) return null;
+  return lines.join('\n');
+}
+
+/// Gåva till fursten: "1 guld per enhet med minst 1 styrkepoäng" – ett
+/// huvudräkne (antal ENHETER), inte en summering av styrkepoäng, precis
+/// som kortets egen text säger. Räknar bygg-/enhetskort generellt (inte
+/// bara hjältar), samma mönster som [_resolveInvention]s
+/// `buildingsWithProgress`.
+String? _resolveGiftForThePrince(GameState state) {
+  final lines = <String>[];
+  for (final player in [state.you, state.opponent]) {
+    final units = player.principality.placedExpansionCards
+        .where((c) => c.strengthPoints > 0)
+        .length;
+    if (units == 0) continue;
+    final unitWord = units == 1 ? 'enhet' : 'enheter';
+    lines.add(
+        '${player.name} har $units $unitWord med styrkepoäng och får $units guld.');
   }
   if (lines.isEmpty) return null;
   return lines.join('\n');

@@ -236,6 +236,54 @@ void main() {
       expect(resolveEventDieFace(EventDieFace.trade, state),
           'Astrid har flest handelspoäng och får 1 valfri resurs från Björn.');
     });
+
+    test('vinnaren har Ockrare: får 2 valfria resurser i stället för 1', () {
+      final youBoard = RealmBoard(ownerId: 'you');
+      youBoard.placeSettlement(0, const PlacedCard(card: BasicSetCards.settlement));
+      youBoard.placeExpansion(
+          0,
+          BuildingRow.above,
+          0,
+          PlacedCard(card: BasicSetCards.tollBridge.copyWith(commercePoints: 2)));
+      youBoard.placeExpansion(0, BuildingRow.below, 0,
+          const PlacedCard(card: EraOfGoldCards.moneylender));
+      final oppBoard = RealmBoard(ownerId: 'opponent');
+      final state = GameState(
+        you: Player(id: 'you', name: 'Astrid', principality: youBoard),
+        opponent: Player(id: 'opponent', name: 'Björn', principality: oppBoard),
+        centerStacks: const {},
+      );
+
+      expect(resolveEventDieFace(EventDieFace.trade, state),
+          'Astrid har flest handelspoäng och Ockrare, och får 2 valfria resurser från Björn.');
+    });
+
+    test('förloraren har Ockrare: påverkar inte texten (bara vinnaren räknas)', () {
+      final youBoard = RealmBoard(ownerId: 'you');
+      youBoard.placeSettlement(0, const PlacedCard(card: BasicSetCards.settlement));
+      youBoard.placeExpansion(
+          0,
+          BuildingRow.above,
+          0,
+          PlacedCard(card: BasicSetCards.tollBridge.copyWith(commercePoints: 2)));
+      final oppBoard = RealmBoard(ownerId: 'opponent');
+      oppBoard.placeSettlement(0, const PlacedCard(card: BasicSetCards.settlement));
+      oppBoard.placeExpansion(
+          0,
+          BuildingRow.above,
+          0,
+          PlacedCard(card: BasicSetCards.tollBridge.copyWith(commercePoints: 1)));
+      oppBoard.placeExpansion(0, BuildingRow.below, 0,
+          const PlacedCard(card: EraOfGoldCards.moneylender));
+      final state = GameState(
+        you: Player(id: 'you', name: 'Astrid', principality: youBoard),
+        opponent: Player(id: 'opponent', name: 'Björn', principality: oppBoard),
+        centerStacks: const {},
+      );
+
+      expect(resolveEventDieFace(EventDieFace.trade, state),
+          'Astrid har flest handelspoäng och får 1 valfri resurs från Björn.');
+    });
   });
 
   group('resolveEventDieFace: Fest', () {
@@ -310,6 +358,62 @@ void main() {
 
       expect(resolveEventDieFace(EventDieFace.plentifulHarvest, state),
           'Astrid har lagt ut Tullbro och får dessutom 2 guld.');
+    });
+
+    test('du har lagt Piratskepp: får 1 guld', () {
+      final board = RealmBoard(ownerId: 'you');
+      board.placeSettlement(0, const PlacedCard(card: BasicSetCards.settlement));
+      board.placeExpansion(
+          0, BuildingRow.above, 0, const PlacedCard(card: EraOfGoldCards.pirateShip));
+      final state = GameState(
+        you: Player(id: 'you', name: 'Astrid', principality: board),
+        opponent: buildPlayer('opponent', 'Björn'),
+        centerStacks: const {},
+      );
+
+      expect(resolveEventDieFace(EventDieFace.plentifulHarvest, state),
+          'Astrid har lagt Piratskepp och får 1 guld.');
+    });
+
+    test('båda spelarna har lagt varsitt Piratskepp: båda raderna visas',
+        () {
+      final youBoard = RealmBoard(ownerId: 'you');
+      youBoard.placeSettlement(0, const PlacedCard(card: BasicSetCards.settlement));
+      youBoard.placeExpansion(
+          0, BuildingRow.above, 0, const PlacedCard(card: EraOfGoldCards.pirateShip));
+      final oppBoard = RealmBoard(ownerId: 'opponent');
+      oppBoard.placeSettlement(0, const PlacedCard(card: BasicSetCards.settlement));
+      oppBoard.placeExpansion(
+          0, BuildingRow.above, 0, const PlacedCard(card: EraOfGoldCards.pirateShip));
+      final state = GameState(
+        you: Player(id: 'you', name: 'Astrid', principality: youBoard),
+        opponent: Player(id: 'opponent', name: 'Björn', principality: oppBoard),
+        centerStacks: const {},
+      );
+
+      expect(
+          resolveEventDieFace(EventDieFace.plentifulHarvest, state),
+          'Astrid har lagt Piratskepp och får 1 guld.\n'
+          'Björn har lagt Piratskepp och får 1 guld.');
+    });
+
+    test('du har både Tullbro och Piratskepp: båda raderna visas', () {
+      final board = RealmBoard(ownerId: 'you');
+      board.placeSettlement(0, const PlacedCard(card: BasicSetCards.settlement));
+      board.placeExpansion(0, BuildingRow.above, 0,
+          const PlacedCard(card: BasicSetCards.tollBridge));
+      board.placeExpansion(
+          0, BuildingRow.below, 0, const PlacedCard(card: EraOfGoldCards.pirateShip));
+      final state = GameState(
+        you: Player(id: 'you', name: 'Astrid', principality: board),
+        opponent: buildPlayer('opponent', 'Björn'),
+        centerStacks: const {},
+      );
+
+      expect(
+          resolveEventDieFace(EventDieFace.plentifulHarvest, state),
+          'Astrid har lagt ut Tullbro och får dessutom 2 guld.\n'
+          'Astrid har lagt Piratskepp och får 1 guld.');
     });
   });
 
@@ -493,6 +597,95 @@ void main() {
 
       expect(resolveEventCard(BasicSetCards.yearOfPlenty, state),
           'Astrid har skog och guldfält angränsande till Lagerhus/Kloster och får 1 resurs per region (om det finns plats).');
+    });
+  });
+
+  group('resolveEventCard: Gåva till fursten', () {
+    test('ingen spelare har någon enhet med styrkepoäng: ingen text', () {
+      final state = GameState(
+        you: buildPlayer('you', 'Astrid'),
+        opponent: buildPlayer('opponent', 'Björn'),
+        centerStacks: const {},
+      );
+
+      expect(
+          resolveEventCard(EraOfGoldCards.giftForThePrince, state), isNull);
+    });
+
+    test(
+        'räknar ANTAL enheter, inte summan av styrkepoäng (2 hjältar med olika styrka ger "2 enheter")',
+        () {
+      final board = RealmBoard(ownerId: 'you');
+      board.placeSettlement(0, const PlacedCard(card: BasicSetCards.settlement));
+      board.placeExpansion(
+          0,
+          BuildingRow.above,
+          0,
+          PlacedCard(card: BasicSetCards.harald.copyWith(strengthPoints: 2)));
+      board.placeExpansion(
+          0,
+          BuildingRow.below,
+          0,
+          PlacedCard(card: BasicSetCards.siglind.copyWith(strengthPoints: 1)));
+      final state = GameState(
+        you: Player(id: 'you', name: 'Astrid', principality: board),
+        opponent: buildPlayer('opponent', 'Björn'),
+        centerStacks: const {},
+      );
+
+      expect(resolveEventCard(EraOfGoldCards.giftForThePrince, state),
+          'Astrid har 2 enheter med styrkepoäng och får 2 guld.');
+    });
+
+    test('en enhet med 0 styrkepoäng räknas inte med', () {
+      final board = RealmBoard(ownerId: 'you');
+      board.placeSettlement(0, const PlacedCard(card: BasicSetCards.settlement));
+      board.placeExpansion(
+          0,
+          BuildingRow.above,
+          0,
+          PlacedCard(card: BasicSetCards.harald.copyWith(strengthPoints: 0)));
+      final state = GameState(
+        you: Player(id: 'you', name: 'Astrid', principality: board),
+        opponent: buildPlayer('opponent', 'Björn'),
+        centerStacks: const {},
+      );
+
+      expect(
+          resolveEventCard(EraOfGoldCards.giftForThePrince, state), isNull);
+    });
+
+    test('båda spelarna har enheter: båda raderna visas, en spelare hoppas över om 0',
+        () {
+      final youBoard = RealmBoard(ownerId: 'you');
+      youBoard.placeSettlement(0, const PlacedCard(card: BasicSetCards.settlement));
+      youBoard.placeExpansion(
+          0,
+          BuildingRow.above,
+          0,
+          PlacedCard(card: BasicSetCards.harald.copyWith(strengthPoints: 3)));
+      final oppBoard = RealmBoard(ownerId: 'opponent');
+      oppBoard.placeSettlement(0, const PlacedCard(card: BasicSetCards.settlement));
+      oppBoard.placeExpansion(
+          0,
+          BuildingRow.above,
+          0,
+          PlacedCard(card: BasicSetCards.siglind.copyWith(strengthPoints: 1)));
+      oppBoard.placeExpansion(
+          0,
+          BuildingRow.below,
+          0,
+          PlacedCard(card: BasicSetCards.austin.copyWith(strengthPoints: 1)));
+      final state = GameState(
+        you: Player(id: 'you', name: 'Astrid', principality: youBoard),
+        opponent: Player(id: 'opponent', name: 'Björn', principality: oppBoard),
+        centerStacks: const {},
+      );
+
+      expect(
+          resolveEventCard(EraOfGoldCards.giftForThePrince, state),
+          'Astrid har 1 enhet med styrkepoäng och får 1 guld.\n'
+          'Björn har 2 enheter med styrkepoäng och får 2 guld.');
     });
   });
 }
