@@ -391,6 +391,7 @@ class GameNotifier extends Notifier<GameState> {
         drawnEventCard: turnState.drawnEventCard,
         peekingStackIndex: turnState.peekingStackIndex,
         winnerId: turnState.winnerId,
+        pirateShipDiscardPending: turnState.pirateShipDiscardPending,
         discardPile: discardPile,
       );
 
@@ -681,6 +682,7 @@ class GameNotifier extends Notifier<GameState> {
           peekingStackIndex: turnState.peekingStackIndex,
           clearPeekingStackIndex: turnState.peekingStackIndex == null,
           winnerId: turnState.winnerId,
+          pirateShipDiscardPending: turnState.pirateShipDiscardPending,
         );
       },
       onError: (Object e) {
@@ -781,6 +783,7 @@ class GameNotifier extends Notifier<GameState> {
         drawnEventCard: state.drawnEventCard,
         peekingStackIndex: state.peekingStackIndex,
         winnerId: state.winnerId,
+        pirateShipDiscardPending: state.pirateShipDiscardPending,
       ),
     ));
   }
@@ -1047,6 +1050,37 @@ class GameNotifier extends Notifier<GameState> {
     _syncMyPlayer();
     _syncCenterStacks();
     _syncTurnState();
+    return null;
+  }
+
+  // ---------------------------------------------------------------------
+  // Piratskepp: motståndaren väljer bort ett eget handelsskepp, se
+  // [_maybeTriggerPirateShip]/[TurnState.pirateShipDiscardPending]-doc.
+  // Precis som Fejd tar den DRABBADE spelaren bort sitt EGET kort på sin
+  // EGEN klient – funkar därför i både lokalt och online läge utan
+  // särskild förgrening.
+  // ---------------------------------------------------------------------
+
+  /// Väljer bort och kasserar ETT av dina egna handelsskepp – ett enda
+  /// tryck räcker (till skillnad från Fejd behövs ingen draghögsval,
+  /// kortet hamnar direkt i slänghögen, se kortets egen text).
+  /// No-op om ingen väntar-flagga är satt, platsen är tom, eller kortet
+  /// där inte är ett handelsskepp.
+  String? resolvePirateShipDiscard(int column, BuildingRow row, int slotIndex) {
+    if (!state.pirateShipDiscardPending) return null;
+    final placed = state.you.principality.expansionAt(column, row, slotIndex);
+    if (placed == null) return null;
+    if (placed.card.expansionKind != ExpansionKind.tradeShip) {
+      return 'Piratskepp kräver att du väljer ett handelsskepp.';
+    }
+    final removed =
+        state.you.principality.removeExpansion(column, row, slotIndex);
+    if (removed == null) return null;
+    state = state.copyWith(you: state.you, pirateShipDiscardPending: false);
+    recomputeTokenHolders();
+    _syncMyPlayer();
+    _syncTurnState();
+    _discardToPile(removed.card);
     return null;
   }
 
@@ -1803,7 +1837,25 @@ class GameNotifier extends Notifier<GameState> {
     state = state.copyWith(
         you: state.you.copyWith(hand: List.of(state.you.hand)..remove(card)));
     _placeExpansionCardAndSync(column, row, slotIndex, card);
+    _maybeTriggerPirateShip(card);
     return null;
+  }
+
+  /// När [card] är Piratskepp och bygget lyckats: motståndaren måste
+  /// välja bort ett eget handelsskepp (regelhäftet, se
+  /// [EraOfGoldCards.pirateShip]-doc) – men bara om det faktiskt finns
+  /// något att välja bort (kortets egen text: "Om motståndaren inte har
+  /// några handelsskepp så händer inget"), se
+  /// [RealmBoard.hasAnyTradeShip]. Sätter en synkad flagga i stället för
+  /// att lösa det direkt här, eftersom det är MOTSTÅNDAREN (inte den
+  /// aktiva spelaren) som ska välja – se [resolvePirateShipDiscard] och
+  /// [TurnState.pirateShipDiscardPending]-doc för varför det (till
+  /// skillnad från Fejd) kräver en riktig synkad signal.
+  void _maybeTriggerPirateShip(GameCard card) {
+    if (card.baseId != EraOfGoldCards.pirateShip.id) return;
+    if (!state.opponent.principality.hasAnyTradeShip) return;
+    state = state.copyWith(pirateShipDiscardPending: true);
+    _syncTurnState();
   }
 
   /// Bygger ett landskapsutbyggnadskort (brun textruta, t.ex.

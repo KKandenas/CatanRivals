@@ -150,6 +150,13 @@ class GameState {
   /// [GameOverOverlay] i game_board_screen.dart.
   final String? winnerId;
 
+  /// Om DU (den icke aktiva spelaren) måste välja bort ett eget
+  /// handelsskepp (Piratskepp, se [TurnState.pirateShipDiscardPending]/
+  /// [GameNotifier.resolvePirateShipDiscard]) – synkat via [TurnState],
+  /// eftersom det (till skillnad från Fejd) triggas av ett engångsbygge
+  /// som motståndarens klient inte kan räkna ut på egen hand.
+  final bool pirateShipDiscardPending;
+
   /// Händelsekortet som just nu ligger uppslaget för alla att läsa,
   /// draget när händelsetärningen visade "?" (se [EventDieFace.eventCard]
   /// och [GameNotifier.drawEventCard]) – synkas till båda spelarna,
@@ -257,6 +264,7 @@ class GameState {
     this.peekedCards,
     this.peekingStackIndex,
     this.winnerId,
+    this.pirateShipDiscardPending = false,
     this.drawnEventCard,
     this.awaitingScoutDecision = false,
     this.scoutChoices,
@@ -414,6 +422,7 @@ class GameState {
     int? peekingStackIndex,
     bool clearPeekingStackIndex = false,
     String? winnerId,
+    bool? pirateShipDiscardPending,
     GameCard? drawnEventCard,
     bool clearDrawnEventCard = false,
     bool? awaitingScoutDecision,
@@ -479,6 +488,8 @@ class GameState {
           ? null
           : (peekingStackIndex ?? this.peekingStackIndex),
       winnerId: winnerId ?? this.winnerId,
+      pirateShipDiscardPending:
+          pirateShipDiscardPending ?? this.pirateShipDiscardPending,
       drawnEventCard: clearDrawnEventCard
           ? null
           : (drawnEventCard ?? this.drawnEventCard),

@@ -31,6 +31,15 @@ class TurnState {
   /// slutställning) – se [GameOverOverlay] i game_board_screen.dart.
   final String? winnerId;
 
+  /// Om den ICKE aktiva spelaren måste välja bort ett eget handelsskepp
+  /// (Piratskepp, regelhäftet: "Your opponent must remove 1 trade ship
+  /// of his choice"), se [GameNotifier.resolvePirateShipDiscard]. Till
+  /// skillnad från t.ex. Fejd (som härleds lokalt ur redan synkad data,
+  /// se GameNotifier-docen) triggas det här av ett ENGÅNGS-BYGGE – det
+  /// finns inget jämförbart tillstånd motståndarens klient kan räkna ut
+  /// på egen hand, så en riktig synkad signal behövs.
+  final bool pirateShipDiscardPending;
+
   const TurnState({
     required this.activePlayerId,
     this.diceRolled = false,
@@ -39,6 +48,7 @@ class TurnState {
     this.drawnEventCard,
     this.peekingStackIndex,
     this.winnerId,
+    this.pirateShipDiscardPending = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -49,6 +59,7 @@ class TurnState {
         if (drawnEventCard != null) 'drawnEventCard': drawnEventCard!.toJson(),
         if (peekingStackIndex != null) 'peekingStackIndex': peekingStackIndex,
         if (winnerId != null) 'winnerId': winnerId,
+        if (pirateShipDiscardPending) 'pirateShipDiscardPending': true,
       };
 
   factory TurnState.fromJson(Map<String, dynamic> json) => TurnState(
@@ -64,5 +75,7 @@ class TurnState {
                 Map<String, dynamic>.from(json['drawnEventCard'] as Map)),
         peekingStackIndex: json['peekingStackIndex'] as int?,
         winnerId: json['winnerId'] as String?,
+        pirateShipDiscardPending:
+            json['pirateShipDiscardPending'] as bool? ?? false,
       );
 }

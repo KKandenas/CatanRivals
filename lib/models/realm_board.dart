@@ -395,6 +395,21 @@ class RealmBoard {
     return false;
   }
 
+  /// Om riket har minst ett handelsskepp utplacerat – Piratskeppets krav
+  /// ("Om motståndaren inte har några handelsskepp så händer inget"), se
+  /// [GameNotifier.dropExpansion]. Utan den här kontrollen skulle
+  /// [GameState.pirateShipDiscardPending] kunna sättas även när
+  /// motståndaren inte har något skepp att välja bort, utan något sätt
+  /// att komma vidare.
+  bool get hasAnyTradeShip {
+    for (final node in _settlements.values) {
+      for (final site in [...node.aboveSites, ...node.belowSites]) {
+        if (site?.card.expansionKind == ExpansionKind.tradeShip) return true;
+      }
+    }
+    return false;
+  }
+
   /// Om riket har minst en stad (inte bara byar) – Köpmans krav ("3
   /// handelspoäng eller stad", se hand_dock.dart).
   bool get hasCity => _settlements.values.any((n) => n.isCity);

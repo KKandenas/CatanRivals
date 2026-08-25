@@ -141,6 +141,14 @@ class PrincipalityGrid extends StatelessWidget {
   final void Function(int column, BuildingRow row)?
       onSelectStartingRegionRearrangementTarget;
 
+  /// Piratskepp (se [GameNotifier.resolvePirateShipDiscard]): om aktiv
+  /// blir bara egna, utplacerade handelsskepp tryckbara – ett enda tryck
+  /// räcker (till skillnad från Fejd finns ingen efterföljande
+  /// draghögsval, kortet hamnar direkt i slänghögen).
+  final bool pirateShipDiscardActive;
+  final void Function(int column, BuildingRow row, int slotIndex)?
+      onSelectPirateShipDiscard;
+
   const PrincipalityGrid({
     super.key,
     required this.board,
@@ -168,6 +176,8 @@ class PrincipalityGrid extends StatelessWidget {
     this.startingRegionRearrangementActive = false,
     this.startingRegionRearrangementFirst,
     this.onSelectStartingRegionRearrangementTarget,
+    this.pirateShipDiscardActive = false,
+    this.onSelectPirateShipDiscard,
   });
 
   bool get _draggingRoad => draggingCard?.category == CardCategory.road;
@@ -623,6 +633,10 @@ class PrincipalityGrid extends StatelessWidget {
         interactive &&
         onSelectFeudBuilding != null &&
         placed.card.expansionKind == ExpansionKind.building;
+    final canPickForPirateShip = pirateShipDiscardActive &&
+        interactive &&
+        onSelectPirateShipDiscard != null &&
+        placed.card.expansionKind == ExpansionKind.tradeShip;
     // Se kommentaren i _roadSlot – en ny utbyggnad på en tidigare tom
     // byggplats byter widget-typ här och toppas därför korrekt in.
     final view = PopIn(
@@ -634,7 +648,9 @@ class PrincipalityGrid extends StatelessWidget {
                 RelocationTargetKind.expansion, column, row, slotIndex)
             : canPickForFeud
                 ? () => onSelectFeudBuilding!(column, row, slotIndex)
-                : null,
+                : canPickForPirateShip
+                    ? () => onSelectPirateShipDiscard!(column, row, slotIndex)
+                    : null,
       ),
     );
     final selected = (relocationActive &&

@@ -26,6 +26,7 @@ import '../widgets/hand_dock.dart';
 import '../widgets/peek_stack_overlay.dart';
 import '../widgets/pending_regions_bar.dart';
 import '../widgets/pill_banner.dart';
+import '../widgets/pirate_ship_discard_bar.dart';
 import '../widgets/principality_grid.dart';
 import '../widgets/relocation_instruction_bar.dart';
 import '../widgets/rules_button.dart';
@@ -897,6 +898,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   onCancel: () =>
                       _handleResult(context, notifier.cancelFeudBuildingPick()),
                 ),
+              // Bara den DRABBADE spelaren (inte den som byggde
+              // Piratskeppet) ska se väljaren – se
+              // GameNotifier.resolvePirateShipDiscard-doc.
+              if (state.pirateShipDiscardPending && !state.isMyTurn)
+                const PirateShipDiscardBar(),
               if (state.startingRegionRearrangementActive)
                 StartingRegionRearrangementBar(
                   hasFirstSelection:
@@ -981,6 +987,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                                 context,
                                 notifier.selectRegionRearrangementTarget(
                                     column, row)),
+                        pirateShipDiscardActive: state.pirateShipDiscardPending &&
+                            !state.isMyTurn,
+                        onSelectPirateShipDiscard: (column, row, slot) =>
+                            _handleResult(
+                                context,
+                                notifier.resolvePirateShipDiscard(
+                                    column, row, slot)),
                       ),
                     ),
                   ),
