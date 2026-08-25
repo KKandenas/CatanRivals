@@ -138,6 +138,20 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     }
   }
 
+  /// Kapell (1–3)/(4–6) (regelhäftet: "Slås 1, 2 eller 3 [respektive 4,
+  /// 5 eller 6] på produktionstärningen gäller inte händelsen Upplopp
+  /// dig") – rätt Kapell för den här omgångens redan slagna
+  /// produktionstärning skyddar dig automatiskt, ingen egen handling
+  /// krävs (till skillnad från Sebastian).
+  bool _chapelProtectsRiots(GameState state) {
+    final roll = state.productionRoll;
+    if (roll == null) return false;
+    final cardId = roll <= 3
+        ? EraOfTurmoilCards.chapelLowRoll.id
+        : EraOfTurmoilCards.chapelHighRoll.id;
+    return state.you.principality.hasExpansionCard(cardId);
+  }
+
   /// Andra halvan av handlingskortens "tvåstegsraket" (se
   /// [HandDock.onUseActionCard]/card_detail_dialog.dart) – "Vill du
   /// använda kortet?" har redan bekräftats, nu avgörs vad just det
@@ -864,10 +878,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                                     0 &&
                                 !state.sebastianProtectedPlayerIds
                                     .contains(state.myPlayerId) &&
+                                !_chapelProtectsRiots(state) &&
                                 state.you.hand.any((c) =>
                                     c.baseId ==
                                     EraOfTurmoilCards
                                         .sebastianTheItinerantPreacher.id),
+                            chapelProtected: _chapelProtectsRiots(state),
                             onPay: () => _handleResult(
                                 context, notifier.resolveRiotsPay()),
                             onCannotPay: () => _handleResult(

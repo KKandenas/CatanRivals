@@ -28,6 +28,12 @@ class RiotsResolutionCard extends StatelessWidget {
   /// inget att skydda), och har inte redan skyddat dig.
   final bool canPlaySebastian;
 
+  /// Om du har rätt Kapell (1–3 respektive 4–6) och produktionstärningens
+  /// resultat matchar dess intervall (regelhäftet: "Slås 1, 2 eller 3 på
+  /// produktionstärningen gäller inte händelsen Upplopp dig") – räknas,
+  /// precis som [youProtected], som din egen färdiga hantering.
+  final bool chapelProtected;
+
   final VoidCallback onPay;
   final VoidCallback onCannotPay;
   final VoidCallback onPlaySebastian;
@@ -39,6 +45,7 @@ class RiotsResolutionCard extends StatelessWidget {
     required this.goldOwed,
     this.youProtected = false,
     this.canPlaySebastian = false,
+    this.chapelProtected = false,
     required this.onPay,
     required this.onCannotPay,
     required this.onPlaySebastian,
@@ -50,6 +57,10 @@ class RiotsResolutionCard extends StatelessWidget {
     if (youProtected) {
       return 'Du spelade Sebastian, den vandrande predikanten – gäller '
           'inte dig. Inget händer.';
+    }
+    if (chapelProtected) {
+      return 'Du har rätt Kapell för produktionstärningens resultat – '
+          'gäller inte dig. Inget händer.';
     }
     if (!_hasQualifyingUnits) {
       return 'Du har inga enheter med styrke- eller handelspoäng. Inget händer.';
@@ -130,7 +141,7 @@ class RiotsResolutionCard extends StatelessWidget {
                       color: CatanColors.ink),
                 ),
                 const SizedBox(height: 12),
-                if (youProtected || !_hasQualifyingUnits)
+                if (youProtected || chapelProtected || !_hasQualifyingUnits)
                   FilledButton(
                     style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF4F6F45)),
@@ -161,7 +172,7 @@ class RiotsResolutionCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                if (canPlaySebastian) ...[
+                if (canPlaySebastian && !chapelProtected) ...[
                   const SizedBox(height: 8),
                   OutlinedButton(
                     style: OutlinedButton.styleFrom(
