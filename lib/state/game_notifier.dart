@@ -1595,25 +1595,50 @@ class GameNotifier extends Notifier<GameState> {
   // [TurnState.pendingAttackCard]-doc.
   // ---------------------------------------------------------------------
 
-  /// Om [card] uppfyller [kind]s urvalskriterium – Bågskytt: minst 1
-  /// styrkepoäng, Pyroman: en byggnad (kortets egen text: "en av
-  /// motståndarens byggnader", till skillnad från Bågskytts bredare
-  /// "en av sina enheter").
-  bool _attackCardCardQualifies(AttackCardKind kind, GameCard card) {
+  /// Om [board]s stad i [column] har en Brandkår utplacerad (ovanför
+  /// ELLER nedanför, se EraOfTurmoilCards.fireBrigade-doc: "skyddar
+  /// alla byggnader ... i den stad där Brandkåren är placerad") – gör
+  /// alla byggnader i just den staden immuna mot Pyroman.
+  bool _cityHasFireBrigade(RealmBoard board, int column) {
+    final node = board.settlementAt(column);
+    if (node == null) return false;
+    bool protects(List<PlacedCard?> sites) => sites
+        .any((s) => s?.card.baseId == EraOfTurmoilCards.fireBrigade.id);
+    return protects(node.aboveSites) || protects(node.belowSites);
+  }
+
+  /// Om [card], utplacerad i [board]s kolumn [column], uppfyller [kind]s
+  /// urvalskriterium – Bågskytt: minst 1 styrkepoäng, Pyroman: en
+  /// byggnad (kortets egen text: "en av motståndarens byggnader", till
+  /// skillnad från Bågskytts bredare "en av sina enheter") SOM INTE är
+  /// skyddad av en Brandkår i samma stad (se [_cityHasFireBrigade]).
+  bool _attackCardCardQualifiesAt(
+      AttackCardKind kind, GameCard card, RealmBoard board, int column) {
     switch (kind) {
       case AttackCardKind.archer:
         return card.strengthPoints > 0;
       case AttackCardKind.arsonist:
-        return card.expansionKind == ExpansionKind.building;
+        if (card.expansionKind != ExpansionKind.building) return false;
+        return !_cityHasFireBrigade(board, column);
     }
   }
 
   /// Om motståndaren har NÅGON kvalificerande enhet för [kind] – annars
   /// händer inget när kortet spelas (samma resonemang som Piratskepp:
   /// "Om motståndaren inte har några handelsskepp så händer inget").
-  bool _attackCardHasTarget(AttackCardKind kind) => state.opponent.principality
-      .placedExpansionCards
-      .any((c) => _attackCardCardQualifies(kind, c));
+  bool _attackCardHasTarget(AttackCardKind kind) {
+    final board = state.opponent.principality;
+    for (final entry in board.settlements.entries) {
+      final node = entry.value;
+      for (final site in [...node.aboveSites, ...node.belowSites]) {
+        if (site == null) continue;
+        if (_attackCardCardQualifiesAt(kind, site.card, board, entry.key)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
 
   /// Sätter den väntande flaggan om (och bara om) motståndaren faktiskt
   /// har något att välja bort.
@@ -1669,10 +1694,15 @@ class GameNotifier extends Notifier<GameState> {
     final placed =
         _expansionAt(state.you.principality, column, row, slotIndex);
     if (placed == null) return null;
-    if (!_attackCardCardQualifies(kind, placed.card)) {
-      return kind == AttackCardKind.archer
-          ? 'Bågskytt gäller bara enheter med styrkepoäng.'
-          : 'Pyroman gäller bara byggnader.';
+    if (!_attackCardCardQualifiesAt(
+        kind, placed.card, state.you.principality, column)) {
+      if (kind == AttackCardKind.archer) {
+        return 'Bågskytt gäller bara enheter med styrkepoäng.';
+      }
+      if (placed.card.expansionKind == ExpansionKind.building) {
+        return 'Den byggnaden är skyddad av en Brandkår.';
+      }
+      return 'Pyroman gäller bara byggnader.';
     }
     state = state.copyWith(
       attackCardPickedUnit: RelocationSelection(
