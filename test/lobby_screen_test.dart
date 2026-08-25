@@ -75,6 +75,27 @@ void main() {
     expect(container.read(gameProvider).victoryPointTarget, 12);
   });
 
+  testWidgets('temarutan för Utvecklingens tid skickas med till playLocally',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpLobby(tester);
+    final container =
+        ProviderScope.containerOf(tester.element(find.byType(LobbyScreen)));
+
+    await tester.tap(find.byKey(const ValueKey('theme-option-progress')));
+    await tester.pump();
+    await tester.tap(find.text('Spela lokalt (utan synk)'));
+    await tester.pumpAndSettle();
+
+    expect(container.read(gameProvider).activeExpansions,
+        {ExpansionSet.eraOfProgress});
+    expect(container.read(gameProvider).victoryPointTarget, 12);
+  });
+
   testWidgets(
       'temarutorna är ömsesidigt uteslutande – väljer man ett nytt tema avmarkeras det förra',
       (tester) async {
@@ -91,11 +112,13 @@ void main() {
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('theme-option-turmoil')));
     await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('theme-option-progress')));
+    await tester.pump();
     await tester.tap(find.text('Spela lokalt (utan synk)'));
     await tester.pumpAndSettle();
 
     expect(container.read(gameProvider).activeExpansions,
-        {ExpansionSet.eraOfTurmoil});
+        {ExpansionSet.eraOfProgress});
   });
 
   testWidgets('"?"-knappen öppnar regelsidan', (tester) async {

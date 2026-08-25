@@ -7,6 +7,8 @@ import '../data/basic_set_cards.dart';
 import '../data/basic_set_draw_deck.dart';
 import '../data/era_of_gold_cards.dart';
 import '../data/era_of_gold_draw_deck.dart';
+import '../data/era_of_progress_cards.dart';
+import '../data/era_of_progress_draw_deck.dart';
 import '../data/era_of_turmoil_cards.dart';
 import '../data/era_of_turmoil_draw_deck.dart';
 import '../data/event_deck.dart';
@@ -122,23 +124,26 @@ class GameNotifier extends Notifier<GameState> {
   /// Bygger om alla tre lokala dragstaplar (region/drag/händelse) för
   /// en ny match, enligt vilka temaset som är aktiva. Bara ETT tema kan
   /// vara aktivt åt gången så länge (se [LobbyScreen]s ömsesidigt
-  /// uteslutande val) – Gulderan och Oroligheternas tid kombineras
-  /// alltså aldrig i samma match. Returnerar de unika ansikte-upp-korten
-  /// (se [Player.faceUpExpansionCard], 2× Köpmansgille för Gulderan
-  /// respektive 2× Värdshus för Oroligheternas tid, annars en tom lista)
-  /// – index 0/1 motsvarar alltid respektive spelares EGET kort (du/host
-  /// får 0, motståndaren/gästen får 1), samma ordning oavsett klient
-  /// eftersom [EraOfGoldDrawDeck.faceUpCards]/[EraOfTurmoilDrawDeck.faceUpCards]
-  /// aldrig blandar dem. Anroparna (`playLocally`/`hostRoom`/`joinRoom`)
-  /// sätter in respektive kort på sin [Player] själva, eftersom `state`
-  /// inte alltid är uppdaterad med [expansions] ännu vid
+  /// uteslutande val) – de tre temaseten kombineras alltså aldrig i
+  /// samma match. Returnerar de unika ansikte-upp-korten (se
+  /// [Player.faceUpExpansionCard], 2× Köpmansgille för Gulderan, 2×
+  /// Värdshus för Oroligheternas tid respektive 2× Universitet för
+  /// Utvecklingens tid, annars en tom lista) – index 0/1 motsvarar
+  /// alltid respektive spelares EGET kort (du/host får 0, motståndaren/
+  /// gästen får 1), samma ordning oavsett klient eftersom
+  /// [EraOfGoldDrawDeck.faceUpCards]/[EraOfTurmoilDrawDeck.faceUpCards]/
+  /// [EraOfProgressDrawDeck.faceUpCards] aldrig blandar dem. Anroparna
+  /// (`playLocally`/`hostRoom`/`joinRoom`) sätter in respektive kort på
+  /// sin [Player] själva, eftersom `state` inte alltid är uppdaterad med
+  /// [expansions] ännu vid
   /// anropstillfället.
   List<GameCard> _resetDecks(Set<ExpansionSet> expansions) {
     _regionDeck = RegionDeck.shuffledRemainingDeck();
     final hasGold = expansions.contains(ExpansionSet.eraOfGold);
     final hasTurmoil = expansions.contains(ExpansionSet.eraOfTurmoil);
+    final hasProgress = expansions.contains(ExpansionSet.eraOfProgress);
     final basicStacks = BasicSetDrawDeck.shuffledStacks(
-        stackCount: hasGold || hasTurmoil ? 3 : 4);
+        stackCount: hasGold || hasTurmoil || hasProgress ? 3 : 4);
     if (hasGold) {
       _drawStacks = [...basicStacks, ...EraOfGoldDrawDeck.shuffledTwoStacks()];
       _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom(
@@ -153,6 +158,15 @@ class GameNotifier extends Notifier<GameState> {
       _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom(
           extraCards: EraOfTurmoilDrawDeck.eventCards());
       return EraOfTurmoilDrawDeck.faceUpCards();
+    }
+    if (hasProgress) {
+      _drawStacks = [
+        ...basicStacks,
+        ...EraOfProgressDrawDeck.shuffledTwoStacks()
+      ];
+      _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom(
+          extraCards: EraOfProgressDrawDeck.eventCards());
+      return EraOfProgressDrawDeck.faceUpCards();
     }
     _drawStacks = basicStacks;
     _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom();
@@ -173,6 +187,9 @@ class GameNotifier extends Notifier<GameState> {
     }
     if (expansions.contains(ExpansionSet.eraOfTurmoil)) {
       return EraOfTurmoilDrawDeck.eventCards();
+    }
+    if (expansions.contains(ExpansionSet.eraOfProgress)) {
+      return EraOfProgressDrawDeck.eventCards();
     }
     return const [];
   }
@@ -778,6 +795,7 @@ class GameNotifier extends Notifier<GameState> {
       final turmoilById = {for (final c in EraOfTurmoilCards.all) c.id: c};
       EraOfTurmoilCards.supplyCounts.forEach((id, totalCount) {
         if (id.startsWith('event-')) return;
+        if (id == EraOfTurmoilCards.hedgeTavern.id) return;
         final template = turmoilById[id] ?? byId[id] ?? goldById[id];
         if (template == null) return;
         final remaining = consumeAccounted(id, totalCount);
@@ -786,9 +804,23 @@ class GameNotifier extends Notifier<GameState> {
         }
       });
     }
+    final hasProgress = expansions.contains(ExpansionSet.eraOfProgress);
+    if (hasProgress) {
+      final progressById = {for (final c in EraOfProgressCards.all) c.id: c};
+      EraOfProgressCards.supplyCounts.forEach((id, totalCount) {
+        if (id.startsWith('event-')) return;
+        if (id == EraOfProgressCards.university.id) return;
+        final template = progressById[id] ?? byId[id];
+        if (template == null) return;
+        final remaining = consumeAccounted(id, totalCount);
+        for (var i = 0; i < remaining; i++) {
+          pool.add(template.copyWith(id: '$id-progress-draw-${1000 + i}'));
+        }
+      });
+    }
     pool.shuffle();
 
-    final stackCount = hasGold || hasTurmoil ? 5 : 4;
+    final stackCount = hasGold || hasTurmoil || hasProgress ? 5 : 4;
     final counts = [
       for (var i = 0; i < stackCount; i++) centerStacks['draw${i + 1}'] ?? 0,
     ];
@@ -2288,14 +2320,17 @@ class GameNotifier extends Notifier<GameState> {
 
   /// Om [card] fysiskt drogs från ett temasets egna högar – avgörs av
   /// draghögs-suffixet i [GameCard.id] ("-gold-draw-N"/
-  /// "-turmoil-draw-N", se [EraOfGoldDrawDeck]/[EraOfTurmoilDrawDeck]/
+  /// "-turmoil-draw-N"/"-progress-draw-N", se [EraOfGoldDrawDeck]/
+  /// [EraOfTurmoilDrawDeck]/[EraOfProgressDrawDeck]/
   /// [_reconstructDrawStacksFromKnownCards]), INTE av
   /// [GameCard.expansionSet]: flera korttyper återanvänds från
   /// grundspelets (eller ett annat temasets) egna definition men fyller
   /// ändå platser i temasetets fysiska hög – bara suffixet avslöjar
   /// vilken pool kortet faktiskt kom ifrån.
   bool _isThemeCard(GameCard card) =>
-      card.id.contains('-gold-draw-') || card.id.contains('-turmoil-draw-');
+      card.id.contains('-gold-draw-') ||
+      card.id.contains('-turmoil-draw-') ||
+      card.id.contains('-progress-draw-');
 
   /// Kollar att [card] hör hemma i draghög [stackIndex] – grundspelskort
   /// får bara läggas tillbaka i grundspelets högar, temasetets egna kort
@@ -2747,8 +2782,9 @@ class GameNotifier extends Notifier<GameState> {
   /// synka den separat, INNAN det här anropas (annars skulle
   /// [recomputeTokenHolders] hinna räkna med kortet på fel ställe).
   ///
-  /// UNDANTAG: byts ett eget ansikte-upp-kort (t.ex. Köpmansgille eller
-  /// Värdshus) ut mot något annat, hamnar det INTE i slänghögen utan
+  /// UNDANTAG: byts ett eget ansikte-upp-kort (t.ex. Köpmansgille,
+  /// Värdshus eller Universitet) ut mot något annat, hamnar det INTE i
+  /// slänghögen utan
   /// tillbaka på din egna, separata ansikte-upp-plats (se
   /// [Player.faceUpExpansionCard]-doc) – det är fortfarande ditt kort,
   /// bara oplacerat igen, och kan byggas på nytt senare.
@@ -2760,7 +2796,8 @@ class GameNotifier extends Notifier<GameState> {
         .placeExpansion(column, row, slotIndex, PlacedCard(card: card));
     final replacedFaceUpCard = (replaced?.card.baseId ==
                 EraOfGoldCards.merchantGuild.id ||
-            replaced?.card.baseId == EraOfTurmoilCards.hedgeTavern.id)
+            replaced?.card.baseId == EraOfTurmoilCards.hedgeTavern.id ||
+            replaced?.card.baseId == EraOfProgressCards.university.id)
         ? replaced!.card
         : null;
     state = state.copyWith(

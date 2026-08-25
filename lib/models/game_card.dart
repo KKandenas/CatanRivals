@@ -219,8 +219,9 @@ class GameCard {
 
   /// Korttypens id utan draghögens per-kopia-suffix ("-draw-N",
   /// "-gold-draw-N", "-gold-event-N", "-turmoil-draw-N",
-  /// "-turmoil-event-N", "-faceup-N", se [BasicSetDrawDeck]/
-  /// [EventDeck]/[EraOfGoldDrawDeck]/[EraOfTurmoilDrawDeck]) – två
+  /// "-turmoil-event-N", "-progress-draw-N", "-progress-event-N",
+  /// "-faceup-N", se [BasicSetDrawDeck]/[EventDeck]/[EraOfGoldDrawDeck]/
+  /// [EraOfTurmoilDrawDeck]/[EraOfProgressDrawDeck]) – två
   /// fysiska kopior av samma korttyp (t.ex. de två Spejare-korten, eller
   /// de två ansikte-upp-Köpmansgillena) har olika [id] men samma
   /// [baseId]. Använd den här, inte [id], för att avgöra vilken *sorts*
@@ -237,6 +238,8 @@ class GameCard {
     RegExp(r'^(.*)-gold-event-\d+$'),
     RegExp(r'^(.*)-turmoil-draw-\d+$'),
     RegExp(r'^(.*)-turmoil-event-\d+$'),
+    RegExp(r'^(.*)-progress-draw-\d+$'),
+    RegExp(r'^(.*)-progress-event-\d+$'),
     RegExp(r'^(.*)-faceup-\d+$'),
     RegExp(r'^(.*)-draw-\d+$'),
   ];

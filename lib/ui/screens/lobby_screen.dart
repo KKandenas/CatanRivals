@@ -169,7 +169,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   /// En tryckbar temaruta i temavals-raden (se [_selectedTheme]) – visar
   /// samma kortbaksbild som draghögarna faktiskt använder i spelet (se
   /// [CatanAssets.backBasicSet]/[backEraGold]/[backEraTurmoil]/
-  /// [CenterStacksStrip]), ingen egen text ovanpå eftersom bilderna
+  /// [backEraProgress]/[CenterStacksStrip]), ingen egen text ovanpå eftersom bilderna
   /// redan har temanamnet inbakat. Den valda rutan får en tjockare
   /// träfärgad ram (samma träfärg som resten av lobbyns ram, se
   /// [CatanColors.woodFrame]) och full ljusstyrka; de andra dämpas lite
@@ -288,6 +288,12 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                                   const ValueKey('theme-option-turmoil'),
                               value: ExpansionSet.eraOfTurmoil,
                               backgroundImage: CatanAssets.backEraTurmoil,
+                            ),
+                            _themeOption(
+                              optionKey:
+                                  const ValueKey('theme-option-progress'),
+                              value: ExpansionSet.eraOfProgress,
+                              backgroundImage: CatanAssets.backEraProgress,
                             ),
                           ],
                         ),

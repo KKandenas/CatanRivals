@@ -425,10 +425,12 @@ class GameState {
   /// tema, men på 3 högar (12 vardera) när ett temaset är aktivt (se
   /// [GameNotifier._resetDecks]), plus 2 högar till med temasetets egna
   /// draghögskort: Gulderans 22 (11 vardera, efter att 2 Köpmansgille
-  /// sorterats ut till ansikte-upp-högen) respektive Oroligheternas tids
-  /// 22 (11 vardera, efter att 2 Värdshus sorterats ut på samma sätt –
-  /// de två temaseten kombineras aldrig i samma match, se
-  /// [LobbyScreen]). Används för att avgöra om en hög redan är vald
+  /// sorterats ut till ansikte-upp-högen) och Oroligheternas tids 22
+  /// (11 vardera, efter att 2 Värdshus sorterats ut på samma sätt)
+  /// respektive Utvecklingens tids 24 (12 vardera, efter att 2
+  /// Universitet sorterats ut – setet har fler fysiska kort totalt) –
+  /// de tre temaseten kombineras aldrig i samma match, se
+  /// [LobbyScreen]. Används för att avgöra om en hög redan är vald
   /// under starthandsvalet (se [CenterStacksStrip]/
   /// [GameNotifier.chooseStartingStack]) – kan inte bara jämföra mot ett
   /// hårdkodat 9 längre nu när högstorleken varierar beroende på tema.
@@ -436,6 +438,9 @@ class GameState {
     if (activeExpansions.contains(ExpansionSet.eraOfGold) ||
         activeExpansions.contains(ExpansionSet.eraOfTurmoil)) {
       return const [12, 12, 12, 11, 11];
+    }
+    if (activeExpansions.contains(ExpansionSet.eraOfProgress)) {
+      return const [12, 12, 12, 12, 12];
     }
     return const [9, 9, 9, 9];
   }

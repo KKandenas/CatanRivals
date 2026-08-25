@@ -46,9 +46,13 @@ class StackChoiceOverlay extends StatelessWidget {
 
   String _backAssetFor(int index) {
     if (!_isThemeStack(index)) return CatanAssets.backBasicSet;
-    return activeExpansions.contains(ExpansionSet.eraOfTurmoil)
-        ? CatanAssets.backEraTurmoil
-        : CatanAssets.backEraGold;
+    if (activeExpansions.contains(ExpansionSet.eraOfTurmoil)) {
+      return CatanAssets.backEraTurmoil;
+    }
+    if (activeExpansions.contains(ExpansionSet.eraOfProgress)) {
+      return CatanAssets.backEraProgress;
+    }
+    return CatanAssets.backEraGold;
   }
 
   @override
