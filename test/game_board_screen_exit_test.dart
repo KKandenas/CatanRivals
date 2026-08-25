@@ -3,6 +3,7 @@ import 'package:catan_rivals/state/game_state.dart';
 import 'package:catan_rivals/ui/screens/game_board_screen.dart';
 import 'package:catan_rivals/ui/screens/lobby_screen.dart';
 import 'package:catan_rivals/ui/screens/rules_screen.dart';
+import 'package:catan_rivals/ui/widgets/dice_roll_button.dart';
 import 'package:catan_rivals/ui/widgets/top_status_bar.dart';
 import 'package:catan_rivals/ui/widgets/total_score_board.dart';
 import 'package:flutter/material.dart';
@@ -158,18 +159,39 @@ void main() {
   });
 
   testWidgets(
-      'TotalScoreBoard klipps inte (Stacken som håller den använder Clip.none)',
+      'TotalScoreBoard ligger som ett direkt, sista lager i HELA skärmens Stack, ovanpå tärningarna',
       (tester) async {
     await pumpBoard(tester);
 
-    // TotalScoreBoard är AVSIKTLIGT lite högre än TopStatusBar (svävar
-    // delvis över den, se dess doc) – Stacken som håller båda måste
-    // därför INTE klippa vid sina egna bounds (rapporterad bugg: botten
-    // av TotalScoreBoard klipptes bort sedan "DIN TUR"-bannern som
-    // tidigare gav Stacken extra höjd flyttades ut).
-    final stackFinder = find.ancestor(
-        of: find.byType(TotalScoreBoard), matching: find.byType(Stack));
-    final stack = tester.widget<Stack>(stackFinder.first);
-    expect(stack.clipBehavior, Clip.none);
+    // TotalScoreBoard ska ritas EFTER (ovanpå) resten av spelplanen –
+    // som ett direkt barn av samma Stack som täcker hela skärmen
+    // (Scaffoldens body), i stället för nästlad i en mindre delstack
+    // begränsad till toppradens höjd (rapporterad bugg: tärningarna,
+    // som ritas senare i trädet men låg i en TIDIGARE Stack-position,
+    // hamnade ovanpå och skymde den helt).
+    final outerStack =
+        tester.widget<Stack>(find.byType(Stack).first);
+
+    int indexOfSubtreeContaining(Type type) {
+      for (var i = 0; i < outerStack.children.length; i++) {
+        if (find
+            .descendant(
+                of: find.byWidget(outerStack.children[i]),
+                matching: find.byType(type))
+            .evaluate()
+            .isNotEmpty) {
+          return i;
+        }
+      }
+      fail('Ingen av Stackens direkta barn innehåller $type');
+    }
+
+    final totalScoreBoardIndex = indexOfSubtreeContaining(TotalScoreBoard);
+    final diceIndex = indexOfSubtreeContaining(DiceRollButton);
+
+    expect(totalScoreBoardIndex, greaterThan(diceIndex),
+        reason:
+            'TotalScoreBoard måste komma EFTER tärningen i Stackens barnlista '
+            'för att alltid ritas ovanpå den');
   });
 }

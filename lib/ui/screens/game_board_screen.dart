@@ -411,18 +411,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                     ),
                   ),
                 ),
-              Stack(
-                // TotalScoreBoard nedan är AVSIKTLIGT lite högre än
-                // TopStatusBar (svävar delvis över den, se dess doc) –
-                // utan clipBehavior: none skulle Stack (som annars
-                // klipper vid sina egna, snäva bounds – bara så hög som
-                // TopStatusBar) klippa av botten av den (rapporterad
-                // bugg: syntes först sedan "DIN TUR"-bannern flyttades ut
-                // härifrån och gjorde den här Stacken kortare).
-                clipBehavior: Clip.none,
+              Column(
                 children: [
-                  Column(
-                    children: [
                       if (state.sessionError != null)
                         PillBanner(
                           color: Theme.of(context).colorScheme.errorContainer,
@@ -475,30 +465,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                         hasHeroToken: opponentHasHeroToken,
                         hasTradeToken: opponentHasTradeToken,
                       ),
-                    ],
-                  ),
-                  // Totalställningen (segerpoäng för båda spelarna, se
-                  // TotalScoreBoard) svävar i övre högra hörnet och
-                  // sträcker sig över raden med motståndarens namn i
-                  // stället för att pressas in i den – då slapp den raden
-                  // växa på höjden bara för att få plats med två rader
-                  // poäng.
-                  if (showTurnEmphasis)
-                    Positioned(
-                      top: 4,
-                      right: 10,
-                      child: TotalScoreBoard(
-                        youName: state.you.name,
-                        youPoints: youTotalVictoryPoints,
-                        youHaveHeroToken: youHaveHeroToken,
-                        youHaveTradeToken: youHaveTradeToken,
-                        amIRed: state.amIRed,
-                        opponentName: state.opponent.name,
-                        opponentPoints: opponentTotalVictoryPoints,
-                        opponentHasHeroToken: opponentHasHeroToken,
-                        opponentHasTradeToken: opponentHasTradeToken,
-                      ),
-                    ),
                 ],
               ),
               // Kortbytesfasen (regelhäftet s. 9), sist i omgången efter
@@ -1047,6 +1013,37 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
               ),
             ],
           ),
+          // Totalställningen (segerpoäng för båda spelarna) ligger som ett
+          // eget, sista lager i HELA skärmens Stack (i stället för nästlad
+          // inuti bara toppradens egen Stack) – den ska alltid synas ovanpå
+          // ALLT annat i spelet (rapporterad bugg: tärningarna, som ritas i
+          // en senare del av trädet, hamnade ovanpå den och skymde den
+          // helt). Positionerad relativt hela skärmen (med en egen
+          // SafeArea) i stället för att svepa ner från toppradens rad, så
+          // den även täcker "DIN TUR"-raden i stället för att hamna bakom
+          // den.
+          if (showTurnEmphasis)
+            Positioned(
+              top: 0,
+              right: 10,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: TotalScoreBoard(
+                    youName: state.you.name,
+                    youPoints: youTotalVictoryPoints,
+                    youHaveHeroToken: youHaveHeroToken,
+                    youHaveTradeToken: youHaveTradeToken,
+                    amIRed: state.amIRed,
+                    opponentName: state.opponent.name,
+                    opponentPoints: opponentTotalVictoryPoints,
+                    opponentHasHeroToken: opponentHasHeroToken,
+                    opponentHasTradeToken: opponentHasTradeToken,
+                  ),
+                ),
+              ),
+            ),
           if (state.winnerId != null)
             GameOverOverlay(
               youWon: state.winnerId == state.myPlayerId,
