@@ -701,6 +701,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                             title:
                                 'Vilken draghög ska byggnaden läggas underst i?',
                             stackCount: state.initialDrawStackSizes.length,
+                            activeExpansions: state.activeExpansions,
                             onChooseStack: (index) => _handleResult(context,
                                 notifier.resolveFeudBuildingRemoval(index)),
                             onCancel: () => _handleResult(
@@ -736,6 +737,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                             title:
                                 'Vilken draghög ska kortet läggas underst i?',
                             stackCount: state.initialDrawStackSizes.length,
+                            activeExpansions: state.activeExpansions,
                             onChooseStack: (index) {
                               final card = _pendingFraternalFeudsCard!;
                               setState(() => _pendingFraternalFeudsCard = null);

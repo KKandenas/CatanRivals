@@ -114,6 +114,56 @@ void main() {
     expect(state.centerStacks['event'], 8);
   });
 
+  /// Testar rapporterad bugg: ombladningen vid Jul byggde tidigare en
+  /// helt ny stapel med bara grundspelets 9 kort (se EventDeck.
+  /// shuffledWithYuleFourthFromBottom), oavsett tema – temasetets egna
+  /// extra händelsekort försvann permanent ur spelet i stället för att
+  /// följa med tillbaka in i stapeln (se GameNotifier._themeEventCards).
+  void testYuleKeepsThemeEventCards(
+      {required Set<ExpansionSet> expansions, required int totalCards}) {
+    final container = ProviderContainer(
+      overrides: [gameSyncServiceProvider.overrideWithValue(FakeGameSyncService())],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(gameProvider.notifier);
+    notifier.playLocally(expansions: expansions);
+
+    expect(container.read(gameProvider).centerStacks['event'], totalCards);
+
+    // Jul ligger garanterat på index totalCards-4 i en färsk stapel (se
+    // EventDeck-doc: alltid 4:e från botten, oavsett stapelstorlek) –
+    // drar förbi den, ett kort i taget, tills nästa drag garanterat
+    // träffar Jul och triggar ombladningen.
+    for (var i = 0; i < totalCards - 4; i++) {
+      notifier.state = container
+          .read(gameProvider)
+          .copyWith(diceRolled: true, eventDieFace: EventDieFace.eventCard);
+      expect(notifier.drawEventCard(), isNull);
+      notifier.dismissEventCard();
+    }
+
+    notifier.state = container
+        .read(gameProvider)
+        .copyWith(diceRolled: true, eventDieFace: EventDieFace.eventCard);
+    expect(notifier.drawEventCard(), isNull);
+
+    final state = container.read(gameProvider);
+    expect(state.drawnEventCard!.id, isNot(BasicSetCards.yule.id));
+    // Skulle temasetets egna kort ha tappats bort vid ombladningen (den
+    // rapporterade buggen) hade den nya stapeln bara haft grundspelets
+    // kort kvar i stället för alla [totalCards] - 1 (det just dragna).
+    expect(state.centerStacks['event'], totalCards - 1);
+  }
+
+  test('Jul med Gulderan aktivt: Gulderans egna händelsekort följer med i ombladningen',
+      () => testYuleKeepsThemeEventCards(
+          expansions: {ExpansionSet.eraOfGold}, totalCards: 12));
+
+  test(
+      'Jul med Oroligheternas tid aktivt: dess egna händelsekort följer med i ombladningen',
+      () => testYuleKeepsThemeEventCards(
+          expansions: {ExpansionSet.eraOfTurmoil}, totalCards: 13));
+
   test('online: händelsekortet synkas till motståndarens klient', () async {
     Future<void> pump() => Future<void>.delayed(Duration.zero);
     final fake = FakeGameSyncService();

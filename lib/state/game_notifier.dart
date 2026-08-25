@@ -157,6 +157,24 @@ class GameNotifier extends Notifier<GameState> {
     return const [];
   }
 
+  /// Det aktiva temasetets EGNA extra händelsekort (se
+  /// [EraOfGoldDrawDeck]/[EraOfTurmoilDrawDeck].eventCards) – delad
+  /// hjälpare mellan [_resetDecks]s reservlösning i [resumeRoom] och
+  /// [_drawEventCardResolvingYule], så att en Jul-ombladning MITT I en
+  /// match aldrig tappar temasetets egna händelsekort (rapporterad
+  /// bugg: bara grundspelets 9 kort kom tillbaka efter Jul – temasetets
+  /// egna försvann permanent ur spelet, eftersom ombladningen byggde en
+  /// helt ny stapel utan att skicka med dem).
+  List<GameCard> _themeEventCards(Set<ExpansionSet> expansions) {
+    if (expansions.contains(ExpansionSet.eraOfGold)) {
+      return EraOfGoldDrawDeck.eventCards();
+    }
+    if (expansions.contains(ExpansionSet.eraOfTurmoil)) {
+      return EraOfTurmoilDrawDeck.eventCards();
+    }
+    return const [];
+  }
+
   /// Bygger `centerStacks`-kartan (draghögarnas synliga antal, plus de
   /// fasta grundspels-antalen väg/by/stad/region) utifrån de FAKTISKT
   /// uppbyggda dragstaplarna/händelsestapeln (se [_resetDecks]) i
@@ -545,7 +563,6 @@ class GameNotifier extends Notifier<GameState> {
       // separat här – det är en del av [you]/[opponent] (redan hämtade
       // ovan via watchPlayers), precis som handen/riket.
 
-      final hasGold = expansions.contains(ExpansionSet.eraOfGold);
       // Alla tre staplar är numera riktigt synkade resurser (se
       // [_drawStacks]/[_regionDeck]/[_eventDeck]-doc) – läs den FAKTISKA,
       // redan synkade blandningen i stället för att gissa. Faller bara
@@ -575,7 +592,7 @@ class GameNotifier extends Notifier<GameState> {
         _eventDeck = syncedEventDeck;
       } catch (_) {
         _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom(
-            extraCards: hasGold ? EraOfGoldDrawDeck.eventCards() : const []);
+            extraCards: _themeEventCards(expansions));
       }
 
       state = GameState(
@@ -1182,13 +1199,17 @@ class GameNotifier extends Notifier<GameState> {
   /// beginning of the game. Afterwards, draw an event card again.")
   /// byggs stapeln om automatiskt och nästa kort dras direkt i
   /// stället – Jul visas alltså aldrig för spelarna, bara kortet som
-  /// kommer efter.
+  /// kommer efter. Ombladningen måste skicka med [_themeEventCards] (se
+  /// dess doc) – annars försvinner temasetets egna händelsekort
+  /// permanent ur spelet så fort Jul dras (rapporterad bugg: bara
+  /// grundspelets 9 kort kom tillbaka).
   GameCard? _drawEventCardResolvingYule() {
     if (_eventDeck.isEmpty) return null;
     var remaining = List<GameCard>.of(_eventDeck);
     var card = remaining.removeAt(0);
     while (card.id == BasicSetCards.yule.id) {
-      remaining = EventDeck.shuffledWithYuleFourthFromBottom();
+      remaining = EventDeck.shuffledWithYuleFourthFromBottom(
+          extraCards: _themeEventCards(state.activeExpansions));
       if (remaining.isEmpty) {
         _setEventDeck(remaining);
         return null;

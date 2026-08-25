@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../models/models.dart';
 import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
 
@@ -7,13 +8,26 @@ import '../theme/catan_colors.dart';
 /// underst i – delas av Fejds bygg-borttagning och Brödrafejds
 /// handkortsval (se [GameNotifier.resolveFeudBuildingRemoval]/
 /// [GameNotifier.pickFraternalFeudsCard]), som båda slutar med precis
-/// det valet efter att själva kortet redan är utpekat.
+/// det valet efter att själva kortet redan är utpekat. Varje ruta visar
+/// samma kortbaksida som draghögen faktiskt har i spelet (se
+/// [CenterStacksStrip._backAssetFor]) – annars ser det ut som att ALLA
+/// högar hör till grundspelet, även temasetets egna (rapporterad bugg:
+/// alla kort ska kunna läggas tillbaka till rätt hög beroende på
+/// baksida).
 class StackChoiceOverlay extends StatelessWidget {
   final String title;
 
   /// Hur många draghögar som ska visas att välja mellan – 4 utan tema,
-  /// 5 med Gulderan (se [GameState.initialDrawStackSizes].length).
+  /// 5 med ett tema aktivt (se [GameState.initialDrawStackSizes].length).
   final int stackCount;
+
+  /// Vilket tema som är aktivt (se [GameState.activeExpansions]) –
+  /// avgör vilken kortbaksbild de två sista rutorna visar när
+  /// [stackCount] är 5 (Gulderan/Oroligheternas tid har olika
+  /// baksidor). Bara ETT tema är någonsin aktivt åt gången (se
+  /// [LobbyScreen]).
+  final Set<ExpansionSet> activeExpansions;
+
   final void Function(int stackIndex) onChooseStack;
   final VoidCallback? onCancel;
 
@@ -21,9 +35,21 @@ class StackChoiceOverlay extends StatelessWidget {
     super.key,
     required this.title,
     this.stackCount = 4,
+    this.activeExpansions = const {},
     required this.onChooseStack,
     this.onCancel,
   });
+
+  /// Samma indelning som [GameNotifier._isThemeStackIndex]: de två sista
+  /// rutorna (bara när [stackCount] är 5) hör till temasetets egna hög.
+  bool _isThemeStack(int index) => stackCount == 5 && index >= stackCount - 2;
+
+  String _backAssetFor(int index) {
+    if (!_isThemeStack(index)) return CatanAssets.backBasicSet;
+    return activeExpansions.contains(ExpansionSet.eraOfTurmoil)
+        ? CatanAssets.backEraTurmoil
+        : CatanAssets.backEraGold;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +89,7 @@ class StackChoiceOverlay extends StatelessWidget {
                             child: Stack(
                               fit: StackFit.expand,
                               children: [
-                                Image.asset(CatanAssets.backBasicSet,
+                                Image.asset(_backAssetFor(i),
                                     fit: BoxFit.cover),
                                 DecoratedBox(
                                   decoration: BoxDecoration(
