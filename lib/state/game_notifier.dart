@@ -45,25 +45,50 @@ class GameNotifier extends Notifier<GameState> {
   StreamSubscription<FraternalFeudsRequest?>? _fraternalFeudsRequestSub;
   StreamSubscription<List<GameCard>>? _discardPileSub;
   StreamSubscription<List<GameCard>>? _faceUpExpansionCardsSub;
+  StreamSubscription<List<List<GameCard>>>? _drawStacksSub;
 
   /// Regionstapelns kvarvarande, blandade kort (se [RegionDeck]) – dras
   /// från när en ny by byggs. Var spelares klient håller sin egen
   /// blandning; det synkas inte kort-för-kort mellan host/guest än (bara
   /// det synliga antalet i centerStacks['regions'] synkas), så exakt
   /// vilka regioner som dras kan skilja mellan de två klienterna. Fullt
-  /// delad, synkad dragstapel är ett större steg för sig.
+  /// delad, synkad dragstapel är ett större steg för sig – regionkort är
+  /// aldrig unika (bara resurstyp), så en avvikelse här är ofarlig till
+  /// skillnad från [_drawStacks] nedan.
   List<GameCard> _regionDeck = RegionDeck.shuffledRemainingDeck();
 
-  /// Grundspelets draghögar (36 kort, se [BasicSetDrawDeck]) och
-  /// händelsekortsstapeln (Yule 4:e från botten, se [EventDeck]).
-  /// Precis som regionstapeln hålls de lokalt per klient tills vidare –
-  /// bara antalet syns i centerStacks, inte de exakta korten. Utan
-  /// aktiva temaset: 4 högar à 9 kort, 9 händelsekort. Med Gulderan
-  /// aktivt (se [_resetDecks]): omfördelas grundspelet till 3 högar à
-  /// 12 kort för att lämna plats åt Gulderans egna 2 (11 kort vardera,
-  /// se [EraOfGoldDrawDeck]) – alltså 5 högar totalt – och 3 extra
-  /// händelsekort läggs till.
+  /// Grundspelets draghögar (36 kort, se [BasicSetDrawDeck]) – TILL
+  /// SKILLNAD FRÅN [_regionDeck]/[_eventDeck] en riktigt DELAD, synkad
+  /// resurs online (se [GameSyncService.watchDrawStacks]/
+  /// [_syncDrawStacks]): hosten skriver sin FAKTISKA blandning till
+  /// rummet vid [createRoom] (se [hostRoom]), gästen läser tillbaka
+  /// EXAKT samma i stället för att blanda sin egen (se [joinRoom]), och
+  /// varje efterföljande drag – från ENDERA spelaren – skriver den nya,
+  /// fullständiga listan igen så båda klienternas lokala kopia alltid
+  /// stämmer överens (rapporterad bugg: en unik hjälte med bara 1 fysisk
+  /// kopia, t.ex. Candamir, gick att dra av BÅDA spelarna samtidigt,
+  /// eftersom varje klient tidigare byggde sin egen, oberoende blandade
+  /// hög). `_setDrawStack` är den ENDA vägen att mutera en enskild hög
+  /// efter att spelet startat – garanterar att ingen kodplats glömmer
+  /// synken. Utan aktiva temaset: 4 högar à 9 kort. Med Gulderan aktivt
+  /// (se [_resetDecks]): omfördelas grundspelet till 3 högar à 12 kort
+  /// för att lämna plats åt Gulderans egna 2 (11 kort vardera, se
+  /// [EraOfGoldDrawDeck]) – alltså 5 högar totalt.
   List<List<GameCard>> _drawStacks = BasicSetDrawDeck.shuffledFourStacks();
+
+  /// Muterar hög [index] till [cards] och synkar direkt (se
+  /// [_drawStacks]-doc) – används i stället för en rå
+  /// `_drawStacks[index] = ...`-tilldelning överallt utom vid
+  /// initial/rekonstruerad uppsättning ([_resetDecks]/
+  /// [_reconstructDrawStacksFromKnownCards]/[resumeLocalSnapshot]), där
+  /// hela listan byggs om på en gång och synkas separat (se [hostRoom]).
+  void _setDrawStack(int index, List<GameCard> cards) {
+    _drawStacks[index] = cards;
+    _syncDrawStacks();
+  }
+
+  /// Händelsekortsstapeln (Yule 4:e från botten, se [EventDeck]) – som
+  /// [_regionDeck], inte (ännu) synkad kort-för-kort.
   List<GameCard> _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom();
 
   /// Bygger om alla tre lokala dragstaplar (region/drag/händelse) för
@@ -130,7 +155,7 @@ class GameNotifier extends Notifier<GameState> {
   Player _dealStartingHand(Player player, int stackIndex) {
     final stack = _drawStacks[stackIndex];
     final drawn = stack.sublist(0, 3);
-    _drawStacks[stackIndex] = stack.sublist(3);
+    _setDrawStack(stackIndex, stack.sublist(3));
     return player
         .copyWith(hand: [...player.hand, ...drawn], hasDrawnStartingHand: true);
   }
@@ -144,6 +169,7 @@ class GameNotifier extends Notifier<GameState> {
       _fraternalFeudsRequestSub?.cancel();
       _discardPileSub?.cancel();
       _faceUpExpansionCardsSub?.cancel();
+      _drawStacksSub?.cancel();
     });
     return GameState(
       you: MockGame.buildYou(),
@@ -172,6 +198,7 @@ class GameNotifier extends Notifier<GameState> {
     _fraternalFeudsRequestSub?.cancel();
     _discardPileSub?.cancel();
     _faceUpExpansionCardsSub?.cancel();
+    _drawStacksSub?.cancel();
     final faceUp = _resetDecks(expansions);
 
     // Lokalt läge har ingen egen vy för en andra spelare att trycka
@@ -225,7 +252,9 @@ class GameNotifier extends Notifier<GameState> {
       await _sync
           .createRoom(
               roomCode, 'host', hostPlayer, centerStacks, initialTurnState,
-              activeExpansions: expansions, faceUpExpansionCards: faceUp)
+              activeExpansions: expansions,
+              faceUpExpansionCards: faceUp,
+              drawStacks: _drawStacks)
           .timeout(const Duration(seconds: 10));
     } on TimeoutException {
       throw Exception(
@@ -254,7 +283,12 @@ class GameNotifier extends Notifier<GameState> {
   /// skillnad från [hostRoom] väljer gästen INTE själv vilka temaset
   /// som gäller – de läses från rummet (satta av hosten vid
   /// [createRoom]) så att båda klienterna bygger upp samma
-  /// draghögs-/ansikte-upp-uppställning (se [_resetDecks]).
+  /// ansikte-upp-uppställning (se [_resetDecks]). Draghögarna (se
+  /// [_drawStacks]-doc) läses ORDAGRANT från hostens FAKTISKA blandning
+  /// i stället för att blandas lokalt – annars skulle den här klienten
+  /// bygga en helt egen, oberoende blandad hög (samma unika kort skulle
+  /// då kunna finnas i BÅDA klienternas separata universum, och gå att
+  /// dra av båda spelarna).
   Future<String?> joinRoom(String roomCode, String myName) async {
     final guestPlayer =
         MockGame.buildStartingPlayer('guest', myName, isRed: false);
@@ -279,6 +313,20 @@ class GameNotifier extends Notifier<GameState> {
       // (fast fel) uppställning än att hela anslutningen stupar på det.
     }
     final faceUp = _resetDecks(expansions);
+    // _resetDecks ovan blandar en egen, lokal gissning av draghögarna
+    // (behövs ändå för sina biverkningar: _regionDeck/_eventDeck) – skriv
+    // över den med hostens FAKTISKA, redan synkade blandning så fort den
+    // går att läsa. Misslyckas det (nätverksfel, eller ett gammalt rum
+    // skapat innan draghögarna synkades): behåll gissningen, hellre en
+    // spelbar (fast möjligt fel) uppställning än att låta hela
+    // anslutningen stupa på det.
+    try {
+      final hostDrawStacks = await _sync
+          .watchDrawStacks(roomCode)
+          .first
+          .timeout(const Duration(seconds: 10));
+      if (hostDrawStacks.isNotEmpty) _drawStacks = hostDrawStacks;
+    } catch (_) {}
 
     state = GameState(
       you: guestPlayer,
@@ -370,8 +418,23 @@ class GameNotifier extends Notifier<GameState> {
       final hasGold = expansions.contains(ExpansionSet.eraOfGold);
       _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom(
           extraCards: hasGold ? EraOfGoldDrawDeck.eventCards() : const []);
-      _reconstructDrawStacksFromKnownCards(
-          you, opponent, centerStacks, expansions);
+      // Draghögarna är numera en riktigt synkad resurs (se
+      // [_drawStacks]-doc) – läs den FAKTISKA, redan synkade blandningen
+      // i stället för att gissa. Faller bara tillbaka till den gamla
+      // rekonstruktionen (se [_reconstructDrawStacksFromKnownCards]) för
+      // ett rum skapat innan draghögarna synkades (`drawStacks` saknas
+      // då helt i Firebase) eller vid ett nätverksfel.
+      try {
+        final syncedDrawStacks = await _sync
+            .watchDrawStacks(roomCode)
+            .first
+            .timeout(const Duration(seconds: 10));
+        if (syncedDrawStacks.isEmpty) throw StateError('tomt');
+        _drawStacks = syncedDrawStacks;
+      } catch (_) {
+        _reconstructDrawStacksFromKnownCards(
+            you, opponent, centerStacks, expansions);
+      }
 
       state = GameState(
         you: you,
@@ -440,8 +503,11 @@ class GameNotifier extends Notifier<GameState> {
     }
   }
 
-  /// Bygger om draghögarna lokalt efter [resumeRoom] – den här klienten
-  /// känner bara till det synkade ANTALET kvar i varje hög
+  /// RESERVLÖSNING för [resumeRoom] – bygger om draghögarna lokalt, från
+  /// en GISSNING, för ett rum där [GameSyncService.watchDrawStacks] inte
+  /// gick att läsa (t.ex. ett rum skapat innan draghögarna synkades, se
+  /// [_drawStacks]-doc, eller ett nätverksfel). Den här klienten känner
+  /// då bara till det synkade ANTALET kvar i varje hög
   /// ([centerStacks]), inte vilka specifika kort. Utgår från
   /// grundspelets fulla 36-korspool ([BasicSetDrawDeck]) – plus
   /// Gulderans egen pool när [expansions] innehåller
@@ -637,6 +703,7 @@ class GameNotifier extends Notifier<GameState> {
     _fraternalFeudsRequestSub?.cancel();
     _discardPileSub?.cancel();
     _faceUpExpansionCardsSub?.cancel();
+    _drawStacksSub?.cancel();
 
     _playersSub = _sync.watchPlayers(roomCode).listen(
       (players) {
@@ -724,6 +791,23 @@ class GameNotifier extends Notifier<GameState> {
             sessionError: 'Kunde inte synka ansikte-upp-högen: $e');
       },
     );
+
+    // Draghögarnas EXAKTA innehåll (se [_drawStacks]-doc) – till skillnad
+    // från de andra strömmarna ovan uppdaterar den här INTE [state] (bara
+    // det privata fältet), eftersom UI:t bara visar det synkade ANTALET
+    // (centerStacks, egen ström). Eka:r tillbaka din EGEN skrivning också
+    // (precis som faceUpExpansionCards ovan) – ofarligt, samma data
+    // tilldelas bara igen.
+    _drawStacksSub = _sync.watchDrawStacks(roomCode).listen(
+      (stacks) {
+        if (stacks.isEmpty) return;
+        _drawStacks = stacks;
+      },
+      onError: (Object e) {
+        state =
+            state.copyWith(sessionError: 'Kunde inte synka draghögarna: $e');
+      },
+    );
   }
 
   void _syncMyPlayer() {
@@ -749,6 +833,12 @@ class GameNotifier extends Notifier<GameState> {
     if (roomCode == null) return;
     unawaited(_sync.writeFaceUpExpansionCards(
         roomCode, state.faceUpExpansionCards));
+  }
+
+  void _syncDrawStacks() {
+    final roomCode = state.roomCode;
+    if (roomCode == null) return;
+    unawaited(_sync.writeDrawStacks(roomCode, _drawStacks));
   }
 
   /// Lägger [card] överst i slänghögen (se [GameState.discardPile]) och
@@ -1038,7 +1128,7 @@ class GameNotifier extends Notifier<GameState> {
         .removeExpansion(picked.column, picked.row, picked.slotIndex);
     if (removed == null) return null;
 
-    _drawStacks[stackIndex] = [..._drawStacks[stackIndex], removed.card];
+    _setDrawStack(stackIndex, [..._drawStacks[stackIndex], removed.card]);
     state = state.copyWith(
       you: state.you,
       centerStacks: Map.of(state.centerStacks)
@@ -1134,7 +1224,7 @@ class GameNotifier extends Notifier<GameState> {
     final done = picked.length >= 2;
 
     if (!state.isOnline) {
-      _drawStacks[stackIndex] = [..._drawStacks[stackIndex], card];
+      _setDrawStack(stackIndex, [..._drawStacks[stackIndex], card]);
       final updatedOpponent = state.opponent
           .copyWith(hand: List.of(state.opponent.hand)..remove(card));
       state = state.copyWith(
@@ -1197,7 +1287,7 @@ class GameNotifier extends Notifier<GameState> {
       if (card == null) continue; // redan borta – t.ex. dubbelleverans
       hand = List.of(hand)..remove(card);
       final stackIndex = request.stackIndices[i];
-      _drawStacks[stackIndex] = [..._drawStacks[stackIndex], card];
+      _setDrawStack(stackIndex, [..._drawStacks[stackIndex], card]);
       centerStacks.update('draw${stackIndex + 1}', (v) => v + 1);
     }
     state = state.copyWith(
@@ -1334,7 +1424,7 @@ class GameNotifier extends Notifier<GameState> {
     if (stack.isEmpty) return null;
 
     final card = stack.first;
-    _drawStacks[stackIndex] = stack.sublist(1);
+    _setDrawStack(stackIndex, stack.sublist(1));
     state = state.copyWith(
       you: state.you.copyWith(hand: [...state.you.hand, card]),
       centerStacks: Map.of(state.centerStacks)
@@ -1379,7 +1469,7 @@ class GameNotifier extends Notifier<GameState> {
   /// centerStacks synkas alltid). Delas av [discardHandCard] och
   /// [exchangeDiscard].
   void _discardCardToStack(GameCard card, int stackIndex) {
-    _drawStacks[stackIndex] = [..._drawStacks[stackIndex], card];
+    _setDrawStack(stackIndex, [..._drawStacks[stackIndex], card]);
     state = state.copyWith(
       you: state.you
           .copyWith(hand: List<GameCard>.of(state.you.hand)..remove(card)),
@@ -1556,7 +1646,8 @@ class GameNotifier extends Notifier<GameState> {
     if (stackIndex == null) return null;
     if (!_drawStacks[stackIndex].contains(card)) return null;
 
-    _drawStacks[stackIndex] = List.of(_drawStacks[stackIndex])..remove(card);
+    _setDrawStack(
+        stackIndex, List.of(_drawStacks[stackIndex])..remove(card));
     state = state.copyWith(
       you: state.you.copyWith(hand: [...state.you.hand, card]),
       centerStacks: Map.of(state.centerStacks)
@@ -1662,7 +1753,7 @@ class GameNotifier extends Notifier<GameState> {
     }
 
     final stackIndex = state.startingHandDraftStackIndex!;
-    _drawStacks[stackIndex] = newPool;
+    _setDrawStack(stackIndex, newPool);
     state = state.copyWith(
       you: state.you.copyWith(hand: [...state.you.hand, ...picked]),
       centerStacks: Map.of(state.centerStacks)

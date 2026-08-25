@@ -21,6 +21,9 @@ import '../models/models.dart';
 ///                                [GameState.activeExpansions]
 ///   faceUpExpansionCards      -> List<GameCard.toJson()>, se
 ///                                [GameState.faceUpExpansionCards]
+///   drawStacks                -> List<List<GameCard.toJson()>>, de
+///                                delade dragstaplarnas EXAKTA innehåll
+///                                (se [GameNotifier]s `_drawStacks`-doc)
 /// ```
 abstract class GameSyncService {
   /// Skapar ett nytt rum med given kod och sätter värden-spelaren som
@@ -28,7 +31,11 @@ abstract class GameSyncService {
   /// genereras slumpmässigt av anroparen). [activeExpansions] sätts en
   /// gång här och ändras aldrig sedan (se [GameState.activeExpansions])
   /// – gästen läser det via [watchActiveExpansions] i stället för att
-  /// välja själv.
+  /// välja själv. [drawStacks] är hostens FAKTISKT hopblandade
+  /// dragstaplar (se [GameNotifier._resetDecks]) – gästen läser dem via
+  /// [watchDrawStacks] i stället för att blanda sina egna, annars skulle
+  /// varje unikt kort (t.ex. en hjälte med bara 1 fysisk kopia) kunna
+  /// dyka upp i BÅDA klienternas separata, oberoende blandade högar.
   Future<void> createRoom(
     String roomCode,
     String hostId,
@@ -37,6 +44,7 @@ abstract class GameSyncService {
     TurnState turnState, {
     Set<ExpansionSet> activeExpansions = const {},
     List<GameCard> faceUpExpansionCards = const [],
+    List<List<GameCard>> drawStacks = const [],
   });
 
   /// Går med i ett befintligt rum. Returnerar `null` vid lyckat
@@ -94,4 +102,15 @@ abstract class GameSyncService {
 
   Future<void> writeFaceUpExpansionCards(
       String roomCode, List<GameCard> faceUpExpansionCards);
+
+  /// Strömmar de delade dragstaplarnas EXAKTA innehåll (se
+  /// [GameNotifier]s `_drawStacks`-doc), varje gång de ändras – ett drag
+  /// av ENDERA spelaren (från handjustering, kika-fasen, Fejd,
+  /// Brödrafejd, starthandsutdelning, m.m.) skriver den nya, fullständiga
+  /// listan hit, så att BÅDA klienterna alltid ser samma kvarvarande pool
+  /// och aldrig kan dra samma fysiska kort två gånger.
+  Stream<List<List<GameCard>>> watchDrawStacks(String roomCode);
+
+  Future<void> writeDrawStacks(
+      String roomCode, List<List<GameCard>> drawStacks);
 }

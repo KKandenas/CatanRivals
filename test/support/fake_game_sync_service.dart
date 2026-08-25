@@ -16,6 +16,7 @@ class FakeGameSyncService implements GameSyncService {
   final Map<String, List<GameCard>> _discardPiles = {};
   final Map<String, Set<ExpansionSet>> _activeExpansions = {};
   final Map<String, List<GameCard>> _faceUpExpansionCards = {};
+  final Map<String, List<List<GameCard>>> _drawStacks = {};
   final Map<String, StreamController<Map<String, Player>>> _playerControllers = {};
   final Map<String, StreamController<Map<String, int>>> _centerStackControllers = {};
   final Map<String, StreamController<TurnState>> _turnStateControllers = {};
@@ -26,6 +27,8 @@ class FakeGameSyncService implements GameSyncService {
       _activeExpansionsControllers = {};
   final Map<String, StreamController<List<GameCard>>>
       _faceUpExpansionCardsControllers = {};
+  final Map<String, StreamController<List<List<GameCard>>>>
+      _drawStacksControllers = {};
 
   StreamController<Map<String, Player>> _playersController(String roomCode) =>
       _playerControllers.putIfAbsent(roomCode, () => StreamController.broadcast());
@@ -55,6 +58,11 @@ class FakeGameSyncService implements GameSyncService {
       _faceUpExpansionCardsControllers.putIfAbsent(
           roomCode, () => StreamController.broadcast());
 
+  StreamController<List<List<GameCard>>> _drawStacksController(
+          String roomCode) =>
+      _drawStacksControllers.putIfAbsent(
+          roomCode, () => StreamController.broadcast());
+
   @override
   Future<void> createRoom(
     String roomCode,
@@ -64,6 +72,7 @@ class FakeGameSyncService implements GameSyncService {
     TurnState turnState, {
     Set<ExpansionSet> activeExpansions = const {},
     List<GameCard> faceUpExpansionCards = const [],
+    List<List<GameCard>> drawStacks = const [],
   }) async {
     _players[roomCode] = {hostId: hostPlayer};
     _centerStacks[roomCode] = Map.of(centerStacks);
@@ -71,6 +80,7 @@ class FakeGameSyncService implements GameSyncService {
     _discardPiles[roomCode] = const [];
     _activeExpansions[roomCode] = Set.of(activeExpansions);
     _faceUpExpansionCards[roomCode] = List.of(faceUpExpansionCards);
+    _drawStacks[roomCode] = drawStacks.map(List<GameCard>.of).toList();
     _playersController(roomCode).add(Map.of(_players[roomCode]!));
     _centerStacksController(roomCode).add(Map.of(_centerStacks[roomCode]!));
     _turnStateController(roomCode).add(turnState);
@@ -78,6 +88,7 @@ class FakeGameSyncService implements GameSyncService {
     _activeExpansionsController(roomCode).add(Set.of(activeExpansions));
     _faceUpExpansionCardsController(roomCode)
         .add(List.of(faceUpExpansionCards));
+    _drawStacksController(roomCode).add(List.of(_drawStacks[roomCode]!));
   }
 
   @override
@@ -204,5 +215,24 @@ class FakeGameSyncService implements GameSyncService {
     _faceUpExpansionCards[roomCode] = List.of(faceUpExpansionCards);
     _faceUpExpansionCardsController(roomCode)
         .add(List.of(faceUpExpansionCards));
+  }
+
+  @override
+  Stream<List<List<GameCard>>> watchDrawStacks(String roomCode) {
+    final existing = _drawStacks[roomCode];
+    final controller = _drawStacksController(roomCode);
+    if (existing != null) {
+      return controller.stream
+          .transform(_replayLatest(existing.map(List<GameCard>.of).toList()));
+    }
+    return controller.stream;
+  }
+
+  @override
+  Future<void> writeDrawStacks(
+      String roomCode, List<List<GameCard>> drawStacks) async {
+    _drawStacks[roomCode] = drawStacks.map(List<GameCard>.of).toList();
+    _drawStacksController(roomCode)
+        .add(_drawStacks[roomCode]!.map(List<GameCard>.of).toList());
   }
 }

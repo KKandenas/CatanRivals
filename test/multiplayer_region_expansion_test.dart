@@ -85,6 +85,19 @@ void main() {
 
     final roomCode = host.read(gameProvider).roomCode!;
     final fake = host.read(gameSyncServiceProvider) as FakeGameSyncService;
+
+    // Testet injicerar Guldgömman direkt i handen ovan (rad 78) i
+    // stället för att faktiskt DRA den ur en dragstapel – till skillnad
+    // från en riktig dragning (som numera synkas exakt, se
+    // GameNotifier._drawStacks-doc) finns kortet därför fortfarande kvar
+    // i den redan synkade `drawStacks`-datan. resumeRoom läser annars
+    // den synkade datan FÖRST (rätt, i det NORMALA fallet där kortet
+    // faktiskt drogs) – här vill vi i stället specifikt testa
+    // RESERVLÖSNINGEN (_reconstructDrawStacksFromKnownCards), så tvinga
+    // fram den genom att simulera ett rum utan synkad dragstapelsdata
+    // (t.ex. skapat innan draghögarna synkades).
+    await fake.writeDrawStacks(roomCode, const []);
+
     final resumed =
         ProviderContainer(overrides: [gameSyncServiceProvider.overrideWithValue(fake)]);
     addTearDown(resumed.dispose);

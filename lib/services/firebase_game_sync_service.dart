@@ -20,6 +20,7 @@ class FirebaseGameSyncService implements GameSyncService {
     TurnState turnState, {
     Set<ExpansionSet> activeExpansions = const {},
     List<GameCard> faceUpExpansionCards = const [],
+    List<List<GameCard>> drawStacks = const [],
   }) async {
     await _roomRef(roomCode).set({
       'createdAt': ServerValue.timestamp,
@@ -31,6 +32,10 @@ class FirebaseGameSyncService implements GameSyncService {
       if (faceUpExpansionCards.isNotEmpty)
         'faceUpExpansionCards':
             faceUpExpansionCards.map((c) => c.toJson()).toList(),
+      if (drawStacks.isNotEmpty)
+        'drawStacks': drawStacks
+            .map((stack) => stack.map((c) => c.toJson()).toList())
+            .toList(),
     });
   }
 
@@ -166,5 +171,28 @@ class FirebaseGameSyncService implements GameSyncService {
     return _roomRef(roomCode)
         .child('faceUpExpansionCards')
         .set(faceUpExpansionCards.map((c) => c.toJson()).toList());
+  }
+
+  @override
+  Stream<List<List<GameCard>>> watchDrawStacks(String roomCode) {
+    return _roomRef(roomCode).child('drawStacks').onValue.map((event) {
+      final raw = event.snapshot.value;
+      if (raw is! List) return const <List<GameCard>>[];
+      return raw.whereType<Object>().map((stack) {
+        final cards = stack as List;
+        return cards
+            .whereType<Object>()
+            .map((c) => GameCard.fromJson(Map<String, dynamic>.from(c as Map)))
+            .toList();
+      }).toList();
+    });
+  }
+
+  @override
+  Future<void> writeDrawStacks(
+      String roomCode, List<List<GameCard>> drawStacks) {
+    return _roomRef(roomCode).child('drawStacks').set(drawStacks
+        .map((stack) => stack.map((c) => c.toJson()).toList())
+        .toList());
   }
 }
