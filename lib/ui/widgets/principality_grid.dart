@@ -160,6 +160,18 @@ class PrincipalityGrid extends StatelessWidget {
   final void Function(int column, BuildingRow row, int slotIndex)?
       onSelectRiotsUnit;
 
+  /// Bågskytt/Pyroman (se [GameNotifier.selectAttackCardUnit]): om
+  /// satt (till skillnad från de andra väljarlägena ovan, som styrs av
+  /// en `bool`, avgör VILKET kort – Bågskytt eller Pyroman – vilket
+  /// kriterium som gäller, se [AttackCardKind]) blir egna, ockuperade
+  /// byggplatser som uppfyller kortets kriterium tryckbara – markerade
+  /// med en gul ram efter valet, tills draghögen väljs (se
+  /// StackChoiceOverlay i game_board_screen.dart).
+  final AttackCardKind? pendingAttackCard;
+  final RelocationSelection? attackCardPickedUnit;
+  final void Function(int column, BuildingRow row, int slotIndex)?
+      onSelectAttackCardUnit;
+
   const PrincipalityGrid({
     super.key,
     required this.board,
@@ -192,6 +204,9 @@ class PrincipalityGrid extends StatelessWidget {
     this.riotsUnitPickActive = false,
     this.riotsPickedUnit,
     this.onSelectRiotsUnit,
+    this.pendingAttackCard,
+    this.attackCardPickedUnit,
+    this.onSelectAttackCardUnit,
   });
 
   bool get _draggingRoad => draggingCard?.category == CardCategory.road;
@@ -655,6 +670,16 @@ class PrincipalityGrid extends StatelessWidget {
         interactive &&
         onSelectRiotsUnit != null &&
         (placed.card.strengthPoints > 0 || placed.card.commercePoints > 0);
+    final attackCardQualifies = switch (pendingAttackCard) {
+      AttackCardKind.archer => placed.card.strengthPoints > 0,
+      AttackCardKind.arsonist =>
+        placed.card.expansionKind == ExpansionKind.building,
+      null => false,
+    };
+    final canPickForAttackCard = pendingAttackCard != null &&
+        interactive &&
+        onSelectAttackCardUnit != null &&
+        attackCardQualifies;
     // Se kommentaren i _roadSlot – en ny utbyggnad på en tidigare tom
     // byggplats byter widget-typ här och toppas därför korrekt in.
     final view = PopIn(
@@ -670,7 +695,10 @@ class PrincipalityGrid extends StatelessWidget {
                     ? () => onSelectPirateShipDiscard!(column, row, slotIndex)
                     : canPickForRiots
                         ? () => onSelectRiotsUnit!(column, row, slotIndex)
-                        : null,
+                        : canPickForAttackCard
+                            ? () => onSelectAttackCardUnit!(
+                                column, row, slotIndex)
+                            : null,
       ),
     );
     final selected = (relocationActive &&
@@ -685,7 +713,11 @@ class PrincipalityGrid extends StatelessWidget {
         (riotsUnitPickActive &&
             riotsPickedUnit?.column == column &&
             riotsPickedUnit?.row == row &&
-            riotsPickedUnit?.slotIndex == slotIndex);
+            riotsPickedUnit?.slotIndex == slotIndex) ||
+        (pendingAttackCard != null &&
+            attackCardPickedUnit?.column == column &&
+            attackCardPickedUnit?.row == row &&
+            attackCardPickedUnit?.slotIndex == slotIndex);
     return selected ? _withSelectionRing(view) : view;
   }
 

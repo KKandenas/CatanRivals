@@ -173,6 +173,25 @@ class GameState {
   final bool riotsUnitPickActive;
   final RelocationSelection? riotsPickedUnit;
 
+  /// Vilket attackkort (Bågskytt/Pyroman) som väntar på att DU (den
+  /// drabbade, dvs [pendingAttackCard] bara betyder något om det INTE
+  /// är din tur) ska välja bort en egen kvalificerande enhet, se
+  /// [TurnState.pendingAttackCard]-doc – synkat via [TurnState] av
+  /// samma skäl som [pirateShipDiscardPending].
+  final AttackCardKind? pendingAttackCard;
+
+  /// Den redan valda platsen under [pendingAttackCard]s enhetsval –
+  /// `null` tills något tryckts, precis som [riotsPickedUnit] (rent
+  /// lokalt UI-state, bara den drabbade klienten som väljer behöver
+  /// veta om det).
+  final RelocationSelection? attackCardPickedUnit;
+
+  /// Vilka spelar-id:n som spelat Sebastian, den vandrande predikanten
+  /// för att skydda sig mot det just nu uppslagna händelsekortet, se
+  /// [TurnState.sebastianProtectedPlayerIds]-doc – synkat via
+  /// [TurnState] av samma skäl som [pirateShipDiscardPending].
+  final Set<String> sebastianProtectedPlayerIds;
+
   /// Händelsekortet som just nu ligger uppslaget för alla att läsa,
   /// draget när händelsetärningen visade "?" (se [EventDieFace.eventCard]
   /// och [GameNotifier.drawEventCard]) – synkas till båda spelarna,
@@ -284,6 +303,9 @@ class GameState {
     this.riotsResolvedPlayerIds = const {},
     this.riotsUnitPickActive = false,
     this.riotsPickedUnit,
+    this.pendingAttackCard,
+    this.attackCardPickedUnit,
+    this.sebastianProtectedPlayerIds = const {},
     this.drawnEventCard,
     this.awaitingScoutDecision = false,
     this.scoutChoices,
@@ -452,6 +474,11 @@ class GameState {
     bool? riotsUnitPickActive,
     RelocationSelection? riotsPickedUnit,
     bool clearRiotsPickedUnit = false,
+    AttackCardKind? pendingAttackCard,
+    bool clearPendingAttackCard = false,
+    RelocationSelection? attackCardPickedUnit,
+    bool clearAttackCardPickedUnit = false,
+    Set<String>? sebastianProtectedPlayerIds,
     GameCard? drawnEventCard,
     bool clearDrawnEventCard = false,
     bool? awaitingScoutDecision,
@@ -524,6 +551,14 @@ class GameState {
       riotsPickedUnit: clearRiotsPickedUnit
           ? null
           : (riotsPickedUnit ?? this.riotsPickedUnit),
+      pendingAttackCard: clearPendingAttackCard
+          ? null
+          : (pendingAttackCard ?? this.pendingAttackCard),
+      attackCardPickedUnit: clearAttackCardPickedUnit
+          ? null
+          : (attackCardPickedUnit ?? this.attackCardPickedUnit),
+      sebastianProtectedPlayerIds:
+          sebastianProtectedPlayerIds ?? this.sebastianProtectedPlayerIds,
       drawnEventCard: clearDrawnEventCard
           ? null
           : (drawnEventCard ?? this.drawnEventCard),

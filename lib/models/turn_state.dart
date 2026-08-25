@@ -1,5 +1,6 @@
 import 'event_die_face.dart';
 import 'game_card.dart';
+import 'realm_board.dart';
 
 /// Vems tur det är och hur långt omgången kommit (regelhäftet s. 7:
 /// 1) slå tärningarna, 2) utför åtgärder, 3) kontrollera handkort,
@@ -63,6 +64,25 @@ class TurnState {
   /// gång ett nytt händelsekort dras.
   final Set<String> riotsResolvedPlayerIds;
 
+  /// Vilket attackkort (Bågskytt/Pyroman, Oroligheternas tid) som just
+  /// nu väntar på att MOTSTÅNDAREN (den drabbade) ska välja bort en
+  /// egen kvalificerande enhet och lägga den underst i en draghög – se
+  /// [GameNotifier._maybeTriggerAttackCard]/[selectAttackCardUnit].
+  /// Samma "riktig synkad signal krävs" resonemang som
+  /// [pirateShipDiscardPending] (den drabbade är inte den aktiva
+  /// spelaren), men med ett extra steg (vilken draghög), se
+  /// [attackCardPickedUnit] i [GameState]. `null` när inget väntar.
+  final AttackCardKind? pendingAttackCard;
+
+  /// Vilka spelar-id:n som spelat Sebastian, den vandrande predikanten
+  /// för att skydda sig mot det just nu uppslagna händelsekortet
+  /// (Upplopp/Fejd/Brödrafejd, se
+  /// [GameNotifier.playSebastianForCurrentEvent]) – kortets egen text:
+  /// "gäller inte dessa händelser dig". Nollställs (tom mängd) varje
+  /// gång ett nytt händelsekort dras, precis som
+  /// [riotsResolvedPlayerIds].
+  final Set<String> sebastianProtectedPlayerIds;
+
   const TurnState({
     required this.activePlayerId,
     this.diceRolled = false,
@@ -74,6 +94,8 @@ class TurnState {
     this.pirateShipDiscardPending = false,
     this.reinerHeraldUsed = false,
     this.riotsResolvedPlayerIds = const {},
+    this.pendingAttackCard,
+    this.sebastianProtectedPlayerIds = const {},
   });
 
   Map<String, dynamic> toJson() => {
@@ -88,6 +110,10 @@ class TurnState {
         if (reinerHeraldUsed) 'reinerHeraldUsed': true,
         if (riotsResolvedPlayerIds.isNotEmpty)
           'riotsResolvedPlayerIds': riotsResolvedPlayerIds.toList(),
+        if (pendingAttackCard != null)
+          'pendingAttackCard': pendingAttackCard!.name,
+        if (sebastianProtectedPlayerIds.isNotEmpty)
+          'sebastianProtectedPlayerIds': sebastianProtectedPlayerIds.toList(),
       };
 
   factory TurnState.fromJson(Map<String, dynamic> json) => TurnState(
@@ -109,5 +135,13 @@ class TurnState {
         riotsResolvedPlayerIds: json['riotsResolvedPlayerIds'] == null
             ? const {}
             : Set<String>.from(json['riotsResolvedPlayerIds'] as List),
+        pendingAttackCard: (json['pendingAttackCard'] as String?) == null
+            ? null
+            : AttackCardKind.values.byName(json['pendingAttackCard'] as String),
+        sebastianProtectedPlayerIds:
+            json['sebastianProtectedPlayerIds'] == null
+                ? const {}
+                : Set<String>.from(
+                    json['sebastianProtectedPlayerIds'] as List),
       );
 }

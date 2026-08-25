@@ -10,6 +10,7 @@ import '../../state/game_notifier.dart';
 import '../../state/game_state.dart';
 import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
+import '../widgets/attack_card_instruction_bar.dart';
 import '../widgets/brigitta_number_picker.dart';
 import '../widgets/build_confirm_card.dart';
 import '../widgets/carved_frame.dart';
@@ -116,9 +117,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   /// [RelocationInstructionBar]) – Reiner härolden visar sin text om vem
   /// som spelat kortet inne i DiceRollSummaryBanner-popupen i stället
   /// (se `_resolveCelebration` i event_die_resolution.dart), eftersom
-  /// kortet alltid tvingar fram Fest-utfallet – övriga (Handelskaravan/
-  /// Guldsmed) är självbevakade och behöver inget mer än att tas bort
-  /// från handen.
+  /// kortet alltid tvingar fram Fest-utfallet. Bågskytt/Pyroman sätter
+  /// bara en väntande flagga (se [AttackCardInstructionBar]/
+  /// StackChoiceOverlay nedan – MOTSTÅNDAREN gör det egentliga valet).
+  /// Plundringsfärds resurstal (1 eller 2, beroende på vem som leder)
+  /// visas i en SnackBar direkt efter, precis som Stapelhus – övriga
+  /// (Handelskaravan/Guldsmed) är självbevakade och behöver inget mer
+  /// än att tas bort från handen.
   void _handleUseActionCard(
       BuildContext context, GameCard card, GameNotifier notifier) {
     if (card.baseId == BasicSetCards.brigittaTheWiseWoman.id) {
@@ -135,6 +140,33 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     }
     if (card.baseId == EraOfGoldCards.reinerTheHerald.id) {
       _handleResult(context, notifier.useReinerTheHerald());
+      return;
+    }
+    if (card.baseId == EraOfTurmoilCards.archer.id) {
+      _handleResult(context, notifier.useArcher());
+      return;
+    }
+    if (card.baseId == EraOfTurmoilCards.arsonist.id) {
+      _handleResult(context, notifier.useArsonist());
+      return;
+    }
+    if (card.baseId == EraOfTurmoilCards.voyageOfPlunder.id) {
+      final state = ref.read(gameProvider);
+      final oppLeads = state.totalVictoryPointsFor(state.opponent) >
+          state.totalVictoryPointsFor(state.you);
+      final error = notifier.useVoyageOfPlunder();
+      if (error != null) {
+        _handleResult(context, error);
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(oppLeads
+              ? 'Motståndaren har flest segerpoäng: du får 2 valfria resurser.'
+              : 'Motståndaren leder inte: du får 1 valfri resurs.'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
       return;
     }
     _handleResult(context, notifier.discardActionCard(card));
@@ -741,6 +773,28 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           ),
                         ),
                       ),
+                    // Bågskytt/Pyroman: efter att en egen enhet valts (se
+                    // PrincipalityGrid.onSelectAttackCardUnit nedan) väntar
+                    // bara valet av vilken draghög den ska läggas underst
+                    // i.
+                    if (state.pendingAttackCard != null &&
+                        state.attackCardPickedUnit != null)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          padding: const EdgeInsets.all(12),
+                          child: StackChoiceOverlay(
+                            title:
+                                'Vilken draghög ska kortet läggas underst i?',
+                            stackCount: state.initialDrawStackSizes.length,
+                            activeExpansions: state.activeExpansions,
+                            onChooseStack: (index) => _handleResult(context,
+                                notifier.resolveAttackCardUnitRemoval(index)),
+                            onCancel: () => _handleResult(
+                                context, notifier.cancelAttackCardUnitPick()),
+                          ),
+                        ),
+                      ),
                     // Fejd: efter att en egen byggnad valts (se
                     // PrincipalityGrid.onSelectFeudBuilding nedan) väntar
                     // bara valet av vilken draghög den ska läggas underst
@@ -951,6 +1005,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
               // GameNotifier.resolvePirateShipDiscard-doc.
               if (state.pirateShipDiscardPending && !state.isMyTurn)
                 const PirateShipDiscardBar(),
+              // Samma "bara den drabbade" resonemang som Piratskepp,
+              // men bara medan enhetsvalet pågår (StackChoiceOverlay
+              // nedan tar över det sista steget).
+              if (state.pendingAttackCard != null &&
+                  !state.isMyTurn &&
+                  state.attackCardPickedUnit == null)
+                AttackCardInstructionBar(kind: state.pendingAttackCard!),
               if (state.startingRegionRearrangementActive)
                 StartingRegionRearrangementBar(
                   hasFirstSelection:
@@ -1047,6 +1108,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                         onSelectRiotsUnit: (column, row, slot) =>
                             _handleResult(context,
                                 notifier.selectRiotsUnit(column, row, slot)),
+                        pendingAttackCard: !state.isMyTurn
+                            ? state.pendingAttackCard
+                            : null,
+                        attackCardPickedUnit: state.attackCardPickedUnit,
+                        onSelectAttackCardUnit: (column, row, slot) =>
+                            _handleResult(
+                                context,
+                                notifier.selectAttackCardUnit(
+                                    column, row, slot)),
                       ),
                     ),
                   ),

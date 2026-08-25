@@ -11,6 +11,14 @@ enum BuildingRow { above, below }
 /// blandat.
 enum RelocationTargetKind { region, expansion }
 
+/// Vilket Oroligheternas tid-attackkort som väntar på att MOTSTÅNDAREN
+/// (den drabbade, se [TurnState.pendingAttackCard]) ska välja bort en
+/// egen enhet och lägga den underst i en draghög – Bågskytt ("en av
+/// sina egna enheter med minst 1 styrkepoäng") kräver bredare kriterium
+/// än Pyroman ("en av motståndarens byggnader"), se
+/// [GameNotifier._attackCardCardQualifies].
+enum AttackCardKind { archer, arsonist }
+
 /// En vald plats under Omlokalisering (se [RelocationTargetKind]) –
 /// det första trycket lagras som "väntande" tills spelaren trycker på
 /// en andra, giltig plats av samma sort (se

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/basic_set_cards.dart';
 import '../../data/era_of_gold_cards.dart';
+import '../../data/era_of_turmoil_cards.dart';
 import '../../models/models.dart';
 import '../theme/catan_colors.dart';
 import 'card_detail_dialog.dart';
@@ -17,10 +18,12 @@ import 'score_summary.dart';
 /// minst 2 resurser av valfri typ totalt, Guldsmed ("Släng 3 guld...")
 /// kräver minst 3 guld – båda måste gå att betala för att kortet
 /// överhuvudtaget ska gå att spela. Gulderans Rövare/Köpman/
-/// Handelsmästare har egna, tidigare okontrollerade krav (se
+/// Handelsmästare, och Oroligheternas tids Bågskytt/Pyroman/Förrädare/
+/// Plundringsfärd, har egna, annars okontrollerade krav (se
 /// [GameCard.requirement], som bara är visningstext – den här
 /// funktionen är den faktiska spärren): styrkeövertag, 3 handelspoäng
-/// eller stad, respektive ett utplacerat Köpmansgille.
+/// eller stad, ett utplacerat Köpmansgille, respektive ett utplacerat
+/// Värdshus.
 /// [hasStrengthAdvantage] måste skickas in separat eftersom den kräver
 /// att jämföra BÅDA spelarnas styrkepoäng ([GameState.strengthAdvantagePlayerId]),
 /// inte något som går att räkna ut från bara [player].
@@ -49,6 +52,19 @@ String? _actionCardBlockedReason(GameCard card, Player player,
     if (!player.principality.hasExpansionCard(EraOfGoldCards.merchantGuild.id)) {
       return 'Kräver Köpmansgille i ditt rike.';
     }
+  }
+  // Oroligheternas tids tre attack-/spionagekort (Bågskytt/Pyroman/
+  // Förrädare) kräver alla Värdshus i det egna riket – kortens egen
+  // requirement-text, se EraOfTurmoilCards-doc.
+  if (card.baseId == EraOfTurmoilCards.archer.id ||
+      card.baseId == EraOfTurmoilCards.arsonist.id ||
+      card.baseId == EraOfTurmoilCards.traitor.id) {
+    if (!player.principality.hasExpansionCard(EraOfTurmoilCards.hedgeTavern.id)) {
+      return 'Kräver Värdshus i ditt rike.';
+    }
+  }
+  if (card.baseId == EraOfTurmoilCards.voyageOfPlunder.id) {
+    if (!hasStrengthAdvantage) return 'Kräver styrkeövertag.';
   }
   return null;
 }

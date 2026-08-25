@@ -616,6 +616,8 @@ class GameNotifier extends Notifier<GameState> {
         pirateShipDiscardPending: turnState.pirateShipDiscardPending,
         reinerHeraldUsed: turnState.reinerHeraldUsed,
         riotsResolvedPlayerIds: turnState.riotsResolvedPlayerIds,
+        pendingAttackCard: turnState.pendingAttackCard,
+        sebastianProtectedPlayerIds: turnState.sebastianProtectedPlayerIds,
         discardPile: discardPile,
       );
 
@@ -923,6 +925,9 @@ class GameNotifier extends Notifier<GameState> {
           pirateShipDiscardPending: turnState.pirateShipDiscardPending,
           reinerHeraldUsed: turnState.reinerHeraldUsed,
           riotsResolvedPlayerIds: turnState.riotsResolvedPlayerIds,
+          pendingAttackCard: turnState.pendingAttackCard,
+          clearPendingAttackCard: turnState.pendingAttackCard == null,
+          sebastianProtectedPlayerIds: turnState.sebastianProtectedPlayerIds,
         );
       },
       onError: (Object e) {
@@ -1069,6 +1074,8 @@ class GameNotifier extends Notifier<GameState> {
         pirateShipDiscardPending: state.pirateShipDiscardPending,
         reinerHeraldUsed: state.reinerHeraldUsed,
         riotsResolvedPlayerIds: state.riotsResolvedPlayerIds,
+        pendingAttackCard: state.pendingAttackCard,
+        sebastianProtectedPlayerIds: state.sebastianProtectedPlayerIds,
       ),
     ));
   }
@@ -1193,8 +1200,11 @@ class GameNotifier extends Notifier<GameState> {
       drawnEventCard: card,
       centerStacks: Map.of(state.centerStacks)..['event'] = _eventDeck.length,
       // Ett NYTT kort kan aldrig ärva en föregående Upplopp-hanterings
-      // redan-klar-status (se riotsResolvedPlayerIds-doc).
+      // redan-klar-status (se riotsResolvedPlayerIds-doc), och inte
+      // heller ett tidigare Sebastian-skydd (se
+      // sebastianProtectedPlayerIds-doc).
       riotsResolvedPlayerIds: const {},
+      sebastianProtectedPlayerIds: const {},
     );
     _syncCenterStacks();
     _syncTurnState();
@@ -1483,6 +1493,222 @@ class GameNotifier extends Notifier<GameState> {
     _syncTurnState();
   }
 
+  /// Spelar Sebastian, den vandrande predikanten för att skydda dig mot
+  /// det just nu uppslagna Upplopp-/Fejd-/Brödrafejd-kortet (kortets
+  /// egen text: "gäller inte dessa händelser dig") – se
+  /// [TurnState.sebastianProtectedPlayerIds]-doc. No-op utan ett sådant
+  /// kort uppslaget, utan Sebastian på hand, eller om du redan är
+  /// skyddad mot det. För Upplopp räknas skyddet som din egen färdiga
+  /// hantering (se [_finishRiotsForMe]) – annars skulle det delade
+  /// kortet aldrig kunna stängas.
+  String? playSebastianForCurrentEvent() {
+    final card = state.drawnEventCard;
+    if (card == null) return null;
+    final baseId = card.baseId;
+    final isRiots = baseId == EraOfTurmoilCards.riots.id;
+    final isProtectable = baseId == BasicSetCards.feud.id ||
+        baseId == BasicSetCards.fraternalFeuds.id ||
+        isRiots;
+    if (!isProtectable) return null;
+    if (state.sebastianProtectedPlayerIds.contains(state.myPlayerId)) {
+      return null;
+    }
+    GameCard? sebastian;
+    for (final c in state.you.hand) {
+      if (c.baseId == EraOfTurmoilCards.sebastianTheItinerantPreacher.id) {
+        sebastian = c;
+        break;
+      }
+    }
+    if (sebastian == null) return null;
+
+    state = state.copyWith(
+      you: state.you.copyWith(hand: List.of(state.you.hand)..remove(sebastian)),
+      sebastianProtectedPlayerIds: {
+        ...state.sebastianProtectedPlayerIds,
+        state.myPlayerId
+      },
+    );
+    _syncMyPlayer();
+    _discardToPile(sebastian);
+    if (isRiots) {
+      _finishRiotsForMe();
+    } else {
+      _syncTurnState();
+    }
+    return null;
+  }
+
+  // ---------------------------------------------------------------------
+  // Bågskytt/Pyroman (Oroligheternas tid): spelas av dig (kräver
+  // Värdshus i ditt eget rike, se hand_dock.dart:_actionCardBlockedReason),
+  // men det är MOTSTÅNDAREN som väljer bort en egen enhet – samma
+  // "riktig synkad signal krävs eftersom det INTE är den aktiva
+  // spelaren som väljer"-resonemang som Piratskepp
+  // ([_maybeTriggerPirateShip]), men med ett extra steg (vilken
+  // draghög att lägga enheten underst i), se
+  // [TurnState.pendingAttackCard]-doc.
+  // ---------------------------------------------------------------------
+
+  /// Om [card] uppfyller [kind]s urvalskriterium – Bågskytt: minst 1
+  /// styrkepoäng, Pyroman: en byggnad (kortets egen text: "en av
+  /// motståndarens byggnader", till skillnad från Bågskytts bredare
+  /// "en av sina enheter").
+  bool _attackCardCardQualifies(AttackCardKind kind, GameCard card) {
+    switch (kind) {
+      case AttackCardKind.archer:
+        return card.strengthPoints > 0;
+      case AttackCardKind.arsonist:
+        return card.expansionKind == ExpansionKind.building;
+    }
+  }
+
+  /// Om motståndaren har NÅGON kvalificerande enhet för [kind] – annars
+  /// händer inget när kortet spelas (samma resonemang som Piratskepp:
+  /// "Om motståndaren inte har några handelsskepp så händer inget").
+  bool _attackCardHasTarget(AttackCardKind kind) => state.opponent.principality
+      .placedExpansionCards
+      .any((c) => _attackCardCardQualifies(kind, c));
+
+  /// Sätter den väntande flaggan om (och bara om) motståndaren faktiskt
+  /// har något att välja bort.
+  void _maybeTriggerAttackCard(AttackCardKind kind) {
+    if (!_attackCardHasTarget(kind)) return;
+    state = state.copyWith(pendingAttackCard: kind);
+    _syncTurnState();
+  }
+
+  /// Delad hjälpare för [useArcher]/[useArsonist]: hittar [template]s
+  /// fysiska kopia på handen, kollar Värdshus-kravet, tar bort kortet
+  /// och slänger det, och sätter sedan [kind]s väntande flagga om
+  /// motståndaren har ett giltigt mål.
+  String? _useAttackCard(GameCard template, AttackCardKind kind) {
+    final turnError = _checkCanBuild();
+    if (turnError != null) return turnError;
+    GameCard? card;
+    for (final c in state.you.hand) {
+      if (c.baseId == template.id) {
+        card = c;
+        break;
+      }
+    }
+    if (card == null) return null;
+    if (!state.you.principality
+        .hasExpansionCard(EraOfTurmoilCards.hedgeTavern.id)) {
+      return 'Kräver Värdshus i ditt rike.';
+    }
+
+    state = state.copyWith(
+      you: state.you.copyWith(hand: List.of(state.you.hand)..remove(card)),
+    );
+    _syncMyPlayer();
+    _discardToPile(card);
+    _maybeTriggerAttackCard(kind);
+    return null;
+  }
+
+  String? useArcher() =>
+      _useAttackCard(EraOfTurmoilCards.archer, AttackCardKind.archer);
+
+  String? useArsonist() =>
+      _useAttackCard(EraOfTurmoilCards.arsonist, AttackCardKind.arsonist);
+
+  /// Väljer vilken av dina egna kvalificerande enheter (se
+  /// [_attackCardCardQualifies]) som ska bort, till följd av
+  /// motståndarens spelade Bågskytt/Pyroman (se [pendingAttackCard]).
+  /// Nästa steg är att välja vilken draghög den ska läggas underst i
+  /// (se [resolveAttackCardUnitRemoval]).
+  String? selectAttackCardUnit(int column, BuildingRow row, int slotIndex) {
+    final kind = state.pendingAttackCard;
+    if (kind == null) return null;
+    final placed =
+        _expansionAt(state.you.principality, column, row, slotIndex);
+    if (placed == null) return null;
+    if (!_attackCardCardQualifies(kind, placed.card)) {
+      return kind == AttackCardKind.archer
+          ? 'Bågskytt gäller bara enheter med styrkepoäng.'
+          : 'Pyroman gäller bara byggnader.';
+    }
+    state = state.copyWith(
+      attackCardPickedUnit: RelocationSelection(
+          kind: RelocationTargetKind.expansion,
+          column: column,
+          row: row,
+          slotIndex: slotIndex),
+    );
+    return null;
+  }
+
+  /// Ångrar det valda kortet (utan att avfärda hela den väntande
+  /// flaggan – kravet kvarstår, du kan bara välja ett annat kort).
+  String? cancelAttackCardUnitPick() {
+    state = state.copyWith(clearAttackCardPickedUnit: true);
+    return null;
+  }
+
+  /// Tar bort den valda enheten och lägger den underst i draghög
+  /// [stackIndex] – avslutar motståndarens Bågskytt/Pyroman.
+  String? resolveAttackCardUnitRemoval(int stackIndex) {
+    final picked = state.attackCardPickedUnit;
+    if (picked == null) return null;
+    // Peek:ar kortet (utan att ta bort det) för att kunna avvisa fel
+    // hög INNAN enheten faktiskt plockas bort – samma resonemang som
+    // resolveFeudBuildingRemoval/resolveRiotsUnitRemoval.
+    final peeked = state.you.principality
+        .expansionAt(picked.column, picked.row, picked.slotIndex);
+    if (peeked == null) return null;
+    final originError = _checkStackMatchesCardOrigin(peeked.card, stackIndex);
+    if (originError != null) return originError;
+
+    final removed = state.you.principality
+        .removeExpansion(picked.column, picked.row, picked.slotIndex);
+    if (removed == null) return null;
+
+    _setDrawStack(stackIndex, [..._drawStacks[stackIndex], removed.card]);
+    state = state.copyWith(
+      you: state.you,
+      centerStacks: Map.of(state.centerStacks)
+        ..update('draw${stackIndex + 1}', (v) => v + 1),
+      clearPendingAttackCard: true,
+      clearAttackCardPickedUnit: true,
+    );
+    // Byggnader kan ha styrkepoäng (t.ex. Övningsplats) – precis som
+    // Upplopp kan en borttagen enhet ändra vem som har Hero Token.
+    recomputeTokenHolders();
+    _syncMyPlayer();
+    _syncCenterStacks();
+    _syncTurnState();
+    return null;
+  }
+
+  /// Spelar Plundringsfärd: kräver styrkeövertag (kortets egen text, se
+  /// hand_dock.dart:_actionCardBlockedReason). Hur många resurser du
+  /// får (2 om motståndaren har fler segerpoäng, annars 1) dras inte av
+  /// automatiskt – bara en påminnande text (se game_board_screen.dart),
+  /// precis som andra resurseffekter i appen.
+  String? useVoyageOfPlunder() {
+    final turnError = _checkCanBuild();
+    if (turnError != null) return turnError;
+    GameCard? card;
+    for (final c in state.you.hand) {
+      if (c.baseId == EraOfTurmoilCards.voyageOfPlunder.id) {
+        card = c;
+        break;
+      }
+    }
+    if (card == null) return null;
+    if (state.strengthAdvantagePlayerId != state.myPlayerId) {
+      return 'Kräver styrkeövertag.';
+    }
+
+    state = state.copyWith(
+      you: state.you.copyWith(hand: List.of(state.you.hand)..remove(card)),
+    );
+    _syncMyPlayer();
+    _discardToPile(card);
+    return null;
+  }
+
   // ---------------------------------------------------------------------
   // Piratskepp: motståndaren väljer bort ett eget handelsskepp, se
   // [_maybeTriggerPirateShip]/[TurnState.pirateShipDiscardPending]-doc.
@@ -1740,6 +1966,7 @@ class GameNotifier extends Notifier<GameState> {
       riotsResolvedPlayerIds: const {},
       riotsUnitPickActive: false,
       clearRiotsPickedUnit: true,
+      sebastianProtectedPlayerIds: const {},
       handAdjustmentPhase: HandAdjustmentPhase.none,
       tradePhase: TradePhase.none,
       clearPeekStackIndex: true,
@@ -2206,7 +2433,8 @@ class GameNotifier extends Notifier<GameState> {
     }
     if (state.feudBuildingPickActive ||
         state.fraternalFeudsPicking ||
-        state.riotsUnitPickActive) {
+        state.riotsUnitPickActive ||
+        state.attackCardPickedUnit != null) {
       return 'Avsluta händelsekortet innan du bygger vidare.';
     }
     if (state.pendingRegions.isNotEmpty) {
