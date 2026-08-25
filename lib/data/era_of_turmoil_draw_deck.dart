@@ -5,14 +5,18 @@ import 'basic_set_cards.dart';
 import 'era_of_gold_cards.dart';
 import 'era_of_turmoil_cards.dart';
 
-/// Oroligheternas tids (Era of Turmoil) 28 fysiska kort. Till skillnad
-/// från Gulderan (se [EraOfGoldDrawDeck]) har det här setet ingen egen
-/// "ansikte-upp"-mekanik – alla kort sorteras i två grupper:
+/// Oroligheternas tids (Era of Turmoil) 28 fysiska kort, uppdelade
+/// enligt samma mönster som Gulderan (se [EraOfGoldDrawDeck]):
 ///
+/// - 2× Värdshus sorteras ut FÖRE blandning och läggs i en öppen,
+///   "ansikte-upp" hög som båda spelarna kan bygga direkt ifrån genom
+///   att betala byggkostnaden (se [faceUpCards]/
+///   [GameNotifier.buyFaceUpExpansion]) – blandas alltså aldrig in
+///   bland de dolda draghögarna.
 /// - 4 händelsekort (Upplopp ×2, plus en extra kopia vardera av
 ///   Fejd/Brödrafejd) går in i den gemensamma händelsekortsstapeln (se
 ///   [eventCards]/[EventDeck]).
-/// - Resterande 24 kort blandas och delas i 2 jämna 12-korts högar (se
+/// - Resterande 22 kort blandas och delas i 2 jämna 11-korts högar (se
 ///   [shuffledTwoStacks]), som läggs till grundspelets egna draghögar
 ///   (då omfördelade till 3 i stället för 4, se [BasicSetDrawDeck]).
 ///
@@ -37,6 +41,16 @@ class EraOfTurmoilDrawDeck {
   static GameCard? _templateFor(String id) =>
       _ownById[id] ?? _basicById[id] ?? _goldById[id];
 
+  /// De 2 Värdshus som sorteras ut före blandning, ett per spelare
+  /// (index 0 = du/host, index 1 = motståndaren/gästen, se
+  /// [GameNotifier._resetDecks]-doc) – se [Player.faceUpExpansionCard].
+  static List<GameCard> faceUpCards() {
+    const template = EraOfTurmoilCards.hedgeTavern;
+    return [
+      for (var i = 0; i < 2; i++) template.copyWith(id: '${template.id}-faceup-$i'),
+    ];
+  }
+
   /// Oroligheternas tids egna 4 händelsekort – läggs till i den
   /// gemensamma händelsekortsstapeln (se
   /// [EventDeck.shuffledWithYuleFourthFromBottom]).
@@ -57,6 +71,9 @@ class EraOfTurmoilDrawDeck {
     final cards = <GameCard>[];
     EraOfTurmoilCards.supplyCounts.forEach((id, count) {
       if (id.startsWith('event-')) return;
+      // Värdshus går aldrig in i draghögarna – alla fysiska kopior
+      // ligger ansikte-upp från start (se [faceUpCards]).
+      if (id == EraOfTurmoilCards.hedgeTavern.id) return;
       final template = _templateFor(id);
       if (template == null) return;
       for (var i = 0; i < count; i++) {
@@ -66,7 +83,7 @@ class EraOfTurmoilDrawDeck {
     return cards;
   }
 
-  /// Blandar de 24 draghögskorten och delar dem i 2 jämna högar (12
+  /// Blandar de 22 draghögskorten och delar dem i 2 jämna högar (11
   /// vardera).
   static List<List<GameCard>> shuffledTwoStacks({Random? random}) {
     final rng = random ?? Random();

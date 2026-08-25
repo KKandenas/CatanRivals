@@ -405,18 +405,18 @@ class GameState {
   /// ur den) – grundspelets 36 kort delas på 4 högar (9 vardera) utan
   /// tema, men på 3 högar (12 vardera) när ett temaset är aktivt (se
   /// [GameNotifier._resetDecks]), plus 2 högar till med temasetets egna
-  /// draghögskort: Gulderans 22 (11 vardera) respektive Oroligheternas
-  /// tids 24 (12 vardera – de två temaseten kombineras aldrig i samma
-  /// match, se [LobbyScreen]). Används för att avgöra om en hög redan är
-  /// vald under starthandsvalet (se [CenterStacksStrip]/
+  /// draghögskort: Gulderans 22 (11 vardera, efter att 2 Köpmansgille
+  /// sorterats ut till ansikte-upp-högen) respektive Oroligheternas tids
+  /// 22 (11 vardera, efter att 2 Värdshus sorterats ut på samma sätt –
+  /// de två temaseten kombineras aldrig i samma match, se
+  /// [LobbyScreen]). Används för att avgöra om en hög redan är vald
+  /// under starthandsvalet (se [CenterStacksStrip]/
   /// [GameNotifier.chooseStartingStack]) – kan inte bara jämföra mot ett
   /// hårdkodat 9 längre nu när högstorleken varierar beroende på tema.
   List<int> get initialDrawStackSizes {
-    if (activeExpansions.contains(ExpansionSet.eraOfGold)) {
+    if (activeExpansions.contains(ExpansionSet.eraOfGold) ||
+        activeExpansions.contains(ExpansionSet.eraOfTurmoil)) {
       return const [12, 12, 12, 11, 11];
-    }
-    if (activeExpansions.contains(ExpansionSet.eraOfTurmoil)) {
-      return const [12, 12, 12, 12, 12];
     }
     return const [9, 9, 9, 9];
   }

@@ -73,6 +73,14 @@ void main() {
   });
 
   group('EraOfTurmoilDrawDeck', () {
+    test('faceUpCards() ger 2 unika Värdshus-kopior', () {
+      final cards = EraOfTurmoilDrawDeck.faceUpCards();
+
+      expect(cards, hasLength(2));
+      expect(cards.map((c) => c.baseId).toSet(), {'city-expansion-hedge-tavern'});
+      expect(cards.map((c) => c.id).toSet(), hasLength(2)); // unika id:n
+    });
+
     test('eventCards() ger de 4 händelsekorten som hör till setet', () {
       final cards = EraOfTurmoilDrawDeck.eventCards();
 
@@ -85,25 +93,27 @@ void main() {
           cards.where((c) => c.baseId == 'event-riots').length, 2);
     });
 
-    test('shuffledTwoStacks() delar de 24 återstående korten i 2 högar à 12, utan förlust/dubblett', () {
+    test('shuffledTwoStacks() delar de 22 återstående korten i 2 högar à 11, utan förlust/dubblett', () {
       final stacks = EraOfTurmoilDrawDeck.shuffledTwoStacks();
 
       expect(stacks, hasLength(2));
       for (final stack in stacks) {
-        expect(stack, hasLength(12));
+        expect(stack, hasLength(11));
       }
 
-      // Facit: 28 fysiska kort totalt - 4 händelsekort = 24 kvar till
-      // draghögarna (se EraOfTurmoilCards.supplyCounts) – ingen
-      // ansikte-upp-mekanik i det här setet (till skillnad från
-      // Gulderans Köpmansgille).
+      // Facit: 28 fysiska kort totalt - 4 händelsekort - 2 ansikte-upp
+      // Värdshus = 22 kvar till draghögarna (se
+      // EraOfTurmoilCards.supplyCounts).
       final drawnIds = stacks.expand((s) => s).map((c) => c.id).toSet();
-      expect(drawnIds, hasLength(24));
+      expect(drawnIds, hasLength(22));
 
+      final faceUpIds =
+          EraOfTurmoilDrawDeck.faceUpCards().map((c) => c.id).toSet();
       final eventIds =
           EraOfTurmoilDrawDeck.eventCards().map((c) => c.id).toSet();
+      expect(drawnIds.intersection(faceUpIds), isEmpty);
       expect(drawnIds.intersection(eventIds), isEmpty);
-      expect(drawnIds.length + eventIds.length, 28);
+      expect(drawnIds.length + faceUpIds.length + eventIds.length, 28);
     });
 
     test('action-brigands (återanvänt från Gulderan) hamnar i draghögarna med rätt baseId', () {

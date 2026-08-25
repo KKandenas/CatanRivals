@@ -123,11 +123,11 @@ class GameNotifier extends Notifier<GameState> {
   /// vara aktivt åt gången så länge (se [LobbyScreen]s ömsesidigt
   /// uteslutande val) – Gulderan och Oroligheternas tid kombineras
   /// alltså aldrig i samma match. Returnerar de unika ansikte-upp-korten
-  /// (se [Player.faceUpExpansionCard], t.ex. 2× Köpmansgille för
-  /// Gulderan, annars en tom lista – Oroligheternas tid har ingen
-  /// motsvarande mekanik) – index 0/1 motsvarar alltid respektive
-  /// spelares EGET kort (du/host får 0, motståndaren/gästen får 1),
-  /// samma ordning oavsett klient eftersom [EraOfGoldDrawDeck.faceUpCards]
+  /// (se [Player.faceUpExpansionCard], 2× Köpmansgille för Gulderan
+  /// respektive 2× Värdshus för Oroligheternas tid, annars en tom lista)
+  /// – index 0/1 motsvarar alltid respektive spelares EGET kort (du/host
+  /// får 0, motståndaren/gästen får 1), samma ordning oavsett klient
+  /// eftersom [EraOfGoldDrawDeck.faceUpCards]/[EraOfTurmoilDrawDeck.faceUpCards]
   /// aldrig blandar dem. Anroparna (`playLocally`/`hostRoom`/`joinRoom`)
   /// sätter in respektive kort på sin [Player] själva, eftersom `state`
   /// inte alltid är uppdaterad med [expansions] ännu vid
@@ -151,7 +151,7 @@ class GameNotifier extends Notifier<GameState> {
       ];
       _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom(
           extraCards: EraOfTurmoilDrawDeck.eventCards());
-      return const [];
+      return EraOfTurmoilDrawDeck.faceUpCards();
     }
     _drawStacks = basicStacks;
     _eventDeck = EventDeck.shuffledWithYuleFourthFromBottom();
@@ -2473,21 +2473,22 @@ class GameNotifier extends Notifier<GameState> {
   /// synka den separat, INNAN det här anropas (annars skulle
   /// [recomputeTokenHolders] hinna räkna med kortet på fel ställe).
   ///
-  /// UNDANTAG: byts ett eget ansikte-upp-kort (t.ex. Köpmansgille) ut
-  /// mot något annat, hamnar det INTE i slänghögen utan tillbaka på din
-  /// egna, separata ansikte-upp-plats (se [Player.faceUpExpansionCard]-
-  /// doc) – det är fortfarande ditt kort, bara oplacerat igen, och kan
-  /// byggas på nytt senare.
+  /// UNDANTAG: byts ett eget ansikte-upp-kort (t.ex. Köpmansgille eller
+  /// Värdshus) ut mot något annat, hamnar det INTE i slänghögen utan
+  /// tillbaka på din egna, separata ansikte-upp-plats (se
+  /// [Player.faceUpExpansionCard]-doc) – det är fortfarande ditt kort,
+  /// bara oplacerat igen, och kan byggas på nytt senare.
   void _placeExpansionCardAndSync(
       int column, BuildingRow row, int slotIndex, GameCard card) {
     final replaced =
         state.you.principality.removeExpansion(column, row, slotIndex);
     state.you.principality
         .placeExpansion(column, row, slotIndex, PlacedCard(card: card));
-    final replacedFaceUpCard =
-        replaced?.card.baseId == EraOfGoldCards.merchantGuild.id
-            ? replaced!.card
-            : null;
+    final replacedFaceUpCard = (replaced?.card.baseId ==
+                EraOfGoldCards.merchantGuild.id ||
+            replaced?.card.baseId == EraOfTurmoilCards.hedgeTavern.id)
+        ? replaced!.card
+        : null;
     state = state.copyWith(
       you: replacedFaceUpCard != null
           ? state.you.copyWith(faceUpExpansionCard: replacedFaceUpCard)

@@ -5,7 +5,8 @@ import 'card_detail_dialog.dart';
 import 'expansion_card_view.dart';
 
 /// Ditt EGET ansikte-upp-kort (se [Player.faceUpExpansionCard]-doc,
-/// t.ex. Köpmansgille för Gulderan) – sorterades ut FÖRE blandning och
+/// t.ex. Köpmansgille för Gulderan eller Värdshus för Oroligheternas
+/// tid) – sorterades ut FÖRE blandning och
 /// ligger synligt hela matchen, i stället för dolt i en av
 /// draghögarna. Bygger du det på din egen tur (se
 /// [GameNotifier.buyFaceUpExpansion]) behövs ingen "kika i hög"-omväg
