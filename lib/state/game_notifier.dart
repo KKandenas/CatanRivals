@@ -621,6 +621,8 @@ class GameNotifier extends Notifier<GameState> {
         riotsResolvedPlayerIds: turnState.riotsResolvedPlayerIds,
         pendingAttackCard: turnState.pendingAttackCard,
         sebastianProtectedPlayerIds: turnState.sebastianProtectedPlayerIds,
+        pendingDefenseRollCard: turnState.pendingDefenseRollCard,
+        traitorPicking: turnState.traitorPicking,
         discardPile: discardPile,
       );
 
@@ -946,6 +948,9 @@ class GameNotifier extends Notifier<GameState> {
           pendingAttackCard: turnState.pendingAttackCard,
           clearPendingAttackCard: turnState.pendingAttackCard == null,
           sebastianProtectedPlayerIds: turnState.sebastianProtectedPlayerIds,
+          pendingDefenseRollCard: turnState.pendingDefenseRollCard,
+          clearPendingDefenseRollCard: turnState.pendingDefenseRollCard == null,
+          traitorPicking: turnState.traitorPicking,
         );
       },
       onError: (Object e) {
@@ -1109,6 +1114,8 @@ class GameNotifier extends Notifier<GameState> {
         riotsResolvedPlayerIds: state.riotsResolvedPlayerIds,
         pendingAttackCard: state.pendingAttackCard,
         sebastianProtectedPlayerIds: state.sebastianProtectedPlayerIds,
+        pendingDefenseRollCard: state.pendingDefenseRollCard,
+        traitorPicking: state.traitorPicking,
       ),
     ));
   }
@@ -1640,12 +1647,71 @@ class GameNotifier extends Notifier<GameState> {
     return false;
   }
 
+  /// Om [board] har Vakttorn – motståndarens Bågskytt/Pyroman/Förrädare
+  /// gated i så fall bakom ett försvarstärningsslag i stället för att
+  /// verka direkt, se [TurnState.pendingDefenseRollCard]/
+  /// [rollLookoutTowerDefense].
+  bool _hasLookoutTowerDefense(RealmBoard board) =>
+      board.hasExpansionCard(EraOfTurmoilCards.lookoutTower.id);
+
   /// Sätter den väntande flaggan om (och bara om) motståndaren faktiskt
-  /// har något att välja bort.
-  void _maybeTriggerAttackCard(AttackCardKind kind) {
+  /// har något att välja bort – men har motståndaren Vakttorn gated det
+  /// i stället bakom ett försvarstärningsslag (se
+  /// [_hasLookoutTowerDefense]) innan [kind] faktiskt får verka.
+  void _maybeTriggerAttackCard(AttackCardKind kind, String cardBaseId) {
     if (!_attackCardHasTarget(kind)) return;
-    state = state.copyWith(pendingAttackCard: kind);
+    if (_hasLookoutTowerDefense(state.opponent.principality)) {
+      state = state.copyWith(pendingDefenseRollCard: cardBaseId);
+    } else {
+      state = state.copyWith(pendingAttackCard: kind);
+    }
     _syncTurnState();
+  }
+
+  /// Slår försvarstärningen mot ett väntande Bågskytt/Pyroman/Förrädare
+  /// (se [TurnState.pendingDefenseRollCard]-doc) – bara relevant om DU
+  /// har Vakttorn utplacerat. Slår du 1 eller 2 har kortet ingen effekt;
+  /// har du ÄVEN Heinrich väktaren skyddar det i stället mot 1–5 (bara
+  /// en 6 tar sig igenom, se EraOfTurmoilCards.heinrichTheSentinel-doc:
+  /// "Kombineras Heinrich med Vakttornet slås tärningen ändå bara en
+  /// gång"). Slår du igenom aktiveras kortets egentliga effekt precis
+  /// som om Vakttorn aldrig funnits (Bågskytt/Pyroman: [pendingAttackCard],
+  /// Förrädare: [traitorPicking]) – synkat via TurnState så att den
+  /// AKTIVA spelaren (som spelade kortet) ser det.
+  ///
+  /// Till skillnad från övriga metoder i den här klassen är returvärdet
+  /// INTE ett felmeddelande utan en informationstext om utfallet
+  /// (slaget + skyddad eller ej), tänkt att visas i en SnackBar precis
+  /// som ett fel (se `_handleResult` i game_board_screen.dart) – annars
+  /// skulle tärningsslaget aldrig synas för spelaren (till skillnad
+  /// från produktionstärningen har det här slaget ingen egen banner).
+  /// `null` bara om inget försvarsslag väntar.
+  String? rollLookoutTowerDefense() {
+    final cardBaseId = state.pendingDefenseRollCard;
+    if (cardBaseId == null) return null;
+    final hasHeinrich = state.you.principality
+        .hasExpansionCard(EraOfTurmoilCards.heinrichTheSentinel.id);
+    final roll = Random().nextInt(6) + 1;
+    final protected = hasHeinrich ? roll <= 5 : roll <= 2;
+
+    if (protected) {
+      state = state.copyWith(clearPendingDefenseRollCard: true);
+      _syncTurnState();
+      return 'Du slog $roll. Vakttornet skyddade dig – kortet hade ingen effekt.';
+    }
+
+    final kind = cardBaseId == EraOfTurmoilCards.archer.id
+        ? AttackCardKind.archer
+        : cardBaseId == EraOfTurmoilCards.arsonist.id
+            ? AttackCardKind.arsonist
+            : null;
+    state = state.copyWith(
+      clearPendingDefenseRollCard: true,
+      pendingAttackCard: kind,
+      traitorPicking: kind == null,
+    );
+    _syncTurnState();
+    return 'Du slog $roll. Inte skyddad.';
   }
 
   /// Delad hjälpare för [useArcher]/[useArsonist]: hittar [template]s
@@ -1673,7 +1739,7 @@ class GameNotifier extends Notifier<GameState> {
     );
     _syncMyPlayer();
     _discardToPile(card);
-    _maybeTriggerAttackCard(kind);
+    _maybeTriggerAttackCard(kind, template.id);
     return null;
   }
 
@@ -1824,7 +1890,15 @@ class GameNotifier extends Notifier<GameState> {
     _syncMyPlayer();
     _discardToPile(card);
     if (state.opponent.hand.isNotEmpty) {
-      state = state.copyWith(traitorPicking: true);
+      // Vakttorn (se _hasLookoutTowerDefense-doc): gated bakom ett
+      // försvarstärningsslag i stället för att öppna handväljaren direkt.
+      if (_hasLookoutTowerDefense(state.opponent.principality)) {
+        state = state.copyWith(
+            pendingDefenseRollCard: EraOfTurmoilCards.traitor.id);
+      } else {
+        state = state.copyWith(traitorPicking: true);
+      }
+      _syncTurnState();
     }
     return null;
   }
@@ -1835,6 +1909,7 @@ class GameNotifier extends Notifier<GameState> {
   /// stänger bara vyn.
   String? cancelTraitorPick() {
     state = state.copyWith(traitorPicking: false);
+    _syncTurnState();
     return null;
   }
 
@@ -1864,6 +1939,7 @@ class GameNotifier extends Notifier<GameState> {
       traitorPicking: false,
     );
     _syncMyPlayer();
+    _syncTurnState();
     final roomCode = state.roomCode;
     if (roomCode != null) {
       unawaited(_sync.writeTraitorRequest(

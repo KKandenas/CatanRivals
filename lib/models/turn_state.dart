@@ -83,6 +83,27 @@ class TurnState {
   /// [riotsResolvedPlayerIds].
   final Set<String> sebastianProtectedPlayerIds;
 
+  /// Vilket attackkort (baseId, Bågskytt/Pyroman/Förrädare) som just nu
+  /// väntar på att MOTSTÅNDAREN (som har Vakttorn) ska slå tärningen för
+  /// att eventuellt avvärja det, se
+  /// [GameNotifier.rollLookoutTowerDefense]/EraOfTurmoilCards.
+  /// lookoutTower-doc. Sätts av den AKTIVA spelaren (som spelade kortet)
+  /// i stället för att gå direkt till [pendingAttackCard]/[traitorPicking]
+  /// – rensas av försvararen efter tärningsslaget, oavsett utfall.
+  /// `null` när ingen försvarstärning väntar.
+  final String? pendingDefenseRollCard;
+
+  /// Förrädare (regelhäftet: "titta på motståndarens kort ... välj ett
+  /// som läggs till den egna handen") – om DU just nu ska välja ett kort
+  /// ur motståndarens hand, se [GameNotifier.useTraitor]/
+  /// [pickTraitorCard]. Till skillnad från Brödrafejds motsvarande
+  /// väljarläge (som aldrig behöver synkas, se [fraternalFeudsPicking] i
+  /// [GameState]) måste den här synkas via [TurnState], eftersom
+  /// Vakttorn (se [pendingDefenseRollCard]) kan göra att det är
+  /// FÖRSVARARENS tärningsslag – inte du själv – som avgör om du
+  /// faktiskt får gå vidare hit.
+  final bool traitorPicking;
+
   const TurnState({
     required this.activePlayerId,
     this.diceRolled = false,
@@ -96,6 +117,8 @@ class TurnState {
     this.riotsResolvedPlayerIds = const {},
     this.pendingAttackCard,
     this.sebastianProtectedPlayerIds = const {},
+    this.pendingDefenseRollCard,
+    this.traitorPicking = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -114,6 +137,9 @@ class TurnState {
           'pendingAttackCard': pendingAttackCard!.name,
         if (sebastianProtectedPlayerIds.isNotEmpty)
           'sebastianProtectedPlayerIds': sebastianProtectedPlayerIds.toList(),
+        if (pendingDefenseRollCard != null)
+          'pendingDefenseRollCard': pendingDefenseRollCard,
+        if (traitorPicking) 'traitorPicking': true,
       };
 
   factory TurnState.fromJson(Map<String, dynamic> json) => TurnState(
@@ -143,5 +169,7 @@ class TurnState {
                 ? const {}
                 : Set<String>.from(
                     json['sebastianProtectedPlayerIds'] as List),
+        pendingDefenseRollCard: json['pendingDefenseRollCard'] as String?,
+        traitorPicking: json['traitorPicking'] as bool? ?? false,
       );
 }

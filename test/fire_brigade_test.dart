@@ -1,3 +1,4 @@
+import 'package:catan_rivals/data/basic_set_cards.dart';
 import 'package:catan_rivals/data/era_of_turmoil_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/services/game_sync_providers.dart';
@@ -73,7 +74,7 @@ void main() {
         2, BuildingRow.below, 0, const PlacedCard(card: EraOfTurmoilCards.drillGround));
     // Byggnad i en annan stad (kolumn 0), utan egen Brandkår.
     opponentBoard.placeExpansion(
-        0, BuildingRow.above, 0, const PlacedCard(card: EraOfTurmoilCards.lookoutTower));
+        0, BuildingRow.above, 0, const PlacedCard(card: BasicSetCards.abbey));
 
     expect(notifier.useArsonist(), isNull);
     expect(container.read(gameProvider).pendingAttackCard, AttackCardKind.arsonist);
@@ -91,7 +92,7 @@ void main() {
     opponentBoard.placeExpansion(
         2, BuildingRow.above, 0, const PlacedCard(card: EraOfTurmoilCards.fireBrigade));
     opponentBoard.placeExpansion(
-        0, BuildingRow.above, 0, const PlacedCard(card: EraOfTurmoilCards.lookoutTower));
+        0, BuildingRow.above, 0, const PlacedCard(card: BasicSetCards.abbey));
     // "you" (den drabbade sidans egna klient, se attack_cards_test.dart-
     // kommentaren) har samma uppställning: skyddad byggnad i kolumn 2,
     // oskyddad i kolumn 0.

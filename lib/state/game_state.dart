@@ -192,6 +192,12 @@ class GameState {
   /// [TurnState] av samma skäl som [pirateShipDiscardPending].
   final Set<String> sebastianProtectedPlayerIds;
 
+  /// Vilket attackkort (baseId) som väntar på att DU (om du har
+  /// Vakttorn) ska slå tärningen för att eventuellt avvärja det, se
+  /// [TurnState.pendingDefenseRollCard]-doc – synkat via [TurnState] av
+  /// samma skäl som [pirateShipDiscardPending].
+  final String? pendingDefenseRollCard;
+
   /// Händelsekortet som just nu ligger uppslaget för alla att läsa,
   /// draget när händelsetärningen visade "?" (se [EventDieFace.eventCard]
   /// och [GameNotifier.drawEventCard]) – synkas till båda spelarna,
@@ -246,10 +252,12 @@ class GameState {
   /// Förrädare (Oroligheternas tid, regelhäftet: "man får titta på
   /// motståndarens kort de har på handen och välja ett som läggs till
   /// den egna handen") – se [GameNotifier.useTraitor]/
-  /// [GameNotifier.pickTraitorCard]. Rent lokalt UI-state (till skillnad
-  /// från [fraternalFeudsPicking] behöver ingen mellanlagring av det
-  /// valda kortet skickas online – se [TraitorRequest]-doc), sant tills
-  /// ett kort valts eller flödet avbryts.
+  /// [GameNotifier.pickTraitorCard], sant tills ett kort valts eller
+  /// flödet avbryts. Synkat via [TurnState] (se
+  /// [TurnState.traitorPicking]-doc) – till skillnad från
+  /// [fraternalFeudsPicking] kan Vakttorn (se [pendingDefenseRollCard])
+  /// göra att det är FÖRSVARARENS tärningsslag, inte du själv, som
+  /// avgör om du faktiskt får gå vidare hit.
   final bool traitorPicking;
 
   /// Starthandsutdelningen (regelhäftet s. 6) när ett tema är aktivt (se
@@ -315,6 +323,7 @@ class GameState {
     this.pendingAttackCard,
     this.attackCardPickedUnit,
     this.sebastianProtectedPlayerIds = const {},
+    this.pendingDefenseRollCard,
     this.drawnEventCard,
     this.awaitingScoutDecision = false,
     this.scoutChoices,
@@ -489,6 +498,8 @@ class GameState {
     RelocationSelection? attackCardPickedUnit,
     bool clearAttackCardPickedUnit = false,
     Set<String>? sebastianProtectedPlayerIds,
+    String? pendingDefenseRollCard,
+    bool clearPendingDefenseRollCard = false,
     GameCard? drawnEventCard,
     bool clearDrawnEventCard = false,
     bool? awaitingScoutDecision,
@@ -570,6 +581,9 @@ class GameState {
           : (attackCardPickedUnit ?? this.attackCardPickedUnit),
       sebastianProtectedPlayerIds:
           sebastianProtectedPlayerIds ?? this.sebastianProtectedPlayerIds,
+      pendingDefenseRollCard: clearPendingDefenseRollCard
+          ? null
+          : (pendingDefenseRollCard ?? this.pendingDefenseRollCard),
       drawnEventCard: clearDrawnEventCard
           ? null
           : (drawnEventCard ?? this.drawnEventCard),

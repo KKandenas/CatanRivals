@@ -25,6 +25,7 @@ import '../widgets/feud_resolution_card.dart';
 import '../widgets/fraternal_feuds_hand_picker.dart';
 import '../widgets/game_over_overlay.dart';
 import '../widgets/hand_dock.dart';
+import '../widgets/lookout_tower_defense_card.dart';
 import '../widgets/peek_stack_overlay.dart';
 import '../widgets/pending_regions_bar.dart';
 import '../widgets/pill_banner.dart';
@@ -136,6 +137,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
         ),
       );
     }
+  }
+
+  /// Visningsnamnet för det attackkort (baseId) som väntar på ett
+  /// Vakttorns-försvar, se [TurnState.pendingDefenseRollCard]-doc.
+  String _attackCardNameFor(String baseId) {
+    if (baseId == EraOfTurmoilCards.archer.id) return EraOfTurmoilCards.archer.name;
+    if (baseId == EraOfTurmoilCards.arsonist.id) return EraOfTurmoilCards.arsonist.name;
+    return EraOfTurmoilCards.traitor.name;
   }
 
   /// Kapell (1–3)/(4–6) (regelhäftet: "Slås 1, 2 eller 3 [respektive 4,
@@ -1005,8 +1014,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                     // pickTraitorCard, både lokalt och online):
                     // motståndarens hand öppen, kortet läggs direkt till
                     // din egen hand – till skillnad från Brödrafejd inget
-                    // andra steg (ingen draghög att välja).
-                    if (state.traitorPicking)
+                    // andra steg (ingen draghög att välja). traitorPicking
+                    // är numera synkat via TurnState (se Vakttorn-doc), så
+                    // isMyTurn-kollen är nödvändig: annars skulle den
+                    // AKTIVA spelarens flagga även visas hos FÖRSVARAREN,
+                    // som då felaktigt skulle se (och kunna välja ur) sin
+                    // EGEN "state.opponent" – dvs den aktiva spelarens
+                    // hand, inte sin egen.
+                    if (state.traitorPicking && state.isMyTurn)
                       Positioned.fill(
                         child: Container(
                           color: Colors.black.withValues(alpha: 0.55),
@@ -1018,6 +1033,24 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                                 'att lägga till din egen (tryck för att förstora)',
                             onPick: (card) => _handleResult(
                                 context, notifier.pickTraitorCard(card)),
+                          ),
+                        ),
+                      ),
+                    // Vakttorn (se GameNotifier.rollLookoutTowerDefense/
+                    // pendingDefenseRollCard-doc): bara FÖRSVARAREN (den
+                    // som har Vakttorn, inte den som spelade attackkortet)
+                    // ska se knappen.
+                    if (state.pendingDefenseRollCard != null &&
+                        !state.isMyTurn)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          padding: const EdgeInsets.all(12),
+                          child: LookoutTowerDefenseCard(
+                            attackCardName: _attackCardNameFor(
+                                state.pendingDefenseRollCard!),
+                            onRoll: () => _handleResult(context,
+                                notifier.rollLookoutTowerDefense()),
                           ),
                         ),
                       ),
