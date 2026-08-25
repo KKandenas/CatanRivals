@@ -39,6 +39,7 @@ import '../widgets/scout_region_picker.dart';
 import '../widgets/stack_choice_overlay.dart';
 import '../widgets/starting_hand_draft_picker.dart';
 import '../widgets/starting_region_rearrangement_bar.dart';
+import '../widgets/tithe_barn_resource_picker.dart';
 import '../widgets/top_status_bar.dart';
 import '../widgets/total_score_board.dart';
 import '../widgets/trade_phase_card.dart';
@@ -229,6 +230,67 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
               Text('Stapelhus byggt: du får 2 valfria resurser direkt.'),
           duration: Duration(seconds: 3),
         ),
+      );
+      return;
+    }
+    // Övningsplats (se EraOfTurmoilCards.drillGround-doc): gäller inte
+    // kortet självt utan varje HJÄLTE du bygger EFTER att du redan har
+    // det i ditt rike – ren påminnelsetext, precis som Stapelhus ovan
+    // (kostnaden dras aldrig av automatiskt).
+    if (builtCard?.expansionKind == ExpansionKind.hero &&
+        ref
+            .read(gameProvider)
+            .you
+            .principality
+            .hasExpansionCard(EraOfTurmoilCards.drillGround.id)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Du har Övningsplats: betala 1 valfri resurs mindre för hjälten.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+    // Marknadsfält: "Har du fler kunskapspoäng än motståndaren får du
+    // omedelbart 2 valfria resurser."
+    if (builtCard?.baseId == EraOfTurmoilCards.fairgrounds.id) {
+      final state = ref.read(gameProvider);
+      if (state.you.principality.totalSkillPoints >
+          state.opponent.principality.totalSkillPoints) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Marknadsfält byggt: du har flest kunskapspoäng – du får 2 valfria resurser direkt.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
+    // Tiondelada: väljer ull eller säd, sedan en påminnelse om hur många
+    // resurser det blir (1 per egen hjälte just nu) – helt manuellt
+    // precis som övriga byggeffekter ovan.
+    if (builtCard?.baseId == EraOfTurmoilCards.titheBarn.id) {
+      final heroCount = ref
+          .read(gameProvider)
+          .you
+          .principality
+          .placedExpansionCards
+          .where((c) => c.expansionKind == ExpansionKind.hero)
+          .length;
+      showTitheBarnResourcePicker(
+        context,
+        onPick: (resource) {
+          final name = resource == ResourceType.wool ? 'ull' : 'säd';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Tiondelada byggt: du får $heroCount $name (1 per egen hjälte).'),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        },
       );
     }
   }
