@@ -33,9 +33,26 @@ class FeudResolutionCard extends StatelessWidget {
   /// hjältar/ingenting utplacerat.
   final bool hasBuildingToRemove;
 
+  /// Om DU (den drabbade sidan, dvs. utan styrkeövertaget) redan spelat
+  /// Sebastian, den vandrande predikanten mot just det här kortet (se
+  /// [GameNotifier.playSebastianForCurrentEvent]/
+  /// TurnState.sebastianProtectedPlayerIds-doc) – ersätter i så fall
+  /// hela instruktionen med en skyddad-text och en enkel OK-knapp.
+  final bool youProtected;
+
+  /// Om MOTSTÅNDAREN (den drabbade sidan) redan spelat Sebastian – bara
+  /// relevant när DU har övertaget, se [youProtected].
+  final bool opponentProtected;
+
+  /// Om Sebastian går att spela just nu: du är den drabbade sidan (utan
+  /// övertaget, inget oavgjort), har kortet på handen, och har inte
+  /// redan skyddat dig.
+  final bool canPlaySebastian;
+
   final VoidCallback onDismiss;
   final VoidCallback onStartFeudPick;
   final VoidCallback onStartFraternalFeudsPick;
+  final VoidCallback onPlaySebastian;
 
   const FeudResolutionCard({
     super.key,
@@ -44,9 +61,13 @@ class FeudResolutionCard extends StatelessWidget {
     required this.youHaveAdvantage,
     required this.opponentName,
     required this.hasBuildingToRemove,
+    this.youProtected = false,
+    this.opponentProtected = false,
+    this.canPlaySebastian = false,
     required this.onDismiss,
     required this.onStartFeudPick,
     required this.onStartFraternalFeudsPick,
+    required this.onPlaySebastian,
   });
 
   bool get _isFraternalFeuds => card.baseId == BasicSetCards.fraternalFeuds.id;
@@ -151,6 +172,17 @@ class FeudResolutionCard extends StatelessWidget {
                   onPressed: _primaryAction,
                   child: Text(_primaryButtonLabel),
                 ),
+                if (canPlaySebastian) ...[
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                        foregroundColor: CatanColors.ink,
+                        side: const BorderSide(color: CatanColors.woodFrame)),
+                    onPressed: onPlaySebastian,
+                    child: const Text(
+                        'Spela Sebastian, den vandrande predikanten (skydda dig)'),
+                  ),
+                ],
               ],
             ),
           ),
@@ -161,6 +193,14 @@ class FeudResolutionCard extends StatelessWidget {
 
   String get _instructionText {
     if (isTie) return 'Inget händer.';
+    if (youProtected) {
+      return 'Du spelade Sebastian, den vandrande predikanten – '
+          'gäller inte dig. Inget händer.';
+    }
+    if (youHaveAdvantage && opponentProtected) {
+      return '$opponentName spelade Sebastian, den vandrande predikanten – '
+          'gäller inte hen. Inget händer.';
+    }
     if (!_isFraternalFeuds) {
       // Fejd: gäller den utan övertaget.
       if (!hasBuildingToRemove) {
@@ -183,7 +223,9 @@ class FeudResolutionCard extends StatelessWidget {
   }
 
   String get _primaryButtonLabel {
-    if (isTie) return 'OK';
+    if (isTie || youProtected || (youHaveAdvantage && opponentProtected)) {
+      return 'OK';
+    }
     if (!_isFraternalFeuds && !youHaveAdvantage && hasBuildingToRemove) {
       return 'Välj byggnad';
     }
@@ -194,7 +236,9 @@ class FeudResolutionCard extends StatelessWidget {
   }
 
   VoidCallback get _primaryAction {
-    if (isTie) return onDismiss;
+    if (isTie || youProtected || (youHaveAdvantage && opponentProtected)) {
+      return onDismiss;
+    }
     if (!_isFraternalFeuds && !youHaveAdvantage && hasBuildingToRemove) {
       return onStartFeudPick;
     }

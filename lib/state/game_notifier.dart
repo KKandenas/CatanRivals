@@ -1262,13 +1262,20 @@ class GameNotifier extends Notifier<GameState> {
     final isFeud = baseId == BasicSetCards.feud.id;
     final isFraternalFeuds = baseId == BasicSetCards.fraternalFeuds.id;
     final advantage = state.strengthAdvantagePlayerId;
+    // Sebastian (se sebastianProtectedPlayerIds-doc): har den sida som
+    // annars skulle drabbats redan skyddat sig, finns inget kvar att
+    // vänta på – då får otherSideMustActFirst inte bli sant, annars
+    // skulle kortet fastna outdismissbart för den andra sidan.
     final otherSideMustActFirst = (isFeud &&
             advantage == state.myPlayerId &&
-            state.opponent.principality.hasAnyBuilding) ||
+            state.opponent.principality.hasAnyBuilding &&
+            !state.sebastianProtectedPlayerIds
+                .contains(state.opponentPlayerId)) ||
         (isFraternalFeuds &&
             advantage != null &&
             advantage != state.myPlayerId &&
-            state.you.hand.isNotEmpty);
+            state.you.hand.isNotEmpty &&
+            !state.sebastianProtectedPlayerIds.contains(state.myPlayerId));
     state = state.copyWith(clearDrawnEventCard: true);
     if (!otherSideMustActFirst) _syncTurnState();
     return null;
@@ -1289,12 +1296,17 @@ class GameNotifier extends Notifier<GameState> {
   /// taget att välja mellan (se [RealmBoard.hasAnyBuilding]) – annars
   /// skulle spelet be dig välja en byggnad som inte finns, utan något
   /// sätt att komma vidare (game_board_screen.dart visar i stället
-  /// "inget händer" direkt i det fallet, se [FeudResolutionCard]).
+  /// "inget händer" direkt i det fallet, se [FeudResolutionCard]). No-op
+  /// även om du redan skyddat dig med Sebastian (se
+  /// [playSebastianForCurrentEvent]/sebastianProtectedPlayerIds-doc).
   String? startFeudBuildingPick() {
     if (state.drawnEventCard == null) return null;
     final advantage = state.strengthAdvantagePlayerId;
     if (advantage == null || advantage == state.myPlayerId) return null;
     if (!state.you.principality.hasAnyBuilding) return null;
+    if (state.sebastianProtectedPlayerIds.contains(state.myPlayerId)) {
+      return null;
+    }
     state = state.copyWith(
         feudBuildingPickActive: true, clearFeudPickedBuilding: true);
     return null;
@@ -1752,11 +1764,16 @@ class GameNotifier extends Notifier<GameState> {
   // ---------------------------------------------------------------------
 
   /// Startar handväljaren när du har styrkeövertaget. No-op utan
-  /// uppslaget Brödrafejd-kort, vid oavgjort, eller om det är
-  /// motståndaren som har övertaget.
+  /// uppslaget Brödrafejd-kort, vid oavgjort, om det är motståndaren
+  /// som har övertaget, eller om motståndaren redan skyddat sig med
+  /// Sebastian (se [playSebastianForCurrentEvent]/
+  /// sebastianProtectedPlayerIds-doc) – det finns då inget att välja.
   String? startFraternalFeudsPick() {
     if (state.drawnEventCard == null) return null;
     if (state.strengthAdvantagePlayerId != state.myPlayerId) return null;
+    if (state.sebastianProtectedPlayerIds.contains(state.opponentPlayerId)) {
+      return null;
+    }
     state = state.copyWith(
         fraternalFeudsPicking: true,
         fraternalFeudsPicked: const [],

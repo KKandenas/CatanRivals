@@ -17,21 +17,40 @@ class RiotsResolutionCard extends StatelessWidget {
   final GameCard card;
   final int unitCount;
   final int goldOwed;
+
+  /// Om du redan spelat Sebastian, den vandrande predikanten mot just
+  /// det här kortet (se [GameNotifier.playSebastianForCurrentEvent]) –
+  /// räknas som din egen färdiga hantering, se
+  /// TurnState.sebastianProtectedPlayerIds-doc.
+  final bool youProtected;
+
+  /// Du har Sebastian på handen, har kvalificerande enheter (annars
+  /// inget att skydda), och har inte redan skyddat dig.
+  final bool canPlaySebastian;
+
   final VoidCallback onPay;
   final VoidCallback onCannotPay;
+  final VoidCallback onPlaySebastian;
 
   const RiotsResolutionCard({
     super.key,
     required this.card,
     required this.unitCount,
     required this.goldOwed,
+    this.youProtected = false,
+    this.canPlaySebastian = false,
     required this.onPay,
     required this.onCannotPay,
+    required this.onPlaySebastian,
   });
 
   bool get _hasQualifyingUnits => unitCount > 0;
 
   String get _statusLine {
+    if (youProtected) {
+      return 'Du spelade Sebastian, den vandrande predikanten – gäller '
+          'inte dig. Inget händer.';
+    }
     if (!_hasQualifyingUnits) {
       return 'Du har inga enheter med styrke- eller handelspoäng. Inget händer.';
     }
@@ -111,7 +130,7 @@ class RiotsResolutionCard extends StatelessWidget {
                       color: CatanColors.ink),
                 ),
                 const SizedBox(height: 12),
-                if (!_hasQualifyingUnits)
+                if (youProtected || !_hasQualifyingUnits)
                   FilledButton(
                     style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF4F6F45)),
@@ -142,6 +161,17 @@ class RiotsResolutionCard extends StatelessWidget {
                       ),
                     ],
                   ),
+                if (canPlaySebastian) ...[
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                        foregroundColor: CatanColors.ink,
+                        side: const BorderSide(color: CatanColors.woodFrame)),
+                    onPressed: onPlaySebastian,
+                    child: const Text(
+                        'Spela Sebastian, den vandrande predikanten (skydda dig)'),
+                  ),
+                ],
               ],
             ),
           ),

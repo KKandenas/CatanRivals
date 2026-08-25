@@ -32,6 +32,7 @@ void main() {
       onDismiss: () {},
       onStartFeudPick: () {},
       onStartFraternalFeudsPick: () => pressed = true,
+      onPlaySebastian: () {},
     )));
     await tester.pumpAndSettle();
 
@@ -58,6 +59,7 @@ void main() {
       onDismiss: () {},
       onStartFeudPick: () => pressed = true,
       onStartFraternalFeudsPick: () {},
+      onPlaySebastian: () {},
     )));
     await tester.pumpAndSettle();
 
@@ -84,6 +86,7 @@ void main() {
       onDismiss: () => dismissed = true,
       onStartFeudPick: () {},
       onStartFraternalFeudsPick: () {},
+      onPlaySebastian: () {},
     )));
     await tester.pumpAndSettle();
 
@@ -113,6 +116,7 @@ void main() {
       onStartFeudPick: () =>
           fail('ska inte kunna starta bygg-väljaren utan byggnader'),
       onStartFraternalFeudsPick: () {},
+      onPlaySebastian: () {},
     )));
     await tester.pumpAndSettle();
 
@@ -141,6 +145,7 @@ void main() {
       onDismiss: () {},
       onStartFeudPick: () {},
       onStartFraternalFeudsPick: () {},
+      onPlaySebastian: () {},
     )));
     await tester.pumpAndSettle();
 

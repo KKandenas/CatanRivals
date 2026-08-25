@@ -725,12 +725,28 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                                         state.myPlayerId
                                     ? state.opponent.principality.hasAnyBuilding
                                     : state.you.principality.hasAnyBuilding,
+                            youProtected: state.sebastianProtectedPlayerIds
+                                .contains(state.myPlayerId),
+                            opponentProtected: state.sebastianProtectedPlayerIds
+                                .contains(state.opponentPlayerId),
+                            canPlaySebastian: state.strengthAdvantagePlayerId !=
+                                    null &&
+                                state.strengthAdvantagePlayerId !=
+                                    state.myPlayerId &&
+                                !state.sebastianProtectedPlayerIds
+                                    .contains(state.myPlayerId) &&
+                                state.you.hand.any((c) =>
+                                    c.baseId ==
+                                    EraOfTurmoilCards
+                                        .sebastianTheItinerantPreacher.id),
                             onDismiss: () => _handleResult(
                                 context, notifier.dismissEventCard()),
                             onStartFeudPick: () => _handleResult(
                                 context, notifier.startFeudBuildingPick()),
                             onStartFraternalFeudsPick: () => _handleResult(
                                 context, notifier.startFraternalFeudsPick()),
+                            onPlaySebastian: () => _handleResult(context,
+                                notifier.playSebastianForCurrentEvent()),
                           ),
                         ),
                       ),
@@ -744,10 +760,23 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                             unitCount: riotsQualifyingUnitCount(state.you),
                             goldOwed: riotsGoldOwed(
                                 riotsQualifyingUnitCount(state.you)),
+                            youProtected: state.sebastianProtectedPlayerIds
+                                .contains(state.myPlayerId),
+                            canPlaySebastian: riotsQualifyingUnitCount(
+                                        state.you) >
+                                    0 &&
+                                !state.sebastianProtectedPlayerIds
+                                    .contains(state.myPlayerId) &&
+                                state.you.hand.any((c) =>
+                                    c.baseId ==
+                                    EraOfTurmoilCards
+                                        .sebastianTheItinerantPreacher.id),
                             onPay: () => _handleResult(
                                 context, notifier.resolveRiotsPay()),
                             onCannotPay: () => _handleResult(
                                 context, notifier.startRiotsUnitPick()),
+                            onPlaySebastian: () => _handleResult(context,
+                                notifier.playSebastianForCurrentEvent()),
                           ),
                         ),
                       ),
