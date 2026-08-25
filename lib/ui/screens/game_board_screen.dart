@@ -109,6 +109,35 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     );
   }
 
+  /// Precis som [_handleResult], men för de tre "lägg en egen enhet/
+  /// byggnad underst i en draghög"-flödena (Fejd/resolveFeudBuildingRemoval,
+  /// Upplopp/resolveRiotsUnitRemoval, Bågskytt/Pyroman/
+  /// resolveAttackCardUnitRemoval) som alla resolveras på DIN EGEN
+  /// state.you.principality (se respektive metods doc) – lyckas det (inget
+  /// fel) och du har Irmgard, ljusets väktare i ditt rike visas en
+  /// påminnelse om den valfria resursen (regelhäftet: "Förlorar du ett
+  /// kort ur ditt rike ... får du 1 valfri resurs"), precis som övriga
+  /// byggeffekter (Stapelhus m.fl.) inte flyttar resursen automatiskt.
+  /// Irmgard själv kan aldrig vara kortet som just togs bort (hon
+  /// kvalificerar inte för någon av de tre händelsernas urvalskriterier,
+  /// se respektive korttext), så det spelar ingen roll om kollen sker
+  /// före eller efter anropet.
+  void _handleCardLossResult(BuildContext context, String? error) {
+    if (error != null) {
+      _handleResult(context, error);
+      return;
+    }
+    if (ref.read(gameProvider).you.principality.hasExpansionCard(
+        EraOfTurmoilCards.irmgardKeeperOfTheLight.id)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Du har Irmgard: du får 1 valfri resurs.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
   /// Andra halvan av handlingskortens "tvåstegsraket" (se
   /// [HandDock.onUseActionCard]/card_detail_dialog.dart) – "Vill du
   /// använda kortet?" har redan bekräftats, nu avgörs vad just det
@@ -863,7 +892,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                                 'Vilken draghög ska enheten läggas underst i?',
                             stackCount: state.initialDrawStackSizes.length,
                             activeExpansions: state.activeExpansions,
-                            onChooseStack: (index) => _handleResult(context,
+                            onChooseStack: (index) => _handleCardLossResult(context,
                                 notifier.resolveRiotsUnitRemoval(index)),
                             onCancel: () => _handleResult(
                                 context, notifier.cancelRiotsUnitPick()),
@@ -885,7 +914,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                                 'Vilken draghög ska kortet läggas underst i?',
                             stackCount: state.initialDrawStackSizes.length,
                             activeExpansions: state.activeExpansions,
-                            onChooseStack: (index) => _handleResult(context,
+                            onChooseStack: (index) => _handleCardLossResult(context,
                                 notifier.resolveAttackCardUnitRemoval(index)),
                             onCancel: () => _handleResult(
                                 context, notifier.cancelAttackCardUnitPick()),
@@ -907,7 +936,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                                 'Vilken draghög ska byggnaden läggas underst i?',
                             stackCount: state.initialDrawStackSizes.length,
                             activeExpansions: state.activeExpansions,
-                            onChooseStack: (index) => _handleResult(context,
+                            onChooseStack: (index) => _handleCardLossResult(context,
                                 notifier.resolveFeudBuildingRemoval(index)),
                             onCancel: () => _handleResult(
                                 context, notifier.cancelFeudBuildingPick()),
