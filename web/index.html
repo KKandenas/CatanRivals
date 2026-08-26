@@ -14,6 +14,27 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <script>
+    // Städar bort en eventuell TIDIGARE service worker + dess cache –
+    // appen registrerar inte längre någon SW alls (se
+    // web/flutter_bootstrap.js), men en redan installerad SW från en
+    // äldre version av appen fortsätter annars köras för alltid och kan
+    // fastna på ett inaktuellt/trasigt cachat innehåll. Rapporterad
+    // bugg: en hemskärmssparad PWA hängde likadant varje gång, ÄVEN
+    // efter en full omstart av appen – bara en helt ny hemskärmsikon
+    // hjälpte, och bara tillfälligt (nästa laddning hängde igen), vilket
+    // pekar exakt på en fastnad service worker (en vanlig Safari-flik
+    // med samma adress, som inte styrs av samma SW-scope på samma sätt,
+    // fungerade hela tiden). Ofarligt att köra även när ingen SW finns.
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        for (const reg of regs) reg.unregister();
+      });
+    }
+    if (window.caches) {
+      caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+    }
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
