@@ -82,6 +82,52 @@ void main() {
       expect(state.pendingRegionJunction, -3);
     });
 
+    test(
+        'plockar och placerar ett kort INNAN det andra väljs (rapporterad bugg: spelaren fastnade – appen bad om 2 kort men gick inte att placera något mer)',
+        () {
+      buildBeyondFrontier();
+      final notifier = container.read(gameProvider.notifier);
+      notifier.useScout();
+      final firstPick = container.read(gameProvider).scoutChoices![0];
+
+      expect(notifier.pickScoutRegion(firstPick), isNull);
+      expect(container.read(gameProvider).pendingRegions, [firstPick]);
+      expect(container.read(gameProvider).scoutChoices, isNotNull);
+
+      // Spelaren drar det redan valda kortet direkt till platsen, INNAN
+      // det andra kortet är valt – möjligt eftersom ScoutRegionPicker-
+      // overlayn inte blockerar Flutters drag-and-drop-hit-test mot
+      // byggplatserna under den.
+      expect(notifier.placePendingRegion(BuildingRow.above, firstPick), isNull);
+      var state = container.read(gameProvider);
+      expect(state.you.principality.regionAt(-3, BuildingRow.above)!.card.id,
+          firstPick.id);
+      expect(state.pendingRegions, isEmpty);
+      expect(state.pendingRegionJunction, -3,
+          reason:
+              'junktionen ska INTE nollställas – det andra kortet är inte valt än');
+      expect(state.scoutChoices, isNotNull,
+          reason: 'väljaren ska fortfarande vänta på det andra kortet');
+
+      final secondPick = state.scoutChoices![0];
+      expect(notifier.pickScoutRegion(secondPick), isNull);
+      state = container.read(gameProvider);
+      expect(state.scoutChoices, isNull,
+          reason: 'båda korten är nu valda – väljaren ska stänga');
+      expect(state.you.hand.any((c) => c.id == BasicSetCards.scout.id), isFalse);
+      expect(state.pendingRegions, [secondPick]);
+      expect(state.pendingRegionJunction, -3);
+
+      final error = notifier.placePendingRegion(BuildingRow.below, secondPick);
+
+      expect(error, isNull);
+      state = container.read(gameProvider);
+      expect(state.you.principality.regionAt(-3, BuildingRow.below)!.card.id,
+          secondPick.id);
+      expect(state.pendingRegions, isEmpty);
+      expect(state.pendingRegionJunction, isNull);
+    });
+
     test('placePendingRegion fungerar som vanligt efter ett Spejare-val', () {
       buildBeyondFrontier();
       final notifier = container.read(gameProvider.notifier);

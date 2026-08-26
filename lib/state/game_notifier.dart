@@ -3270,7 +3270,23 @@ class GameNotifier extends Notifier<GameState> {
     _setRegionDeck(List.of(_regionDeck)..remove(card));
     final picked = [...state.pendingRegions, card];
 
-    if (picked.length < 2) {
+    // Hur många kort som TOTALT valts den här Spejare-omgången är INTE
+    // detsamma som picked.length: spelaren kan hinna dra och placera
+    // ett redan valt kort på sin plats INNAN det andra kortet ens är
+    // valt (rapporterad bugg) – ScoutRegionPicker-overlayn hindrar
+    // inte Flutters drag-and-drop-hit-test från att nå byggplatserna
+    // under den, se [placePendingRegion]-doc. pendingRegions töms då
+    // av det placerade kortet innan det andra hinner väljas, så
+    // picked.length ensam skulle aldrig nå 2 – räknar därför även in
+    // vad som redan hunnit placeras vid junktionen.
+    final junction = state.pendingRegionJunction;
+    final alreadyPlaced = junction == null
+        ? 0
+        : [BuildingRow.above, BuildingRow.below]
+            .where((row) => state.you.principality.regionAt(junction, row) != null)
+            .length;
+
+    if (alreadyPlaced + picked.length < 2) {
       state = state.copyWith(
         pendingRegions: picked,
         scoutChoices: List.of(_regionDeck),
@@ -3328,9 +3344,22 @@ class GameNotifier extends Notifier<GameState> {
     state.you.principality.placeRegion(junction, row, PlacedCard(card: card));
     final remaining = List<GameCard>.of(state.pendingRegions)..remove(card);
 
+    // Junktionen är klar när BÅDA platserna faktiskt är fyllda på
+    // riket – inte bara när [remaining] (det HÅLLNA, ännu ej
+    // utplacerade urvalet) råkar vara tomt. Med Spejare (se
+    // [pickScoutRegion]-doc) kan spelaren hinna placera ett redan valt
+    // kort innan det andra ens är valt, så pendingRegions kan bli tomt
+    // en kort stund fast bara 1 av 2 platser är fyllda – med den gamla
+    // kollen (remaining.isEmpty) nollställdes junktionen då i förtid
+    // och spelaren kunde aldrig placera det andra kortet (rapporterad
+    // bugg).
+    final bothSitesFilled =
+        state.you.principality.regionAt(junction, BuildingRow.above) != null &&
+            state.you.principality.regionAt(junction, BuildingRow.below) != null;
+
     state = state.copyWith(
       pendingRegions: remaining,
-      clearPendingRegionJunction: remaining.isEmpty,
+      clearPendingRegionJunction: bothSitesFilled,
     );
     _syncMyPlayer();
     return null;
