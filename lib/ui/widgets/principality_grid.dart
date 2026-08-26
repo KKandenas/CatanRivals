@@ -661,7 +661,7 @@ class PrincipalityGrid extends StatelessWidget {
     final canPickForFeud = feudBuildingPickActive &&
         interactive &&
         onSelectFeudBuilding != null &&
-        placed.card.expansionKind == ExpansionKind.building;
+        placed.card.isBuilding;
     final canPickForPirateShip = pirateShipDiscardActive &&
         interactive &&
         onSelectPirateShipDiscard != null &&
@@ -672,8 +672,7 @@ class PrincipalityGrid extends StatelessWidget {
         (placed.card.strengthPoints > 0 || placed.card.commercePoints > 0);
     final attackCardQualifies = switch (pendingAttackCard) {
       AttackCardKind.archer => placed.card.strengthPoints > 0,
-      AttackCardKind.arsonist =>
-        placed.card.expansionKind == ExpansionKind.building,
+      AttackCardKind.arsonist => placed.card.isBuilding,
       null => false,
     };
     final canPickForAttackCard = pendingAttackCard != null &&

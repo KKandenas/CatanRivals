@@ -213,9 +213,12 @@ String? _resolvePlague(GameState state) {
 String? _resolveInvention(GameState state) {
   final lines = <String>[];
   for (final player in [state.you, state.opponent]) {
+    // isBuilding (se GameCard-doc) räknar även stadsutbyggnader (t.ex.
+    // Universitet, som har 1 framstegspoäng) – de saknar expansionKind
+    // helt, så en ren expansionKind-koll missade dem tidigare
+    // (rapporterad bugg, samma rotorsak som Fejd/Pyroman).
     final buildingsWithProgress = player.principality.placedExpansionCards
-        .where((c) =>
-            c.expansionKind == ExpansionKind.building && c.progressPoints > 0)
+        .where((c) => c.isBuilding && c.progressPoints > 0)
         .length;
     if (buildingsWithProgress == 0) continue;
     final awarded = buildingsWithProgress > 2 ? 2 : buildingsWithProgress;

@@ -511,6 +511,23 @@ void main() {
       expect(resolveEventCard(BasicSetCards.invention, state),
           'Astrid har 3 byggnader med framstegspoäng och får ta 2 valfria resurser.');
     });
+
+    test(
+        'räknar även en stadsutbyggnad med framstegspoäng (Universitet) – saknar expansionKind men räknas ändå som byggnad (rapporterad bugg, se GameCard.isBuilding)',
+        () {
+      final board = RealmBoard(ownerId: 'you');
+      board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+      board.placeExpansion(0, BuildingRow.above, 0,
+          const PlacedCard(card: EraOfProgressCards.university));
+      final state = GameState(
+        you: Player(id: 'you', name: 'Astrid', principality: board),
+        opponent: buildPlayer('opponent', 'Björn'),
+        centerStacks: const {},
+      );
+
+      expect(resolveEventCard(BasicSetCards.invention, state),
+          'Astrid har 1 byggnad med framstegspoäng och får ta 1 valfri resurs.');
+    });
   });
 
   group('resolveEventCard: Handelsskeppskapplöpning', () {

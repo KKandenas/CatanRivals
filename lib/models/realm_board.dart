@@ -413,16 +413,18 @@ class RealmBoard {
     return removed;
   }
 
-  /// Om riket har minst en byggnad (inte skepp/hjältar/andra enheter)
-  /// utplacerad – Fejd (regelhäftet: "the opponent must remove one of
-  /// them") kan bara göra något om det faktiskt finns en byggnad att
-  /// välja mellan, se [GameNotifier.startFeudBuildingPick]. Utan den
-  /// här kontrollen skulle spelet be spelaren välja en byggnad som
-  /// inte finns, utan något sätt att komma vidare.
+  /// Om riket har minst en byggnad (inte skepp/hjältar/andra enheter,
+  /// se [GameCard.isBuilding] – INKLUSIVE stadsutbyggnader, t.ex.
+  /// Apotek eller Rådhus) utplacerad – Fejd (regelhäftet: "the opponent
+  /// must remove one of them") kan bara göra något om det faktiskt
+  /// finns en byggnad att välja mellan, se
+  /// [GameNotifier.startFeudBuildingPick]. Utan den här kontrollen
+  /// skulle spelet be spelaren välja en byggnad som inte finns, utan
+  /// något sätt att komma vidare.
   bool get hasAnyBuilding {
     for (final node in _settlements.values) {
       for (final site in [...node.aboveSites, ...node.belowSites]) {
-        if (site?.card.expansionKind == ExpansionKind.building) return true;
+        if (site?.card.isBuilding == true) return true;
       }
     }
     return false;

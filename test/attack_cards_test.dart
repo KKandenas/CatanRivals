@@ -1,4 +1,5 @@
 import 'package:catan_rivals/data/basic_set_cards.dart';
+import 'package:catan_rivals/data/era_of_progress_cards.dart';
 import 'package:catan_rivals/data/era_of_turmoil_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/services/game_sync_providers.dart';
@@ -166,6 +167,75 @@ void main() {
       final state = container.read(gameProvider);
       expect(state.you.principality.settlementAt(2)!.aboveSites[0], isNull);
       expect(state.pendingAttackCard, isNull);
+    });
+
+    test(
+        'gäller även stadsutbyggnader (t.ex. Rådhus) – de sågs tidigare inte som byggnader (rapporterad bugg)',
+        () {
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final notifier = container.read(gameProvider.notifier);
+      giveHedgeTavern(container);
+      notifier.state = container
+          .read(gameProvider)
+          .copyWith(you: container.read(gameProvider).you.copyWith(
+              hand: [...container.read(gameProvider).you.hand, EraOfTurmoilCards.arsonist]));
+      container.read(gameProvider).opponent.principality.placeExpansion(
+          0, BuildingRow.above, 0, const PlacedCard(card: EraOfTurmoilCards.drillGround));
+      expect(notifier.useArsonist(), isNull);
+
+      container.read(gameProvider).you.principality
+          .upgradeToCity(2, const PlacedCard(card: BasicSetCards.city));
+      container.read(gameProvider).you.principality.placeExpansion(
+          2, BuildingRow.above, 0, const PlacedCard(card: EraOfProgressCards.pharmacy));
+
+      expect(notifier.selectAttackCardUnit(2, BuildingRow.above, 0), isNull);
+      expect(notifier.resolveAttackCardUnitRemoval(0), isNull);
+      final state = container.read(gameProvider);
+      expect(state.you.principality.settlementAt(2)!.aboveSites[0], isNull);
+    });
+
+    test(
+        'tar bort Rådhus: Församlingshus som legat stackat under stannar kvar exponerat i stället för att slängas/hamna i draghögen',
+        () {
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final notifier = container.read(gameProvider.notifier);
+      giveHedgeTavern(container);
+      notifier.state = container
+          .read(gameProvider)
+          .copyWith(you: container.read(gameProvider).you.copyWith(
+              hand: [...container.read(gameProvider).you.hand, EraOfTurmoilCards.arsonist]));
+      container.read(gameProvider).opponent.principality.placeExpansion(
+          0, BuildingRow.above, 0, const PlacedCard(card: EraOfTurmoilCards.drillGround));
+      expect(notifier.useArsonist(), isNull);
+
+      container.read(gameProvider).you.principality
+          .upgradeToCity(2, const PlacedCard(card: BasicSetCards.city));
+      container.read(gameProvider).you.principality.placeExpansion(
+          2,
+          BuildingRow.above,
+          0,
+          const PlacedCard(
+              card: EraOfProgressCards.townHall,
+              stackedUnder: BasicSetCards.parishHall));
+
+      expect(notifier.selectAttackCardUnit(2, BuildingRow.above, 0), isNull);
+      final beforeCount = notifier.drawStack(0).length;
+      expect(notifier.resolveAttackCardUnitRemoval(0), isNull);
+
+      final site =
+          container.read(gameProvider).you.principality.settlementAt(2)!.aboveSites[0];
+      expect(site?.card.id, BasicSetCards.parishHall.id);
+      expect(site?.stackedUnder, isNull);
+      expect(notifier.drawStack(0).length, beforeCount + 1);
+      expect(notifier.drawStack(0).last.id, EraOfProgressCards.townHall.id);
+      expect(
+          container
+              .read(gameProvider)
+              .discardPile
+              .any((c) => c.baseId == BasicSetCards.parishHall.id),
+          isFalse);
     });
   });
 

@@ -136,6 +136,26 @@ void main() {
     });
   });
 
+  group('GameCard.isBuilding', () {
+    test('true för ett vanligt byggkort (expansionKind.building)', () {
+      expect(BasicSetCards.abbey.isBuilding, isTrue);
+    });
+
+    test('false för enheter (hjältar/handelsskepp/övriga)', () {
+      expect(BasicSetCards.austin.isUnique, isFalse); // sanity: en hjälte
+      expect(BasicSetCards.austin.expansionKind, ExpansionKind.hero);
+      expect(BasicSetCards.austin.isBuilding, isFalse);
+    });
+
+    test(
+        'true för stadsutbyggnader (CardCategory.cityExpansion) trots att de saknar expansionKind (rapporterad bugg: Fejd/Pyroman missade dem tidigare)',
+        () {
+      expect(EraOfProgressCards.pharmacy.expansionKind, isNull);
+      expect(EraOfProgressCards.pharmacy.isBuilding, isTrue);
+      expect(EraOfProgressCards.townHall.isBuilding, isTrue);
+    });
+  });
+
   group('EraOfProgressCards', () {
     test('has 15 new card types', () {
       expect(EraOfProgressCards.all, hasLength(15));

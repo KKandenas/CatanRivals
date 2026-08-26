@@ -1,4 +1,5 @@
 import 'package:catan_rivals/data/basic_set_cards.dart';
+import 'package:catan_rivals/data/era_of_progress_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/state/game_notifier.dart';
 import 'package:catan_rivals/state/game_state.dart';
@@ -178,6 +179,17 @@ void main() {
 
       expect(board.hasAnyBuilding, isTrue);
     });
+
+    test(
+        'true för en stadsutbyggnad (t.ex. Apotek) – de saknar expansionKind men räknas ändå som byggnad, se GameCard.isBuilding',
+        () {
+      final board = RealmBoard(ownerId: 'test');
+      board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+      board.placeExpansion(0, BuildingRow.above, 0,
+          const PlacedCard(card: EraOfProgressCards.pharmacy));
+
+      expect(board.hasAnyBuilding, isTrue);
+    });
   });
 
   group('Fejd', () {
@@ -293,6 +305,66 @@ void main() {
       expect(notifier.drawStack(1).length, beforeCount + 1);
       expect(notifier.drawStack(1).last.id, BasicSetCards.abbey.id);
       expect(state.centerStacks['draw2'], beforeCenterCount! + 1);
+    });
+
+    test(
+        'selectFeudBuilding godtar en stadsutbyggnad (t.ex. Apotek) – sågs tidigare inte som byggnad (rapporterad bugg)',
+        () {
+      final container = readyContainer();
+      addTearDown(container.dispose);
+      giveStrength(container.read(gameProvider).opponent, 2);
+      container.read(gameProvider).you.principality
+          .upgradeToCity(2, const PlacedCard(card: BasicSetCards.city));
+      container.read(gameProvider).you.principality.placeExpansion(
+          2, BuildingRow.below, 0, const PlacedCard(card: EraOfProgressCards.pharmacy));
+      forceFeudCard(container, BasicSetCards.feud);
+      final notifier = container.read(gameProvider.notifier);
+      notifier.startFeudBuildingPick();
+
+      final error = notifier.selectFeudBuilding(2, BuildingRow.below, 0);
+
+      expect(error, isNull);
+      expect(container.read(gameProvider).feudPickedBuilding, isNotNull);
+    });
+
+    test(
+        'resolveFeudBuildingRemoval: väljer man Rådhus stannar Församlingshus kvar exponerat i stället för att slängas/hamna i draghögen',
+        () {
+      final container = readyContainer();
+      addTearDown(container.dispose);
+      giveStrength(container.read(gameProvider).opponent, 2);
+      container.read(gameProvider).you.principality
+          .upgradeToCity(2, const PlacedCard(card: BasicSetCards.city));
+      container.read(gameProvider).you.principality.placeExpansion(
+          2,
+          BuildingRow.below,
+          0,
+          const PlacedCard(
+              card: EraOfProgressCards.townHall,
+              stackedUnder: BasicSetCards.parishHall));
+      forceFeudCard(container, BasicSetCards.feud);
+      final notifier = container.read(gameProvider.notifier);
+      notifier.startFeudBuildingPick();
+      expect(notifier.selectFeudBuilding(2, BuildingRow.below, 0), isNull);
+
+      final beforeCount = notifier.drawStack(1).length;
+      final error = notifier.resolveFeudBuildingRemoval(1);
+
+      expect(error, isNull);
+      final site =
+          container.read(gameProvider).you.principality.settlementAt(2)!.belowSites[0];
+      expect(site?.card.id, BasicSetCards.parishHall.id,
+          reason: 'Församlingshus ska exponeras igen på samma plats');
+      expect(site?.stackedUnder, isNull);
+      expect(notifier.drawStack(1).length, beforeCount + 1);
+      expect(notifier.drawStack(1).last.id, EraOfProgressCards.townHall.id);
+      expect(
+          container
+              .read(gameProvider)
+              .discardPile
+              .any((c) => c.baseId == BasicSetCards.parishHall.id),
+          isFalse,
+          reason: 'Församlingshus ska varken slängas eller hamna i draghögen');
     });
 
     test('att bygga vidare är blockerat medan Fejds bygg-väljare är aktiv',

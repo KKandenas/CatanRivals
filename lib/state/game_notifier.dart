@@ -1434,15 +1434,16 @@ class GameNotifier extends Notifier<GameState> {
   }
 
   /// Väljer vilken av dina egna byggnader (inte skepp/hjältar –
-  /// regelhäftet gäller bara byggnader för Fejd) som ska bort. Nästa
-  /// steg är att välja vilken draghög den ska läggas underst i (se
-  /// [resolveFeudBuildingRemoval]).
+  /// regelhäftet gäller bara byggnader för Fejd, se [GameCard.isBuilding]
+  /// – INKLUSIVE stadsutbyggnader, t.ex. Apotek eller Rådhus, se
+  /// nedan) som ska bort. Nästa steg är att välja vilken draghög den
+  /// ska läggas underst i (se [resolveFeudBuildingRemoval]).
   String? selectFeudBuilding(int column, BuildingRow row, int slotIndex) {
     if (!state.feudBuildingPickActive) return null;
     final placed =
         _expansionAt(state.you.principality, column, row, slotIndex);
     if (placed == null) return null;
-    if (placed.card.expansionKind != ExpansionKind.building) {
+    if (!placed.card.isBuilding) {
       return 'Fejd gäller bara byggnader, inte skepp eller hjältar.';
     }
     state = state.copyWith(
@@ -1453,6 +1454,26 @@ class GameNotifier extends Notifier<GameState> {
           slotIndex: slotIndex),
     );
     return null;
+  }
+
+  /// Tar bort kortet på en byggplats för Fejd/Pyroman – men om det har
+  /// ett kort liggande UNDER sig (bara Rådhus/Församlingshus i
+  /// dagsläget, se [PlacedCard.stackedUnder]-doc) läggs INTE det
+  /// övertäckta kortet med i draghögen tillsammans med det borttagna:
+  /// det läggs i stället tillbaka, exponerat, på samma plats – bara den
+  /// borttagna byggnaden (Rådhus) försvinner. Skiljer sig alltså
+  /// medvetet från [_placeExpansionCardAndSync], där hela stapeln
+  /// (Rådhus OCH Församlingshus) läggs i slänghögen om man i stället
+  /// BYGGER ÖVER platsen.
+  PlacedCard? _removeExpansionExposingStacked(
+      int column, BuildingRow row, int slotIndex) {
+    final removed =
+        state.you.principality.removeExpansion(column, row, slotIndex);
+    if (removed?.stackedUnder != null) {
+      state.you.principality.placeExpansion(
+          column, row, slotIndex, PlacedCard(card: removed!.stackedUnder!));
+    }
+    return removed;
   }
 
   /// Tar bort den valda byggnaden och lägger den underst i draghög
@@ -1469,8 +1490,8 @@ class GameNotifier extends Notifier<GameState> {
     final originError = _checkStackMatchesCardOrigin(peeked.card, stackIndex);
     if (originError != null) return originError;
 
-    final removed = state.you.principality
-        .removeExpansion(picked.column, picked.row, picked.slotIndex);
+    final removed = _removeExpansionExposingStacked(
+        picked.column, picked.row, picked.slotIndex);
     if (removed == null) return null;
 
     _setDrawStack(stackIndex, [..._drawStacks[stackIndex], removed.card]);
@@ -1699,7 +1720,7 @@ class GameNotifier extends Notifier<GameState> {
       case AttackCardKind.archer:
         return card.strengthPoints > 0;
       case AttackCardKind.arsonist:
-        if (card.expansionKind != ExpansionKind.building) return false;
+        if (!card.isBuilding) return false;
         return !_cityHasFireBrigade(board, column);
     }
   }
@@ -1839,7 +1860,7 @@ class GameNotifier extends Notifier<GameState> {
       if (kind == AttackCardKind.archer) {
         return 'Bågskytt gäller bara enheter med styrkepoäng.';
       }
-      if (placed.card.expansionKind == ExpansionKind.building) {
+      if (placed.card.isBuilding) {
         return 'Den byggnaden är skyddad av en Brandkår.';
       }
       return 'Pyroman gäller bara byggnader.';
@@ -1875,8 +1896,8 @@ class GameNotifier extends Notifier<GameState> {
     final originError = _checkStackMatchesCardOrigin(peeked.card, stackIndex);
     if (originError != null) return originError;
 
-    final removed = state.you.principality
-        .removeExpansion(picked.column, picked.row, picked.slotIndex);
+    final removed = _removeExpansionExposingStacked(
+        picked.column, picked.row, picked.slotIndex);
     if (removed == null) return null;
 
     _setDrawStack(stackIndex, [..._drawStacks[stackIndex], removed.card]);

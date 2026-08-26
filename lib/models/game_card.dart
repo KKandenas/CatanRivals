@@ -217,6 +217,19 @@ class GameCard {
         imageAsset: json['imageAsset'] as String,
       );
 
+  /// Om kortet är en byggnad (till skillnad från skepp/hjältar/andra
+  /// enheter) – avgör vad Fejd (regelhäftet: "the opponent must remove
+  /// one of them", bara byggnader) och Pyroman (Oroligheternas tid: bara
+  /// byggnader, se [GameNotifier._attackCardCardQualifiesAt]) får
+  /// välja. Alla [CardCategory.cityExpansion]-kort ÄR byggnader
+  /// (rapporterad bugg: de saknar [expansionKind] helt eftersom den
+  /// underkategorin bara delar upp [CardCategory.expansion] i byggnad/
+  /// enhet – utan den här kollen missade Fejd/Pyroman därför alla
+  /// stadsutbyggnader, t.ex. Apotek eller Rådhus).
+  bool get isBuilding =>
+      expansionKind == ExpansionKind.building ||
+      category == CardCategory.cityExpansion;
+
   /// Korttypens id utan draghögens per-kopia-suffix ("-draw-N",
   /// "-gold-draw-N", "-gold-event-N", "-turmoil-draw-N",
   /// "-turmoil-event-N", "-progress-draw-N", "-progress-event-N",
