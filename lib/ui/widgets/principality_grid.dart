@@ -587,8 +587,8 @@ class PrincipalityGrid extends StatelessWidget {
           details.data,
           () => onDropExpansion?.call(column, row, slotIndex, details.data),
           replacedCard: placed.card,
-          blockedReason:
-              buildRequirementBlockedReason(details.data, board, column, row),
+          blockedReason: buildRequirementBlockedReason(
+              details.data, board, column, row, slotIndex),
         ),
         builder: (context, candidates, rejected) => card,
       );
@@ -602,8 +602,8 @@ class PrincipalityGrid extends StatelessWidget {
       onAcceptWithDetails: (details) => onRequestBuildConfirm?.call(
         details.data,
         () => onDropExpansion?.call(column, row, slotIndex, details.data),
-        blockedReason:
-            buildRequirementBlockedReason(details.data, board, column, row),
+        blockedReason: buildRequirementBlockedReason(
+            details.data, board, column, row, slotIndex),
       ),
       builder: (context, candidates, rejected) {
         final isHovering = candidates.isNotEmpty;

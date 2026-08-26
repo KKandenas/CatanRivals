@@ -18,8 +18,16 @@ import '../models/models.dart';
 /// [CardCategory.regionExpansion] är det en regions knutpunkt (se
 /// [RealmBoard.regionAt]) – anroparen vet redan vilket eftersom den
 /// bara kallar den här funktionen från rätt drop-mål.
+///
+/// [slotIndex] pekar ut VILKEN byggplats (0 eller 1, se
+/// [RealmBoard.placeExpansion]) inom kolumnen – bara relevant för
+/// Rådhus (se nedan), som måste läggas på exakt den plats där
+/// Församlingshus redan ligger, inte bara någonstans i riket. Standard
+/// 0 för anrop där platsen ändå aldrig kan gälla Rådhus (t.ex.
+/// landskapsutbyggnader, som saknar slotIndex helt).
 String? buildRequirementBlockedReason(
-    GameCard card, RealmBoard board, int column, BuildingRow row) {
+    GameCard card, RealmBoard board, int column, BuildingRow row,
+    [int slotIndex = 0]) {
   if (card.category == CardCategory.cityExpansion) {
     final node = board.settlementAt(column);
     if (node == null || !node.isCity) {
@@ -56,8 +64,14 @@ String? buildRequirementBlockedReason(
     }
   }
   if (card.baseId == EraOfProgressCards.townHall.id) {
-    if (!board.hasExpansionCard(BasicSetCards.parishHall.id)) {
-      return 'Rådhus kräver Församlingshus i ditt rike.';
+    // Regelhäftet/korttexten: "Placera Rådhuset på ditt Församlingshus" –
+    // inte bara "någonstans i ett rike som råkar ha ett Församlingshus".
+    // Utan slotIndex-kontrollen gick Rådhus tidigare att bygga på en tom
+    // plats, eller byta ut en helt annan byggnad, så länge Församlingshus
+    // fanns kvar NÅGONSTANS i riket (rapporterad bugg).
+    final onExistingSite = board.expansionAt(column, row, slotIndex);
+    if (onExistingSite?.card.baseId != BasicSetCards.parishHall.id) {
+      return 'Rådhus måste läggas ovanpå ditt Församlingshus.';
     }
   }
   return null;

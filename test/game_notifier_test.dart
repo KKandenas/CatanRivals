@@ -1,5 +1,6 @@
 import 'package:catan_rivals/data/basic_set_cards.dart';
 import 'package:catan_rivals/data/era_of_gold_cards.dart';
+import 'package:catan_rivals/data/era_of_progress_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/state/game_notifier.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -133,6 +134,55 @@ void main() {
       expect(
           container.read(gameProvider).you.hand.contains(EraOfGoldCards.stapleHouse),
           isTrue);
+    });
+
+    test(
+        'dropExpansion avvisar Rådhus på en tom plats, även om Församlingshus ligger på en ANNAN plats i riket (rapporterad bugg)',
+        () {
+      final notifier = container.read(gameProvider.notifier);
+      final before = container.read(gameProvider);
+      before.you.hand.add(EraOfProgressCards.townHall);
+      before.you.principality
+          .upgradeToCity(0, const PlacedCard(card: BasicSetCards.city));
+      before.you.principality.placeExpansion(
+          0, BuildingRow.above, 0, const PlacedCard(card: BasicSetCards.parishHall));
+
+      final error = notifier.dropExpansion(
+          0, BuildingRow.above, 1, EraOfProgressCards.townHall);
+
+      expect(error, 'Rådhus måste läggas ovanpå ditt Församlingshus.');
+      expect(
+          container.read(gameProvider).you.hand.contains(EraOfProgressCards.townHall),
+          isTrue);
+      expect(
+          container.read(gameProvider).you.principality.settlementAt(0)!.aboveSites[1],
+          isNull);
+    });
+
+    test('dropExpansion tillåter Rådhus direkt ovanpå Församlingshus', () {
+      final notifier = container.read(gameProvider.notifier);
+      // Att byta ut ett redan utplacerat kort kräver att minst ett tema
+      // är aktivt (se _checkReplaceAllowed-doc) – Rådhus finns bara i
+      // Utvecklingens tid, så det gäller alltid i praktiken, men testet
+      // behöver sätta det uttryckligen eftersom mock-uppställningen ovan
+      // annars bara har grundspelet aktivt.
+      notifier.state =
+          notifier.state.copyWith(activeExpansions: {ExpansionSet.eraOfProgress});
+      final before = container.read(gameProvider);
+      before.you.hand.add(EraOfProgressCards.townHall);
+      before.you.principality
+          .upgradeToCity(0, const PlacedCard(card: BasicSetCards.city));
+      before.you.principality.placeExpansion(
+          0, BuildingRow.above, 0, const PlacedCard(card: BasicSetCards.parishHall));
+
+      final error = notifier.dropExpansion(
+          0, BuildingRow.above, 0, EraOfProgressCards.townHall);
+
+      expect(error, isNull);
+      expect(
+          container.read(gameProvider).you.principality.settlementAt(0)!.aboveSites[0]!
+              .card.id,
+          EraOfProgressCards.townHall.id);
     });
 
     test(

@@ -203,17 +203,50 @@ void main() {
     expect(reason, isNull);
   });
 
-  test('Rådhus utan Församlingshus avvisas', () {
+  test('Rådhus på en tom plats avvisas, även om Församlingshus finns i riket',
+      () {
+    // Rapporterad bugg: Rådhus gick tidigare att bygga på VILKEN SOM
+    // HELST plats i riket bara Församlingshus fanns någonstans – inte
+    // bara direkt ovanpå det, som regelhäftet/korttexten kräver.
+    final board = RealmBoard(ownerId: 'you');
+    board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
+    board.placeExpansion(0, BuildingRow.above, 0,
+        const PlacedCard(card: BasicSetCards.parishHall));
+
+    final reason = buildRequirementBlockedReason(
+        EraOfProgressCards.townHall, board, 0, BuildingRow.below);
+
+    expect(reason, 'Rådhus måste läggas ovanpå ditt Församlingshus.');
+  });
+
+  test(
+      'Rådhus ovanpå ett annat kort (inte Församlingshus) avvisas, även om Församlingshus finns i riket',
+      () {
+    final board = RealmBoard(ownerId: 'you');
+    board.placeSettlement(0, const PlacedCard(card: BasicSetCards.settlement));
+    board.upgradeToCity(0, const PlacedCard(card: BasicSetCards.city));
+    board.placeExpansion(0, BuildingRow.above, 0,
+        const PlacedCard(card: BasicSetCards.parishHall));
+    board.placeExpansion(
+        0, BuildingRow.above, 1, const PlacedCard(card: BasicSetCards.abbey));
+
+    final reason = buildRequirementBlockedReason(
+        EraOfProgressCards.townHall, board, 0, BuildingRow.above, 1);
+
+    expect(reason, 'Rådhus måste läggas ovanpå ditt Församlingshus.');
+  });
+
+  test('Rådhus utan Församlingshus alls i riket avvisas', () {
     final board = RealmBoard(ownerId: 'you');
     board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
 
     final reason = buildRequirementBlockedReason(
         EraOfProgressCards.townHall, board, 0, BuildingRow.above);
 
-    expect(reason, 'Rådhus kräver Församlingshus i ditt rike.');
+    expect(reason, 'Rådhus måste läggas ovanpå ditt Församlingshus.');
   });
 
-  test('Rådhus med Församlingshus utplacerat godkänns', () {
+  test('Rådhus direkt ovanpå Församlingshus (rätt plats) godkänns', () {
     final board = RealmBoard(ownerId: 'you');
     board.placeSettlement(0, const PlacedCard(card: BasicSetCards.city));
     board.placeExpansion(0, BuildingRow.above, 0,
@@ -221,6 +254,21 @@ void main() {
 
     final reason = buildRequirementBlockedReason(
         EraOfProgressCards.townHall, board, 0, BuildingRow.above);
+
+    expect(reason, isNull);
+  });
+
+  test(
+      'Rådhus direkt ovanpå Församlingshus på den andra stadsplatsen (slotIndex 1) godkänns',
+      () {
+    final board = RealmBoard(ownerId: 'you');
+    board.placeSettlement(0, const PlacedCard(card: BasicSetCards.settlement));
+    board.upgradeToCity(0, const PlacedCard(card: BasicSetCards.city));
+    board.placeExpansion(0, BuildingRow.above, 1,
+        const PlacedCard(card: BasicSetCards.parishHall));
+
+    final reason = buildRequirementBlockedReason(
+        EraOfProgressCards.townHall, board, 0, BuildingRow.above, 1);
 
     expect(reason, isNull);
   });

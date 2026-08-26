@@ -3025,8 +3025,8 @@ class GameNotifier extends Notifier<GameState> {
     }
     final replaceError = _checkReplaceAllowed(column, row, slotIndex);
     if (replaceError != null) return replaceError;
-    final blockedReason =
-        buildRequirementBlockedReason(card, state.you.principality, column, row);
+    final blockedReason = buildRequirementBlockedReason(
+        card, state.you.principality, column, row, slotIndex);
     if (blockedReason != null) return blockedReason;
 
     state = state.copyWith(
@@ -3132,8 +3132,8 @@ class GameNotifier extends Notifier<GameState> {
     }
     final replaceError = _checkReplaceAllowed(column, row, slotIndex);
     if (replaceError != null) return replaceError;
-    final blockedReason =
-        buildRequirementBlockedReason(card, state.you.principality, column, row);
+    final blockedReason = buildRequirementBlockedReason(
+        card, state.you.principality, column, row, slotIndex);
     if (blockedReason != null) return blockedReason;
 
     state = state.copyWith(
