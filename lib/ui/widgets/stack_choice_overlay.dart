@@ -4,16 +4,20 @@ import '../../models/models.dart';
 import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
 
-/// Litet val av vilken av de fyra draghögarna ett kort ska läggas
-/// underst i – delas av Fejds bygg-borttagning och Brödrafejds
-/// handkortsval (se [GameNotifier.resolveFeudBuildingRemoval]/
-/// [GameNotifier.pickFraternalFeudsCard]), som båda slutar med precis
-/// det valet efter att själva kortet redan är utpekat. Varje ruta visar
-/// samma kortbaksida som draghögen faktiskt har i spelet (se
+/// Litet val av vilken av de fyra (eller fler, se [stackCount]) drag-
+/// högarna ett kort ska läggas underst i – delas av Upplopps/attack-
+/// kortens enhetsborttagning, Fejds bygg-borttagning och Brödrafejds
+/// handkortsval (se [GameNotifier.resolveRiotsUnitRemoval]/
+/// [resolveAttackCardUnitRemoval]/[resolveFeudBuildingRemoval]/
+/// [pickFraternalFeudsCard]), som alla slutar med precis det valet
+/// efter att själva kortet redan är utpekat. Varje ruta visar samma
+/// kortbaksida som draghögen faktiskt har i spelet (se
 /// [CenterStacksStrip._backAssetFor]) – annars ser det ut som att ALLA
 /// högar hör till grundspelet, även temasetets egna (rapporterad bugg:
 /// alla kort ska kunna läggas tillbaka till rätt hög beroende på
-/// baksida).
+/// baksida – samma bugg dök upp igen i Duel of the Princes-läget, se
+/// [_backAssetFor]s 6-högsfall, eftersom den bara var fixad i
+/// [CenterStacksStrip], inte här).
 class StackChoiceOverlay extends StatelessWidget {
   final String title;
 
@@ -41,11 +45,24 @@ class StackChoiceOverlay extends StatelessWidget {
   });
 
   /// Samma indelning som [GameNotifier._isThemeStackIndex]: de två sista
-  /// rutorna (bara när [stackCount] är 5) hör till temasetets egna hög.
-  bool _isThemeStack(int index) => stackCount == 5 && index >= stackCount - 2;
+  /// rutorna (bara när [stackCount] är 5) hör till temasetets egna hög –
+  /// eller, i Duel of the Princes-läget ([stackCount] 6, se
+  /// [DuelOfThePrincesSetup]-klassdoc), de tre sista (index 3/4/5), en
+  /// per temaset.
+  bool _isThemeStack(int index) {
+    if (stackCount == 6) return index >= 3;
+    return stackCount == 5 && index >= stackCount - 2;
+  }
 
   String _backAssetFor(int index) {
     if (!_isThemeStack(index)) return CatanAssets.backBasicSet;
+    if (stackCount == 6) {
+      // Duel of the Princes: fast ordning Gulderan/Oroligheternas tid/
+      // Utvecklingens tid (index 3/4/5, se DuelOfThePrincesSetup-doc).
+      if (index == 3) return CatanAssets.backEraGold;
+      if (index == 4) return CatanAssets.backEraTurmoil;
+      return CatanAssets.backEraProgress;
+    }
     if (activeExpansions.contains(ExpansionSet.eraOfTurmoil)) {
       return CatanAssets.backEraTurmoil;
     }

@@ -73,4 +73,30 @@ void main() {
         everyElement(CatanAssets.backBasicSet));
     expect(assets.sublist(3, 5), everyElement(CatanAssets.backEraTurmoil));
   });
+
+  testWidgets(
+      'Duel of the Princes (6 högar): grundspelet + var sin temabaksida, inte allihop grundspelets',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: StackChoiceOverlay(
+          title: 't',
+          stackCount: 6,
+          activeExpansions: const {
+            ExpansionSet.eraOfGold,
+            ExpansionSet.eraOfTurmoil,
+            ExpansionSet.eraOfProgress,
+          },
+          onChooseStack: (_) {},
+        ),
+      ),
+    ));
+
+    final assets = assetsShown(tester);
+    expect(assets, hasLength(6));
+    expect(assets.sublist(0, 3), everyElement(CatanAssets.backBasicSet));
+    expect(assets[3], CatanAssets.backEraGold);
+    expect(assets[4], CatanAssets.backEraTurmoil);
+    expect(assets[5], CatanAssets.backEraProgress);
+  });
 }
