@@ -168,6 +168,7 @@ class EraOfTurmoilCards {
     name: 'Kapell (1–3)',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfTurmoil,
+    requirement: 'Stad',
     buildingCost: {ResourceType.ore: 2, ResourceType.brick: 1, ResourceType.grain: 1},
     victoryPoints: 1,
     effectText: 'Slås 1, 2 eller 3 på produktionstärningen gäller inte händelsen Upplopp dig.',
@@ -179,6 +180,7 @@ class EraOfTurmoilCards {
     name: 'Kapell (4–6)',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfTurmoil,
+    requirement: 'Stad',
     buildingCost: {ResourceType.ore: 2, ResourceType.brick: 1, ResourceType.grain: 1},
     victoryPoints: 1,
     effectText: 'Slås 4, 5 eller 6 på produktionstärningen gäller inte händelsen Upplopp dig.',
@@ -190,6 +192,7 @@ class EraOfTurmoilCards {
     name: 'Marknadsfält',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfTurmoil,
+    requirement: 'Stad',
     buildingCost: {ResourceType.lumber: 2, ResourceType.grain: 1, ResourceType.wool: 1},
     victoryPoints: 1,
     effectText:
@@ -203,6 +206,7 @@ class EraOfTurmoilCards {
     name: 'Brandkår',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfTurmoil,
+    requirement: 'Stad',
     buildingCost: {ResourceType.wool: 2, ResourceType.brick: 1, ResourceType.ore: 1},
     victoryPoints: 1,
     effectText:
@@ -219,6 +223,7 @@ class EraOfTurmoilCards {
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfTurmoil,
     isUnique: true,
+    requirement: 'Stad',
     buildingCost: {ResourceType.gold: 2, ResourceType.grain: 1, ResourceType.wool: 1},
     victoryPoints: 1,
     effectText:
@@ -232,6 +237,7 @@ class EraOfTurmoilCards {
     name: 'Tiondelada',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfTurmoil,
+    requirement: 'Stad',
     buildingCost: {ResourceType.lumber: 2, ResourceType.brick: 1, ResourceType.ore: 1},
     victoryPoints: 1,
     effectText:
@@ -246,6 +252,7 @@ class EraOfTurmoilCards {
     name: 'Stora festsalen',
     category: CardCategory.cityExpansion,
     expansionSet: ExpansionSet.eraOfTurmoil,
+    requirement: 'Stad',
     buildingCost: {ResourceType.grain: 3, ResourceType.ore: 3, ResourceType.brick: 2},
     victoryPoints: 2,
     effectText: 'Detta kort är värt 2 segerpoäng.',

@@ -159,7 +159,7 @@ void main() {
     test('University is unique and requires Abbey or Library', () {
       expect(EraOfProgressCards.university.isUnique, isTrue);
       expect(EraOfProgressCards.university.requirement,
-          'Kloster eller Bibliotek');
+          'Stad, samt Kloster eller Bibliotek');
     });
 
     test('Chief Cannoneer is a unit, not a hero, and has no skill points', () {
