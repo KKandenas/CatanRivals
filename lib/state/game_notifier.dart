@@ -2988,12 +2988,21 @@ class GameNotifier extends Notifier<GameState> {
       int column, BuildingRow row, int slotIndex, GameCard card) {
     final replaced =
         state.you.principality.removeExpansion(column, row, slotIndex);
-    state.you.principality
-        .placeExpansion(column, row, slotIndex, PlacedCard(card: card));
-    final replacedFaceUpCard = (replaced?.card.baseId ==
-                EraOfGoldCards.merchantGuild.id ||
-            replaced?.card.baseId == EraOfTurmoilCards.hedgeTavern.id ||
-            replaced?.card.baseId == EraOfProgressCards.university.id)
+    // Rådhus läggs OVANPÅ Församlingshus i stället för att ersätta det
+    // (korttexten: "Placera Rådhuset på ditt Församlingshus") – se
+    // PlacedCard.stackedUnder-doc. Församlingshus ligger då kvar,
+    // övertäckt, i stället för att hamna i slänghögen som ett vanligt
+    // byt-ut (rapporterad bugg/förtydligande).
+    final stackedUnder = (card.baseId == EraOfProgressCards.townHall.id &&
+            replaced?.card.baseId == BasicSetCards.parishHall.id)
+        ? replaced!.card
+        : null;
+    state.you.principality.placeExpansion(
+        column, row, slotIndex, PlacedCard(card: card, stackedUnder: stackedUnder));
+    final replacedFaceUpCard = (stackedUnder == null &&
+            (replaced?.card.baseId == EraOfGoldCards.merchantGuild.id ||
+                replaced?.card.baseId == EraOfTurmoilCards.hedgeTavern.id ||
+                replaced?.card.baseId == EraOfProgressCards.university.id))
         ? replaced!.card
         : null;
     state = state.copyWith(
@@ -3004,8 +3013,15 @@ class GameNotifier extends Notifier<GameState> {
     );
     recomputeTokenHolders();
     _syncMyPlayer();
-    if (replaced != null && replacedFaceUpCard == null) {
+    if (replaced != null && replacedFaceUpCard == null && stackedUnder == null) {
       _discardToPile(replaced.card);
+      // Om DET borttagna kortet i sin tur hade något övertäckt under sig
+      // (t.ex. byggs något helt annat ovanpå en Rådhus+Församlingshus-
+      // stapel) försvinner inte det kortet spårlöst – det läggs också i
+      // slänghögen.
+      if (replaced.stackedUnder != null) {
+        _discardToPile(replaced.stackedUnder!);
+      }
     }
   }
 

@@ -254,6 +254,44 @@ void main() {
               'baseId för "building-marketplace-draw-0" är "building-marketplace"');
     });
 
+    test(
+        'hasExpansionCard hittar även ett kort som ligger stackat under ett annat (Rådhus/Församlingshus, se PlacedCard.stackedUnder)',
+        () {
+      final board = StarterCards.buildStartingPrincipality('p1');
+      board.placeExpansion(
+          2,
+          BuildingRow.below,
+          0,
+          const PlacedCard(
+              card: EraOfProgressCards.townHall,
+              stackedUnder: BasicSetCards.parishHall));
+
+      expect(board.hasExpansionCard('city-expansion-town-hall'), isTrue);
+      expect(board.hasExpansionCard('building-parish-hall'), isTrue,
+          reason:
+              'Församlingshus ligger fortfarande kvar i riket, bara övertäckt');
+    });
+
+    test(
+        'placedExpansionCards inkluderar ett stackat kort (Församlingshus under Rådhus)',
+        () {
+      final board = StarterCards.buildStartingPrincipality('p1');
+      board.placeExpansion(
+          2,
+          BuildingRow.below,
+          0,
+          const PlacedCard(
+              card: EraOfProgressCards.townHall,
+              stackedUnder: BasicSetCards.parishHall));
+
+      expect(
+          board.placedExpansionCards.any((c) => c.id == EraOfProgressCards.townHall.id),
+          isTrue);
+      expect(
+          board.placedExpansionCards.any((c) => c.id == BasicSetCards.parishHall.id),
+          isTrue);
+    });
+
     test('upgrading to a city adds a second building site on each side', () {
       final board = StarterCards.buildStartingPrincipality('p1');
 
@@ -273,6 +311,24 @@ void main() {
 
       expect(restored.settlements.keys.toSet(), board.settlements.keys.toSet());
       expect(restored.totalVictoryPoints, board.totalVictoryPoints);
+    });
+
+    test('round-trips a stackedUnder-kort (Rådhus/Församlingshus) through JSON',
+        () {
+      final board = StarterCards.buildStartingPrincipality('p1');
+      board.placeExpansion(
+          0,
+          BuildingRow.above,
+          0,
+          const PlacedCard(
+              card: EraOfProgressCards.townHall,
+              stackedUnder: BasicSetCards.parishHall));
+
+      final restored = RealmBoard.fromJson(board.toJson());
+
+      final site = restored.settlementAt(0)!.aboveSites[0]!;
+      expect(site.card.id, EraOfProgressCards.townHall.id);
+      expect(site.stackedUnder?.id, BasicSetCards.parishHall.id);
     });
 
     test('serialized column keys are never purely numeric strings', () {

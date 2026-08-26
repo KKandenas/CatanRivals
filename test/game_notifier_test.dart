@@ -159,7 +159,9 @@ void main() {
           isNull);
     });
 
-    test('dropExpansion tillåter Rådhus direkt ovanpå Församlingshus', () {
+    test(
+        'dropExpansion tillåter Rådhus direkt ovanpå Församlingshus – Församlingshus läggs inte i slänghögen utan ligger kvar stackat',
+        () {
       final notifier = container.read(gameProvider.notifier);
       // Att byta ut ett redan utplacerat kort kräver att minst ett tema
       // är aktivt (se _checkReplaceAllowed-doc) – Rådhus finns bara i
@@ -179,10 +181,45 @@ void main() {
           0, BuildingRow.above, 0, EraOfProgressCards.townHall);
 
       expect(error, isNull);
+      final site =
+          container.read(gameProvider).you.principality.settlementAt(0)!.aboveSites[0]!;
+      expect(site.card.id, EraOfProgressCards.townHall.id);
+      expect(site.stackedUnder?.id, BasicSetCards.parishHall.id);
+      // Rapporterad bugg/förbättring: Församlingshus ska INTE hamna i
+      // slänghögen – den ligger kvar, bara övertäckt.
       expect(
-          container.read(gameProvider).you.principality.settlementAt(0)!.aboveSites[0]!
-              .card.id,
-          EraOfProgressCards.townHall.id);
+          container
+              .read(gameProvider)
+              .discardPile
+              .any((c) => c.baseId == BasicSetCards.parishHall.id),
+          isFalse);
+    });
+
+    test(
+        'dropExpansion avvisar ett andra Församlingshus även när det första ligger stackat under Rådhus',
+        () {
+      final notifier = container.read(gameProvider.notifier);
+      notifier.state =
+          notifier.state.copyWith(activeExpansions: {ExpansionSet.eraOfProgress});
+      final before = container.read(gameProvider);
+      before.you.principality
+          .upgradeToCity(0, const PlacedCard(card: BasicSetCards.city));
+      before.you.principality.placeExpansion(
+          0,
+          BuildingRow.above,
+          0,
+          const PlacedCard(
+              card: EraOfProgressCards.townHall,
+              stackedUnder: BasicSetCards.parishHall));
+      before.you.hand.add(BasicSetCards.parishHall);
+
+      final error = notifier.dropExpansion(
+          0, BuildingRow.above, 1, BasicSetCards.parishHall);
+
+      expect(error, 'Du kan bara ha en ${BasicSetCards.parishHall.name} i ditt rike.');
+      expect(
+          container.read(gameProvider).you.principality.settlementAt(0)!.aboveSites[1],
+          isNull);
     });
 
     test(

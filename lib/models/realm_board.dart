@@ -58,21 +58,44 @@ class RelocationSelection {
 /// Vi visar det som upplysta ringar (se [ResourcePipRow]) i stället för
 /// att rotera kortet grafiskt, men datat är annars likvärdigt med det
 /// fysiska spelets regel.
+///
+/// `stackedUnder` är kortet (om något) som fysiskt ligger UNDER [card]
+/// på samma byggplats – just nu bara Församlingshus när Rådhus byggs
+/// direkt ovanpå det (korttexten: "Placera Rådhuset på ditt
+/// Församlingshus", se [GameNotifier._placeExpansionCardAndSync]).
+/// Ligger kvar i riket (räknas fortfarande som byggt för krav-/
+/// unikkontroller, se [RealmBoard.hasExpansionCard]) men syns inte och
+/// ger ingen egen effekt så länge det är övertäckt – till skillnad från
+/// ett vanligt "byt ut"-drag (se [GameNotifier.dropExpansion]-doc)
+/// hamnar det INTE i slänghögen. Följer automatiskt med hela
+/// [PlacedCard] vid Omlokalisering (se [RealmBoard.swapExpansions])
+/// eftersom det bara är ett fält på samma objekt, inte en egen plats.
 class PlacedCard {
   final GameCard card;
   final int storedResources;
+  final GameCard? stackedUnder;
 
-  const PlacedCard({required this.card, this.storedResources = 0});
+  const PlacedCard(
+      {required this.card, this.storedResources = 0, this.stackedUnder});
 
   PlacedCard copyWith({int? storedResources}) => PlacedCard(
-      card: card, storedResources: storedResources ?? this.storedResources);
+      card: card,
+      storedResources: storedResources ?? this.storedResources,
+      stackedUnder: stackedUnder);
 
-  Map<String, dynamic> toJson() =>
-      {'card': card.toJson(), 'storedResources': storedResources};
+  Map<String, dynamic> toJson() => {
+        'card': card.toJson(),
+        'storedResources': storedResources,
+        if (stackedUnder != null) 'stackedUnder': stackedUnder!.toJson(),
+      };
 
   factory PlacedCard.fromJson(Map<String, dynamic> json) => PlacedCard(
         card: GameCard.fromJson(Map<String, dynamic>.from(json['card'] as Map)),
         storedResources: json['storedResources'] as int? ?? 0,
+        stackedUnder: json['stackedUnder'] == null
+            ? null
+            : GameCard.fromJson(
+                Map<String, dynamic>.from(json['stackedUnder'] as Map)),
       );
 }
 
@@ -434,10 +457,15 @@ class RealmBoard {
   /// Församlingshus), se [GameNotifier.dropExpansion] – anropa med
   /// [GameCard.baseId], inte [GameCard.id], annars missar kontrollen av
   /// samma anledning.
+  ///
+  /// Räknar även [PlacedCard.stackedUnder] (t.ex. Församlingshus under
+  /// Rådhus) – det ligger fortfarande kvar i riket, bara övertäckt, så
+  /// en andra kopia ska fortfarande avvisas som en dubblett.
   bool hasExpansionCard(String cardId) {
     for (final node in _settlements.values) {
       for (final site in [...node.aboveSites, ...node.belowSites]) {
         if (site?.card.baseId == cardId) return true;
+        if (site?.stackedUnder?.baseId == cardId) return true;
       }
     }
     return false;
@@ -446,15 +474,19 @@ class RealmBoard {
   /// Alla bygg-/enhetskort som just nu ligger på en byggplats någonstans
   /// i riket (byar/städers ovanför-/nedanför-platser), PLUS utplacerade
   /// landskapsutbyggnadskort (t.ex. Guldgömma, se [regionExpansionAt])
-  /// – används för att räkna ut vilka kort som redan är "kända"
-  /// (utdelade) när [GameNotifier.resumeRoom] bygger om de lokala
-  /// draghögarna efter en sidladdning. Utan landskapsutbyggnaderna här
-  /// skulle en redan placerad Guldgömma kunna "dyka upp" igen i den
-  /// ombyggda draghögen.
+  /// OCH eventuella [PlacedCard.stackedUnder]-kort (t.ex. Församlingshus
+  /// under Rådhus) – används för att räkna ut vilka kort som redan är
+  /// "kända" (utdelade) när [GameNotifier.resumeRoom] bygger om de
+  /// lokala draghögarna efter en sidladdning. Utan landskapsutbyggnaderna
+  /// (eller de övertäckta korten) här skulle de kunna "dyka upp" igen i
+  /// den ombyggda draghögen.
   List<GameCard> get placedExpansionCards => [
         for (final node in _settlements.values)
           for (final site in [...node.aboveSites, ...node.belowSites])
-            if (site != null) site.card,
+            if (site != null) ...[
+              site.card,
+              if (site.stackedUnder != null) site.stackedUnder!,
+            ],
         for (final expansion in [
           ..._regionExpansionsAbove.values,
           ..._regionExpansionsBelow.values,

@@ -1,4 +1,6 @@
 import 'package:catan_rivals/data/basic_set_cards.dart';
+import 'package:catan_rivals/data/era_of_progress_cards.dart';
+import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/ui/widgets/build_confirm_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,7 +12,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// GameNotifier.dropExpansion/PrincipalityGrid.onRequestBuildConfirm).
 void main() {
   Future<void> pumpCard(WidgetTester tester,
-      {required replacedCard,
+      {GameCard card = BasicSetCards.storehouse,
+      required replacedCard,
       String? blockedReason,
       String? costReminder,
       VoidCallback? onConfirm,
@@ -18,7 +21,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
         body: BuildConfirmCard(
-          card: BasicSetCards.storehouse,
+          card: card,
           replacedCard: replacedCard,
           blockedReason: blockedReason,
           costReminder: costReminder,
@@ -43,6 +46,20 @@ void main() {
     expect(
         find.text('Ersätter ${BasicSetCards.road.name}, som läggs i slänghögen.'),
         findsOneWidget);
+  });
+
+  testWidgets(
+      'Rådhus ovanpå Församlingshus visar en annan text – Församlingshus läggs INTE i slänghögen',
+      (tester) async {
+    await pumpCard(tester,
+        card: EraOfProgressCards.townHall,
+        replacedCard: BasicSetCards.parishHall);
+
+    expect(
+        find.text(
+            'Läggs ovanpå ${BasicSetCards.parishHall.name}, som ligger kvar (övertäckt).'),
+        findsOneWidget);
+    expect(find.textContaining('läggs i slänghögen'), findsNothing);
   });
 
   group('costReminder (t.ex. Övningsplats, se GameBoardScreen._costReminderFor)',

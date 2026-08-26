@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../data/basic_set_cards.dart';
+import '../../data/era_of_progress_cards.dart';
 import '../../models/models.dart';
 import '../theme/catan_assets.dart';
 import '../theme/catan_colors.dart';
@@ -37,6 +39,19 @@ String? _pointsPhrase(GameCard card) {
   return '${parts.sublist(0, parts.length - 1).join(', ')} och ${parts.last}';
 }
 
+/// Texten för [BuildConfirmCard.replacedCard]. Normalt hamnar det
+/// ersatta kortet i slänghögen – men Rådhus läggs i stället OVANPÅ
+/// Församlingshus och ligger kvar där, övertäckt (se
+/// PlacedCard.stackedUnder-doc/GameNotifier._placeExpansionCardAndSync)
+/// – "läggs i slänghögen" vore missvisande där.
+String _replacedCardPhrase(GameCard card, GameCard replacedCard) {
+  if (card.baseId == EraOfProgressCards.townHall.id &&
+      replacedCard.baseId == BasicSetCards.parishHall.id) {
+    return 'Läggs ovanpå ${replacedCard.name}, som ligger kvar (övertäckt).';
+  }
+  return 'Ersätter ${replacedCard.name}, som läggs i slänghögen.';
+}
+
 /// Bekräftelsekortet som visas ovanpå motståndarens rike när ett kort
 /// släpps på en giltig plats – inte en modal dialogruta, utan en vanlig
 /// widget som läggs ovanpå motståndarens (inte ditt eget) rike, så att
@@ -65,8 +80,10 @@ class BuildConfirmCard extends StatelessWidget {
   /// Satt bara när platsen redan har ett bygg-/enhets-/skeppskort (se
   /// [PrincipalityGrid]s `onRequestBuildConfirm`) – man får byta ut det
   /// mot [card] i stället för att bygget avvisas: fortfarande [card]s
-  /// fulla kostnad (ingen rabatt), och [replacedCard] hamnar i
-  /// slänghögen (se [GameNotifier.dropExpansion]).
+  /// fulla kostnad (ingen rabatt), och [replacedCard] hamnar normalt i
+  /// slänghögen (se [GameNotifier.dropExpansion]) – UTOM när [card] är
+  /// Rådhus och [replacedCard] är Församlingshus, då läggs den i
+  /// stället kvar, övertäckt (se [_replacedCardPhrase]).
   final GameCard? replacedCard;
 
   final String? blockedReason;
@@ -158,7 +175,7 @@ class BuildConfirmCard extends StatelessWidget {
                           if (replacedCard != null) ...[
                             const SizedBox(height: 4),
                             Text(
-                              'Ersätter ${replacedCard!.name}, som läggs i slänghögen.',
+                              _replacedCardPhrase(card, replacedCard!),
                               style: const TextStyle(
                                   fontSize: 12.5,
                                   fontStyle: FontStyle.italic,

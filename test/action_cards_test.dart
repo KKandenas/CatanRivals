@@ -1,5 +1,6 @@
 import 'package:catan_rivals/data/basic_set_cards.dart';
 import 'package:catan_rivals/data/era_of_gold_cards.dart';
+import 'package:catan_rivals/data/era_of_progress_cards.dart';
 import 'package:catan_rivals/models/models.dart';
 import 'package:catan_rivals/state/game_notifier.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -378,6 +379,38 @@ void main() {
           BasicSetCards.storehouse.id);
       expect(after.you.hand.any((c) => c.id == BasicSetCards.relocation.id),
           isFalse);
+    });
+
+    test(
+        'byter plats på Rådhus: Församlingshuset som ligger stackat under följer med (rapporterad förbättring)',
+        () {
+      final notifier = container.read(gameProvider.notifier);
+      final state = container.read(gameProvider);
+      state.you.hand.add(BasicSetCards.relocation);
+      state.you.principality.placeExpansion(
+          0,
+          BuildingRow.above,
+          0,
+          const PlacedCard(
+              card: EraOfProgressCards.townHall,
+              stackedUnder: BasicSetCards.parishHall));
+      state.you.principality.placeExpansion(
+          0, BuildingRow.below, 0, const PlacedCard(card: BasicSetCards.tollBridge));
+
+      notifier.startRelocation();
+      notifier.selectRelocationTarget(
+          RelocationTargetKind.expansion, 0, BuildingRow.above, 0);
+      notifier.selectRelocationTarget(
+          RelocationTargetKind.expansion, 0, BuildingRow.below, 0);
+
+      final after = container.read(gameProvider);
+      final movedTownHall =
+          after.you.principality.settlementAt(0)!.belowSites[0]!;
+      expect(movedTownHall.card.id, EraOfProgressCards.townHall.id);
+      expect(movedTownHall.stackedUnder?.id, BasicSetCards.parishHall.id);
+      expect(
+          after.you.principality.settlementAt(0)!.aboveSites[0]!.card.id,
+          BasicSetCards.tollBridge.id);
     });
 
     test('startRelocation är no-op utan kortet på hand', () {
