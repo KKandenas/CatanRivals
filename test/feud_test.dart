@@ -408,6 +408,53 @@ void main() {
     });
 
     test(
+        'startFraternalFeudsPick är no-op om motståndarens hand är tom (inget att välja)',
+        () {
+      final container = readyContainer();
+      addTearDown(container.dispose);
+      giveStrength(container.read(gameProvider).you, 2);
+      forceFeudCard(container, BasicSetCards.fraternalFeuds);
+      final notifier = container.read(gameProvider.notifier);
+      final state = container.read(gameProvider);
+      notifier.state =
+          state.copyWith(opponent: state.opponent.copyWith(hand: const []));
+
+      final error = notifier.startFraternalFeudsPick();
+
+      expect(error, isNull);
+      expect(container.read(gameProvider).fraternalFeudsPicking, isFalse,
+          reason:
+              'rapporterad bugg: spelaren fastnade i en väljare som aldrig kunde nå 2 valda kort');
+    });
+
+    test(
+        'pickFraternalFeudsCard avslutas automatiskt efter bara 1 val om motståndaren bara hade 1 kort',
+        () {
+      final container = readyContainer();
+      addTearDown(container.dispose);
+      giveStrength(container.read(gameProvider).you, 2);
+      forceFeudCard(container, BasicSetCards.fraternalFeuds);
+      final notifier = container.read(gameProvider.notifier);
+      const onlyCard = BasicSetCards.storehouse;
+      var state = container.read(gameProvider);
+      notifier.state = state.copyWith(
+          opponent: state.opponent.copyWith(hand: [onlyCard]));
+      notifier.startFraternalFeudsPick();
+      expect(container.read(gameProvider).fraternalFeudsPicking, isTrue);
+
+      final error = notifier.pickFraternalFeudsCard(onlyCard, 0);
+
+      expect(error, isNull);
+      state = container.read(gameProvider);
+      expect(state.opponent.hand, isEmpty);
+      expect(state.fraternalFeudsPicking, isFalse,
+          reason:
+              'inte fler kort att välja bland – ska avslutas efter bara 1 val, inte vänta på ett omöjligt andra');
+      expect(state.fraternalFeudsPicked, [onlyCard]);
+      expect(state.drawnEventCard, isNull);
+    });
+
+    test(
         'pickFraternalFeudsCard flyttar 2 kort från motståndarens hand, sedan avslutas det automatiskt',
         () {
       final container = readyContainer();

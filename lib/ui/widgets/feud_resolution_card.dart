@@ -33,6 +33,15 @@ class FeudResolutionCard extends StatelessWidget {
   /// hjältar/ingenting utplacerat.
   final bool hasBuildingToRemove;
 
+  /// Om motståndaren (den vars hand det gäller) faktiskt har minst 1
+  /// kort på handen att välja bland – bara relevant för Brödrafejd (se
+  /// [GameNotifier.startFraternalFeudsPick]). Utan kontrollen skulle
+  /// Brödrafejd be om ett val som inte går att göra när motståndarens
+  /// hand redan är tom, precis som [hasBuildingToRemove] gör för Fejd
+  /// (rapporterad bugg: spelaren fastnade i väljaren utan att kunna
+  /// avsluta den).
+  final bool hasCardsToPick;
+
   /// Om DU (den drabbade sidan, dvs. utan styrkeövertaget) redan spelat
   /// Sebastian, den vandrande predikanten mot just det här kortet (se
   /// [GameNotifier.playSebastianForCurrentEvent]/
@@ -61,6 +70,7 @@ class FeudResolutionCard extends StatelessWidget {
     required this.youHaveAdvantage,
     required this.opponentName,
     required this.hasBuildingToRemove,
+    this.hasCardsToPick = true,
     this.youProtected = false,
     this.opponentProtected = false,
     this.canPlaySebastian = false,
@@ -215,11 +225,17 @@ class FeudResolutionCard extends StatelessWidget {
               'att ta bort.';
     }
     // Brödrafejd: gäller den med övertaget.
+    if (!hasCardsToPick) {
+      return youHaveAdvantage
+          ? '$opponentName har inga kort på handen. Inget händer.'
+          : 'Din hand är tom. Inget händer.';
+    }
     return youHaveAdvantage
-        ? 'Titta i $opponentName' 's hand och välj 2 kort att lägga '
-            'underst i valfria draghögar.'
-        : '$opponentName väljer 2 kort från din hand att lägga underst i '
-            'valfria draghögar.';
+        ? 'Titta i $opponentName' 's hand och välj 2 kort (färre om '
+            'motståndaren har mindre än 2) att lägga underst i valfria '
+            'draghögar.'
+        : '$opponentName väljer 2 kort (färre om du har mindre än 2) '
+            'från din hand att lägga underst i valfria draghögar.';
   }
 
   String get _primaryButtonLabel {
@@ -229,7 +245,7 @@ class FeudResolutionCard extends StatelessWidget {
     if (!_isFraternalFeuds && !youHaveAdvantage && hasBuildingToRemove) {
       return 'Välj byggnad';
     }
-    if (_isFraternalFeuds && youHaveAdvantage) {
+    if (_isFraternalFeuds && youHaveAdvantage && hasCardsToPick) {
       return 'Välj kort';
     }
     return 'OK';
@@ -242,7 +258,7 @@ class FeudResolutionCard extends StatelessWidget {
     if (!_isFraternalFeuds && !youHaveAdvantage && hasBuildingToRemove) {
       return onStartFeudPick;
     }
-    if (_isFraternalFeuds && youHaveAdvantage) {
+    if (_isFraternalFeuds && youHaveAdvantage && hasCardsToPick) {
       return onStartFraternalFeudsPick;
     }
     return onDismiss;

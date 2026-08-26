@@ -153,4 +153,36 @@ void main() {
         findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'OK'), findsOneWidget);
   });
+
+  testWidgets(
+      'Brödrafejd utan kort hos motståndaren: "inget händer" med en OK-knapp som stänger direkt, aldrig "Välj kort" (rapporterad bugg: spelaren fastnade i väljaren)',
+      (tester) async {
+    var dismissed = false;
+    await tester.pumpWidget(wrap(FeudResolutionCard(
+      card: BasicSetCards.fraternalFeuds,
+      isTie: false,
+      youHaveAdvantage: true,
+      opponentName: 'Björn',
+      hasBuildingToRemove: true,
+      hasCardsToPick: false,
+      onDismiss: () => dismissed = true,
+      onStartFeudPick: () {},
+      onStartFraternalFeudsPick: () =>
+          fail('ska inte kunna starta kortväljaren utan kort att välja'),
+      onPlaySebastian: () {},
+    )));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Björn har inga kort på handen. Inget händer.'),
+        findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Välj kort'), findsNothing);
+    final button = find.widgetWithText(FilledButton, 'OK');
+    expect(button, findsOneWidget);
+
+    await tester.ensureVisible(button);
+    await tester.tap(button, warnIfMissed: false);
+    await tester.pump();
+
+    expect(dismissed, isTrue);
+  });
 }

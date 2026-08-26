@@ -2196,15 +2196,22 @@ class GameNotifier extends Notifier<GameState> {
 
   /// Startar handväljaren när du har styrkeövertaget. No-op utan
   /// uppslaget Brödrafejd-kort, vid oavgjort, om det är motståndaren
-  /// som har övertaget, eller om motståndaren redan skyddat sig med
-  /// Sebastian (se [playSebastianForCurrentEvent]/
-  /// sebastianProtectedPlayerIds-doc) – det finns då inget att välja.
+  /// som har övertaget, om motståndaren redan skyddat sig med Sebastian
+  /// (se [playSebastianForCurrentEvent]/sebastianProtectedPlayerIds-doc),
+  /// eller om motståndarens hand redan är TOM – i alla dessa fall finns
+  /// det inget att välja, så väljaren ska aldrig öppnas (rapporterad
+  /// bugg: annars fastnade spelaren i en väljare som aldrig kunde nå 2
+  /// valda kort eftersom det inte fanns så många att välja bland). Har
+  /// motståndaren EXAKT 1 kort öppnas väljaren ändå – se
+  /// [pickFraternalFeudsCard]s `done`-villkor för hur den då avslutas
+  /// automatiskt efter bara 1 val i stället för 2.
   String? startFraternalFeudsPick() {
     if (state.drawnEventCard == null) return null;
     if (state.strengthAdvantagePlayerId != state.myPlayerId) return null;
     if (state.sebastianProtectedPlayerIds.contains(state.opponentPlayerId)) {
       return null;
     }
+    if (state.opponent.hand.isEmpty) return null;
     state = state.copyWith(
         fraternalFeudsPicking: true,
         fraternalFeudsPicked: const [],
@@ -2226,7 +2233,12 @@ class GameNotifier extends Notifier<GameState> {
   /// Brödrafejd automatiskt – lokalt genom att mutera motståndarens
   /// hand/draghög direkt, online genom att skicka en
   /// [FraternalFeudsRequest] som motståndarens klient tillämpar på sig
-  /// själv.
+  /// själv. Hade motståndaren bara 1 kort kvar när väljaren startades
+  /// (se [startFraternalFeudsPick]-doc) avslutas den redan efter det
+  /// enda valet i stället för att vänta på ett omöjligt andra kort
+  /// (rapporterad bugg: spelaren fastnade annars för alltid) – avgörs
+  /// genom att kolla hur många kort som FAKTISKT finns kvar att välja
+  /// bland, inte ett hårdkodat mål på 2.
   String? pickFraternalFeudsCard(GameCard card, int stackIndex) {
     if (!state.fraternalFeudsPicking) return null;
     if (!state.opponent.hand.contains(card)) return null;
@@ -2235,7 +2247,8 @@ class GameNotifier extends Notifier<GameState> {
 
     final picked = [...state.fraternalFeudsPicked, card];
     final pickedStacks = [...state.fraternalFeudsPickedStacks, stackIndex];
-    final done = picked.length >= 2;
+    final remainingInOpponentHand = state.opponent.hand.length - 1;
+    final done = picked.length >= 2 || remainingInOpponentHand <= 0;
 
     if (!state.isOnline) {
       _setDrawStack(stackIndex, [..._drawStacks[stackIndex], card]);

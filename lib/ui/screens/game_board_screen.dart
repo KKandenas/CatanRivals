@@ -905,6 +905,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                                         state.myPlayerId
                                     ? state.opponent.principality.hasAnyBuilding
                                     : state.you.principality.hasAnyBuilding,
+                            hasCardsToPick: state.strengthAdvantagePlayerId ==
+                                    state.myPlayerId
+                                ? state.opponent.hand.isNotEmpty
+                                : state.you.hand.isNotEmpty,
                             youProtected: state.sebastianProtectedPlayerIds
                                 .contains(state.myPlayerId),
                             opponentProtected: state.sebastianProtectedPlayerIds
