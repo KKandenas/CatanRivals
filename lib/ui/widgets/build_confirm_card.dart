@@ -71,6 +71,16 @@ class BuildConfirmCard extends StatelessWidget {
 
   final String? blockedReason;
 
+  /// En kort påminnelsetext om en byggeffekt som sänker KOSTNADEN (t.ex.
+  /// Övningsplats: "betala 1 valfri resurs mindre" för en hjälte) –
+  /// visas HÄR, bredvid den faktiska kostnaden, i stället för som en
+  /// SnackBar EFTER att spelaren redan betalat/byggt (rapporterad bugg:
+  /// för sent för att faktiskt påverka vad spelaren betalar). Precis
+  /// som resten av kostnaden dras den aldrig av automatiskt – appen
+  /// håller inte koll på om spelaren har råd, se klassdoc. `null` när
+  /// ingen sådan rabatt gäller.
+  final String? costReminder;
+
   final VoidCallback onConfirm;
   final VoidCallback onCancel;
 
@@ -79,6 +89,7 @@ class BuildConfirmCard extends StatelessWidget {
     required this.card,
     this.replacedCard,
     this.blockedReason,
+    this.costReminder,
     required this.onConfirm,
     required this.onCancel,
   });
@@ -204,6 +215,17 @@ class BuildConfirmCard extends StatelessWidget {
                       'Betala genom att trycka − på respektive resurs:',
                       style: TextStyle(fontSize: 11.5, color: CatanColors.ink),
                     ),
+                    if (costReminder != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        costReminder!,
+                        style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.bold,
+                            fontStyle: FontStyle.italic,
+                            color: CatanColors.ink),
+                      ),
+                    ],
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 8,

@@ -12,6 +12,7 @@ void main() {
   Future<void> pumpCard(WidgetTester tester,
       {required replacedCard,
       String? blockedReason,
+      String? costReminder,
       VoidCallback? onConfirm,
       VoidCallback? onCancel}) async {
     await tester.pumpWidget(MaterialApp(
@@ -20,6 +21,7 @@ void main() {
           card: BasicSetCards.storehouse,
           replacedCard: replacedCard,
           blockedReason: blockedReason,
+          costReminder: costReminder,
           onConfirm: onConfirm ?? () {},
           onCancel: onCancel ?? () {},
         ),
@@ -41,6 +43,40 @@ void main() {
     expect(
         find.text('Ersätter ${BasicSetCards.road.name}, som läggs i slänghögen.'),
         findsOneWidget);
+  });
+
+  group('costReminder (t.ex. Övningsplats, se GameBoardScreen._costReminderFor)',
+      () {
+    testWidgets('visas bredvid kostnaden, INNAN spelaren trycker Betalt',
+        (tester) async {
+      await pumpCard(tester,
+          replacedCard: null,
+          costReminder: 'Du har Övningsplats: betala 1 valfri resurs mindre.');
+
+      expect(
+          find.text('Du har Övningsplats: betala 1 valfri resurs mindre.'),
+          findsOneWidget);
+      expect(find.text('Betalt'), findsOneWidget,
+          reason: 'påminnelsen ska synas TILLSAMMANS med kostnaden, inte i stället för den');
+    });
+
+    testWidgets('utan costReminder visas ingen sådan text', (tester) async {
+      await pumpCard(tester, replacedCard: null);
+
+      expect(find.textContaining('Övningsplats'), findsNothing);
+    });
+
+    testWidgets('visas inte när blockedReason är satt (ingen kostnad visas då heller)',
+        (tester) async {
+      await pumpCard(tester,
+          replacedCard: null,
+          blockedReason: 'Kräver Köpmansgille i ditt rike.',
+          costReminder: 'Du har Övningsplats: betala 1 valfri resurs mindre.');
+
+      expect(
+          find.text('Du har Övningsplats: betala 1 valfri resurs mindre.'),
+          findsNothing);
+    });
   });
 
   group('blockedReason (se build_requirements.dart)', () {

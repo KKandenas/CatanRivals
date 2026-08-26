@@ -11,7 +11,14 @@ import 'package:flutter_test/flutter_test.dart';
 /// Testar de rena påminnelsetexterna (SnackBar/dialog, inga faktiska
 /// resurser flyttas – se GameBoardScreen._confirmPendingBuild-doc,
 /// samma mönster som Stapelhus i staple_house_build_notice_test.dart)
-/// för Övningsplats, Marknadsfält och Tiondelada.
+/// för Övningsplats, Marknadsfält och Tiondelada. Övningsplats
+/// (rabatt på nästa hjältes kostnad) visas numera TILLSAMMANS med
+/// kostnaden i BuildConfirmCard, INNAN spelaren betalar – inte som en
+/// SnackBar efteråt (rapporterad bugg: för sent för att faktiskt
+/// påverka vad spelaren betalar) – se
+/// GameBoardScreen._costReminderFor-doc. Widgeten testas isolerat i
+/// build_confirm_card_test.dart; testerna här kollar att den faktiska
+/// spel-integrationen räknar ut rätt text.
 void main() {
   Future<ProviderContainer> readyGame(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1200, 2000);
@@ -43,7 +50,7 @@ void main() {
   }
 
   testWidgets(
-      'bygger man en hjälte med Övningsplats i riket visas en påminnelse om 1 resurs mindre',
+      'bygger man en hjälte med Övningsplats i riket visas rabattpåminnelsen redan i bekräftelserutan, INNAN Betalt trycks',
       (tester) async {
     final container = await readyGame(tester);
     addTearDown(container.dispose);
@@ -63,18 +70,17 @@ void main() {
 
     await dragHandCardToSite(tester, 'Carl Kluvskägg', 0);
 
+    // Påminnelsen ska synas TILLSAMMANS med "Betalt" – innan spelaren
+    // betalar, inte i en SnackBar efteråt (rapporterad bugg: annars
+    // hinner spelaren aldrig faktiskt utnyttja rabatten).
     expect(find.text('Betalt'), findsOneWidget);
-    await tester.tap(find.text('Betalt'));
-    await tester.pump();
-
     expect(
-        find.text(
-            'Du har Övningsplats: betala 1 valfri resurs mindre för hjälten.'),
+        find.text('Du har Övningsplats: betala 1 valfri resurs mindre.'),
         findsOneWidget);
   });
 
   testWidgets(
-      'bygger man en hjälte UTAN Övningsplats i riket visas ingen påminnelse',
+      'bygger man en hjälte UTAN Övningsplats i riket visas ingen rabattpåminnelse',
       (tester) async {
     final container = await readyGame(tester);
     addTearDown(container.dispose);
@@ -91,12 +97,10 @@ void main() {
     await tester.pumpAndSettle();
 
     await dragHandCardToSite(tester, 'Carl Kluvskägg', 0);
-    await tester.tap(find.text('Betalt'));
-    await tester.pump();
 
+    expect(find.text('Betalt'), findsOneWidget);
     expect(
-        find.text(
-            'Du har Övningsplats: betala 1 valfri resurs mindre för hjälten.'),
+        find.text('Du har Övningsplats: betala 1 valfri resurs mindre.'),
         findsNothing);
   });
 

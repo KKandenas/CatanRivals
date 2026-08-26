@@ -292,6 +292,24 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     });
   }
 
+  /// Övningsplats: "Varje hjälte du bygger, efter att du redan har
+  /// Övningsplats i ditt rike, kostar 1 valfri resurs mindre." – en
+  /// ren självbevakad påminnelse (appen drar aldrig av kostnaden
+  /// automatiskt, se [BuildConfirmCard]-doc), visad TILLSAMMANS med
+  /// den faktiska kostnaden i [BuildConfirmCard] i stället för i en
+  /// SnackBar EFTER att spelaren redan betalat/byggt – annars hinner
+  /// spelaren aldrig faktiskt utnyttja rabatten (rapporterad bugg).
+  /// Gäller inte Övningsplats-kortet självt (bara HJÄLTAR som byggs
+  /// medan det redan ligger i riket).
+  String? _costReminderFor(GameCard card, GameState state) {
+    if (card.expansionKind == ExpansionKind.hero &&
+        state.you.principality
+            .hasExpansionCard(EraOfTurmoilCards.drillGround.id)) {
+      return 'Du har Övningsplats: betala 1 valfri resurs mindre.';
+    }
+    return null;
+  }
+
   void _confirmPendingBuild() {
     final confirm = _pendingBuildConfirm;
     final builtCard = _pendingBuildCard;
@@ -311,25 +329,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
       );
       return;
     }
-    // Övningsplats (se EraOfTurmoilCards.drillGround-doc): gäller inte
-    // kortet självt utan varje HJÄLTE du bygger EFTER att du redan har
-    // det i ditt rike – ren påminnelsetext, precis som Stapelhus ovan
-    // (kostnaden dras aldrig av automatiskt).
-    if (builtCard?.expansionKind == ExpansionKind.hero &&
-        ref
-            .read(gameProvider)
-            .you
-            .principality
-            .hasExpansionCard(EraOfTurmoilCards.drillGround.id)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'Du har Övningsplats: betala 1 valfri resurs mindre för hjälten.'),
-          duration: Duration(seconds: 3),
-        ),
-      );
-      return;
-    }
+    // Övningsplats: se _costReminderFor-doc – flyttad dit så
+    // påminnelsen visas TILLSAMMANS med kostnaden, innan spelaren
+    // betalar, i stället för i en SnackBar efteråt (för sent för att
+    // faktiskt påverka vad som betalas).
     // Marknadsfält: "Har du fler kunskapspoäng än motståndaren får du
     // omedelbart 2 valfria resurser."
     if (builtCard?.baseId == EraOfTurmoilCards.fairgrounds.id) {
@@ -843,6 +846,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                             card: _pendingBuildCard!,
                             replacedCard: _pendingReplacedCard,
                             blockedReason: _pendingBlockedReason,
+                            costReminder:
+                                _costReminderFor(_pendingBuildCard!, state),
                             onConfirm: _confirmPendingBuild,
                             onCancel: _clearPendingBuild,
                           ),
