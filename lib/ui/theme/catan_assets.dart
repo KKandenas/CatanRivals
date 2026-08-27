@@ -57,6 +57,49 @@ class CatanAssets {
   static const String backEraTurmoil = '$_backs/era_turmoil.webp';
   static const String backEraProgress = '$_backs/era_progress.webp';
 
+  /// Om draghög [index] (av totalt [stackCount] högar) är en av det
+  /// AKTIVA temasetets EGNA högar – `false` för grundspelets högar, och
+  /// alltid `false` utan tema (bara 4 högar då). Med ETT tema aktivt (5
+  /// högar) är det de sista 2; i Duel of the Princes (6 högar, se
+  /// [DuelOfThePrincesSetup]-klassdoc) har varje temaset sin egen
+  /// ENSKILDA hög i stället, de sista 3 (index 3/4/5).
+  ///
+  /// EN källa till sanning för den här indelningen – [CenterStacksStrip]
+  /// (draghögsremsan i spelet) och [StackChoiceOverlay] (draghögsvalet
+  /// vid Fejd/Upplopp/Brödrafejd m.fl.) behövde tidigare komma överens
+  /// om exakt samma logik i varsin egen privat kopia, vilket en gång
+  /// gled isär (rapporterad bugg: alla högar visade grundspelets
+  /// baksida i stället för respektive temas egen, se
+  /// [drawStackBackAsset]).
+  static bool isThemeDrawStack(int index, int stackCount) {
+    if (stackCount == 6) return index >= 3;
+    return stackCount == 5 && index >= stackCount - 2;
+  }
+
+  /// Kortbaksidan draghög [index] (av totalt [stackCount] högar, se
+  /// [isThemeDrawStack]) faktiskt visar i spelet – grundspelets
+  /// gemensamma baksida, eller rätt temaset-baksida beroende på
+  /// [activeExpansions] (utanför Duel of the Princes är bara ETT tema
+  /// någonsin aktivt åt gången, se [LobbyScreen]).
+  static String drawStackBackAsset(
+      int index, int stackCount, Set<ExpansionSet> activeExpansions) {
+    if (!isThemeDrawStack(index, stackCount)) return backBasicSet;
+    if (stackCount == 6) {
+      // Duel of the Princes: fast ordning Gulderan/Oroligheternas tid/
+      // Utvecklingens tid (index 3/4/5, se DuelOfThePrincesSetup-doc).
+      if (index == 3) return backEraGold;
+      if (index == 4) return backEraTurmoil;
+      return backEraProgress;
+    }
+    if (activeExpansions.contains(ExpansionSet.eraOfTurmoil)) {
+      return backEraTurmoil;
+    }
+    if (activeExpansions.contains(ExpansionSet.eraOfProgress)) {
+      return backEraProgress;
+    }
+    return backEraGold;
+  }
+
   /// Liten kostnadsikon (hexagon) för en resurstyp – för att visa
   /// byggkostnad kompakt på hand-/stapelkort.
   static String resourceCostIcon(ResourceType type) =>

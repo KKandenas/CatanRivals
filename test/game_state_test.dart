@@ -65,4 +65,12 @@ void main() {
     expect(baseState(tradePhase: TradePhase.choosing).canBuildRightNow,
         isFalse);
   });
+
+  group('GameState.drawStackKey', () {
+    test('är 1-baserad ("draw1" för index 0, osv.)', () {
+      expect(GameState.drawStackKey(0), 'draw1');
+      expect(GameState.drawStackKey(3), 'draw4');
+      expect(GameState.drawStackKey(5), 'draw6');
+    });
+  });
 }

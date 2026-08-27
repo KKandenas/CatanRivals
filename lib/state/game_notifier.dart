@@ -227,7 +227,7 @@ class GameNotifier extends Notifier<GameState> {
       'event': _eventDeck.length,
     };
     for (var i = 0; i < _drawStacks.length; i++) {
-      map['draw${i + 1}'] = _drawStacks[i].length;
+      map[GameState.drawStackKey(i)] = _drawStacks[i].length;
     }
     return map;
   }
@@ -855,7 +855,7 @@ class GameNotifier extends Notifier<GameState> {
     final stackCount =
         isDuelOfThePrinces ? 6 : (hasGold || hasTurmoil || hasProgress ? 5 : 4);
     final counts = [
-      for (var i = 0; i < stackCount; i++) centerStacks['draw${i + 1}'] ?? 0,
+      for (var i = 0; i < stackCount; i++) centerStacks[GameState.drawStackKey(i)] ?? 0,
     ];
     final stacks = <List<GameCard>>[];
     var offset = 0;
@@ -1498,7 +1498,7 @@ class GameNotifier extends Notifier<GameState> {
     state = state.copyWith(
       you: state.you,
       centerStacks: Map.of(state.centerStacks)
-        ..update('draw${stackIndex + 1}', (v) => v + 1),
+        ..update(GameState.drawStackKey(stackIndex), (v) => v + 1),
       feudBuildingPickActive: false,
       clearFeudPickedBuilding: true,
       clearDrawnEventCard: true,
@@ -1606,7 +1606,7 @@ class GameNotifier extends Notifier<GameState> {
     state = state.copyWith(
       you: state.you,
       centerStacks: Map.of(state.centerStacks)
-        ..update('draw${stackIndex + 1}', (v) => v + 1),
+        ..update(GameState.drawStackKey(stackIndex), (v) => v + 1),
       riotsUnitPickActive: false,
       clearRiotsPickedUnit: true,
     );
@@ -1904,7 +1904,7 @@ class GameNotifier extends Notifier<GameState> {
     state = state.copyWith(
       you: state.you,
       centerStacks: Map.of(state.centerStacks)
-        ..update('draw${stackIndex + 1}', (v) => v + 1),
+        ..update(GameState.drawStackKey(stackIndex), (v) => v + 1),
       clearPendingAttackCard: true,
       clearAttackCardPickedUnit: true,
     );
@@ -2278,7 +2278,7 @@ class GameNotifier extends Notifier<GameState> {
       state = state.copyWith(
         opponent: updatedOpponent,
         centerStacks: Map.of(state.centerStacks)
-          ..update('draw${stackIndex + 1}', (v) => v + 1),
+          ..update(GameState.drawStackKey(stackIndex), (v) => v + 1),
         fraternalFeudsPicked: picked,
         fraternalFeudsPickedStacks: pickedStacks,
         fraternalFeudsPicking: !done,
@@ -2336,7 +2336,7 @@ class GameNotifier extends Notifier<GameState> {
       hand = List.of(hand)..remove(card);
       final stackIndex = request.stackIndices[i];
       _setDrawStack(stackIndex, [..._drawStacks[stackIndex], card]);
-      centerStacks.update('draw${stackIndex + 1}', (v) => v + 1);
+      centerStacks.update(GameState.drawStackKey(stackIndex), (v) => v + 1);
     }
     state = state.copyWith(
       you: state.you.copyWith(hand: hand),
@@ -2481,7 +2481,7 @@ class GameNotifier extends Notifier<GameState> {
     state = state.copyWith(
       you: state.you.copyWith(hand: [...state.you.hand, card]),
       centerStacks: Map.of(state.centerStacks)
-        ..update('draw${stackIndex + 1}', (v) => v - 1),
+        ..update(GameState.drawStackKey(stackIndex), (v) => v - 1),
     );
     _syncMyPlayer();
     _syncCenterStacks();
@@ -2564,7 +2564,7 @@ class GameNotifier extends Notifier<GameState> {
       you: state.you
           .copyWith(hand: List<GameCard>.of(state.you.hand)..remove(card)),
       centerStacks: Map.of(state.centerStacks)
-        ..update('draw${stackIndex + 1}', (v) => v + 1),
+        ..update(GameState.drawStackKey(stackIndex), (v) => v + 1),
     );
     _syncMyPlayer();
     _syncCenterStacks();
@@ -2748,7 +2748,7 @@ class GameNotifier extends Notifier<GameState> {
     state = state.copyWith(
       you: state.you.copyWith(hand: [...state.you.hand, card]),
       centerStacks: Map.of(state.centerStacks)
-        ..update('draw${stackIndex + 1}', (v) => v - 1),
+        ..update(GameState.drawStackKey(stackIndex), (v) => v - 1),
     );
     _syncMyPlayer();
     _syncCenterStacks();
@@ -2772,7 +2772,7 @@ class GameNotifier extends Notifier<GameState> {
     if (!state.isMyTurnToChooseHand) {
       return 'Inte din tur att välja en draghög.';
     }
-    final key = 'draw${index + 1}';
+    final key = GameState.drawStackKey(index);
     final fullSize = state.initialDrawStackSizes[index];
     if ((state.centerStacks[key] ?? 0) < fullSize) {
       return 'Den högen är redan vald.';
@@ -2809,7 +2809,7 @@ class GameNotifier extends Notifier<GameState> {
     // UI:t ska aldrig göra det här möjligt (se CenterStacksStrip), men
     // dubbelkollar ändå – temasetets egna högar hör inte till starthanden.
     if (_isThemeStackIndex(index)) return null;
-    final key = 'draw${index + 1}';
+    final key = GameState.drawStackKey(index);
     final fullSize = state.initialDrawStackSizes[index];
     if ((state.centerStacks[key] ?? 0) < fullSize) {
       return 'Den högen är redan vald.';
@@ -2854,7 +2854,7 @@ class GameNotifier extends Notifier<GameState> {
     state = state.copyWith(
       you: state.you.copyWith(hand: [...state.you.hand, ...picked]),
       centerStacks: Map.of(state.centerStacks)
-        ..update('draw${stackIndex + 1}', (v) => v - 3),
+        ..update(GameState.drawStackKey(stackIndex), (v) => v - 3),
       clearStartingHandDraftStackIndex: true,
       clearStartingHandDraftPool: true,
       startingHandDraftPicked: const [],

@@ -441,6 +441,14 @@ class GameState {
 
   bool get handsReady => pendingHandChooserId == null;
 
+  /// Nyckeln i [centerStacks] för draghög [index] (0-baserat, samma
+  /// index som [GameNotifier]s interna `_drawStacks`-lista) – strängen
+  /// är 1-baserad ("draw1", "draw2", ...) av historiska skäl. En delad
+  /// hjälpfunktion i stället för att bygga strängen för hand på snart
+  /// tiotalet ställen i game_notifier.dart/center_stacks_strip.dart,
+  /// för att undvika en felskriven `+ 1` i någon enstaka kopia.
+  static String drawStackKey(int index) => 'draw${index + 1}';
+
   /// Antal handkort du ska ha när action-fasen avslutas (regelhäftet
   /// s. 9): 3 som grund, plus 1 per framstegspoäng du har i spel.
   int get handLimit => you.principality.totalProgressPoints + 3;

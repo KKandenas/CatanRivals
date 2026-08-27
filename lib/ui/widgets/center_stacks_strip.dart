@@ -216,41 +216,20 @@ class CenterStacksStrip extends StatelessWidget {
     );
   }
 
-  /// Om draghög [index] är en av det aktiva temasetets EGNA högar (de
-  /// sista 2 av 5, se [GameState.initialDrawStackSizes]/
-  /// [GameNotifier._isThemeStackIndex]) – styr både vilken kortbaksbild
-  /// som visas ([_backAssetFor]) och (tillsammans med
+  /// Om draghög [index] är en av det aktiva temasetets EGNA högar – se
+  /// [CatanAssets.isThemeDrawStack] (EN delad källa till sanning, se
+  /// den metodens doc). Styr både vilken kortbaksbild som visas
+  /// ([_backAssetFor]) och (tillsammans med
   /// [selectedDiscardCardIsThemeCard]) vilka högar som går att slänga
   /// ett valt handkort i.
-  /// I Duel of the Princes-läget (se [GameState.initialDrawStackSizes]
-  /// 6-högsfall) har VARJE temaset sin egen ENSKILDA hög (index 3/4/5)
-  /// i stället för att dela på 2 gemensamma – "sista 3" räknas då i
-  /// stället för "sista 2".
-  bool _isThemeStack(int index) {
-    if (initialStackSizes.length == 6) return index >= 3;
-    return initialStackSizes.length == 5 && index >= initialStackSizes.length - 2;
-  }
+  bool _isThemeStack(int index) =>
+      CatanAssets.isThemeDrawStack(index, initialStackSizes.length);
 
-  String _backAssetFor(int index) {
-    if (!_isThemeStack(index)) return CatanAssets.backBasicSet;
-    if (initialStackSizes.length == 6) {
-      // Duel of the Princes: fast ordning Gulderan/Oroligheternas tid/
-      // Utvecklingens tid (index 3/4/5, se DuelOfThePrincesSetup-doc).
-      if (index == 3) return CatanAssets.backEraGold;
-      if (index == 4) return CatanAssets.backEraTurmoil;
-      return CatanAssets.backEraProgress;
-    }
-    if (activeExpansions.contains(ExpansionSet.eraOfTurmoil)) {
-      return CatanAssets.backEraTurmoil;
-    }
-    if (activeExpansions.contains(ExpansionSet.eraOfProgress)) {
-      return CatanAssets.backEraProgress;
-    }
-    return CatanAssets.backEraGold;
-  }
+  String _backAssetFor(int index) => CatanAssets.drawStackBackAsset(
+      index, initialStackSizes.length, activeExpansions);
 
   Widget _drawStackPile(int index) {
-    final count = stackCounts['draw${index + 1}'] ?? 0;
+    final count = stackCounts[GameState.drawStackKey(index)] ?? 0;
     final claimed = count < initialStackSizes[index];
     final peeking = peekingStackIndex == index;
     final asset = _backAssetFor(index);
