@@ -20,14 +20,14 @@ import '../widgets/card_detail_dialog.dart';
 /// Längst ner finns temaseten (Gulderan/"The Era of Gold",
 /// Utvecklingens tid/"The Era of Progress" och Oroligheternas tid/
 /// "The Era of Turmoil"), var och en i en egen, tydligt avgränsad
-/// sektion – de är BARA med här för granskning (rätt kort/text/bilder)
-/// innan de eventuellt vävs in i själva spelet, se [_EraSection]. Kort
-/// utan en riktig bild ännu visas med en tydlig "Bild saknas"-
-/// platshållare (se [_CardTile]) i stället för att tyst falla tillbaka
-/// till en generisk brun ruta. Oroligheternas tid har ännu ingen egen
-/// baksidesbild (till skillnad från de två andra, se
-/// [CatanAssets.backEraTurmoil]) – den sektionen visar tills vidare
-/// bara den äldre, generiska platshållarbilden i rubrikens tumnagel.
+/// sektion – fullständiga kortkataloger för respektive tema, se
+/// [_EraSection]. Alla tre går att välja direkt från startskärmen
+/// (LobbyScreen), enskilt eller tillsammans (Duel of the Princes, se
+/// [DuelOfThePrincesSetup]-klassdoc) – de är alltså riktigt spelbart
+/// innehåll, inte bara en förhandsgranskning. Kort som ändå saknar en
+/// riktig bild visas med en tydlig "Bild saknas"-platshållare (se
+/// [_CardTile]) i stället för att tyst falla tillbaka till en generisk
+/// brun ruta.
 ///
 /// Nås via [RulesButton] (uppe till vänster) både på startskärmen
 /// (lobby_screen.dart) och under själva spelet (game_board_screen.dart).
@@ -71,8 +71,26 @@ class RulesScreen extends StatelessWidget {
           const _InfoCard(
             icon: Icons.emoji_events,
             text:
-                'Den som har 7 eller fler segerpoäng vid slutet av sin '
-                'EGEN runda vinner matchen direkt.',
+                'Den som når segerpoängmålet vid slutet av sin EGEN runda '
+                'vinner matchen direkt. Målet beror på vad som är aktivt: '
+                '7 poäng i grundspelet, 12 poäng med ett tema aktivt, 13 '
+                'poäng i Duel of the Princes (alla tre teman på samma '
+                'gång).',
+          ),
+          const SizedBox(height: 20),
+          const _SectionHeader('Duel of the Princes'),
+          const _InfoCard(
+            icon: Icons.groups,
+            text:
+                'Spelar man alla tre temaseten samtidigt (välj det på '
+                'startskärmen) gäller några särskilda regler: '
+                'segerpoängmålet är 13 i stället för 12, varje temaset '
+                'delar EN gemensam draghög (i stället för en per spelare) '
+                'som innehåller HELA temats kortpool – inklusive de kort '
+                'som annars köps ansikte-upp – minus ett antal namngivna '
+                'kort som är helt borttagna ur den matchen. Dessutom är '
+                'bara 6 av totalt 15 särskilda händelsekort slumpmässigt '
+                'med, utöver de vanliga.',
           ),
           const SizedBox(height: 20),
           const _SectionHeader('Händelsetärningen'),
@@ -361,8 +379,8 @@ class _EraGroup {
 
 /// Ett helt temaset (t.ex. Gulderan/"The Era of Gold"), tydligt
 /// avgränsat från grundspelet: en guldkantad rubrik med kortbaksidan,
-/// en granskningsnotis, kortgrupperna (se [_EraGroup]/[_CardGroup]),
-/// och till sist en lista på de kort som ÅTERANVÄNDS rakt av från
+/// kortgrupperna (se [_EraGroup]/[_CardGroup]), och till sist en lista
+/// på de kort som ÅTERANVÄNDS rakt av från
 /// grundspelet (bara fler fysiska kopior i det här setets stapel, se
 /// t.ex. [EraOfGoldCards]s egen doc-kommentar) – de får ingen egen
 /// kortruta här (det vore bara en dubblett av grundspelets), bara
@@ -428,10 +446,11 @@ class _EraSection extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         const _InfoCard(
-          icon: Icons.construction,
+          icon: Icons.collections_bookmark,
           text:
-              'Under granskning – inte med i själva spelet ännu. Kort utan '
-              'en riktig bild visas med "Bild saknas" nedan.',
+              'Fullständig kortkatalog för det här temasetet – välj det '
+              'på startskärmen för att spela med det. Kort som ändå '
+              'saknar en riktig bild visas med "Bild saknas" nedan.',
         ),
         const SizedBox(height: 14),
         for (final group in groups)
@@ -546,9 +565,9 @@ class _CardTile extends StatelessWidget {
                           CatanAssets.resolveCardImage(card),
                           fit: BoxFit.cover,
                           // Tydlig "saknas"-platshållare (i stället för en
-                          // tyst, tom brun ruta) – hela poängen med
-                          // regelsidan för ett temaset under granskning är
-                          // att just det här ska synas i ögonvrån.
+                          // tyst, tom brun ruta) – ett eventuellt saknat
+                          // kort ska synas i ögonvrån här, inte upptäckas
+                          // först mitt i en match.
                           errorBuilder: (context, error, stackTrace) =>
                               Container(
                             color: CatanColors.parchmentDark,

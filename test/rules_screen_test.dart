@@ -34,12 +34,31 @@ void main() {
 
     expect(find.text('Så funkar en omgång'), findsOneWidget);
     expect(find.text('Vinstvillkor'), findsOneWidget);
-    expect(
-        find.textContaining('7 eller fler segerpoäng'), findsOneWidget);
+    // "segerpoängmålet" nämns även i Duel of the Princes-notisen strax
+    // under (se nästa test), så bara "minst en gång" är meningsfullt här.
+    expect(find.textContaining('segerpoängmålet'), findsWidgets);
+    expect(find.text('Duel of the Princes'), findsOneWidget);
     expect(find.text('Händelsetärningen'), findsOneWidget);
     for (final face in EventDieFace.values) {
       expect(find.text(face.swedishName), findsWidgets);
     }
+  });
+
+  testWidgets(
+      'vinstvillkoret nämner alla tre segerpoängmål (7/12/13), och temaseten framställs inte längre som "inte med i spelet ännu" (rapporterad inaktuell text)',
+      (tester) async {
+    await pumpRules(tester);
+
+    final winCondition = tester
+        .widgetList<Text>(find.textContaining('segerpoängmålet'))
+        .first
+        .data!;
+    expect(winCondition, contains('7 poäng'));
+    expect(winCondition, contains('12 poäng'));
+    expect(winCondition, contains('13 poäng'));
+
+    expect(find.textContaining('Under granskning'), findsNothing);
+    expect(find.textContaining('inte med i själva spelet'), findsNothing);
   });
 
   testWidgets('visar alla 39 korttyper i grundspelet, grupperade', (tester) async {
