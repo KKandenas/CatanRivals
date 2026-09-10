@@ -1,0 +1,44 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "games": {
+      ".read": false,
+      ".write": false,
+
+      "$roomCode": {
+        ".read": true,
+        ".write": true,
+
+        "$other": {
+          ".validate": false
+        },
+
+        "createdAt": {
+          ".validate": "!data.exists() || newData.val() == data.val()"
+        },
+
+        "players": {
+          ".validate": "newData.hasChildren()",
+          "$playerId": {
+            ".validate": "newData.hasChildren(['id', 'name'])"
+          }
+        },
+
+        "turnState": {
+          ".validate": "newData.hasChild('activePlayerId')"
+        },
+
+        "centerStacks": {},
+        "activeExpansions": {},
+        "drawStacks": {},
+        "regionDeck": {},
+        "eventDeck": {},
+        "discardPile": {},
+        "fraternalFeudsRequest": {},
+        "traitorRequest": {}
+      }
+    }
+  }
+}
