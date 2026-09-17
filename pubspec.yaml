@@ -19,6 +19,13 @@ dependencies:
   firebase_core: ^3.6.0
   firebase_database: ^11.1.4
 
+  # Anonym autentisering (se firebase_bootstrap.dart) – inget
+  # inloggnings-UI, bara ett tyst signInAnonymously() vid start så att
+  # Realtime Database-reglerna kan kräva "auth != null" och därmed
+  # stänga av rå åtkomst utifrån (t.ex. curl/Postman mot den publika
+  # databas-URL:en) utan att det märks av spelaren.
+  firebase_auth: ^5.7.0
+
   cupertino_icons: ^1.0.8
 
   # localStorage-åtkomst för SessionStorage (återuppta ett spel efter en

@@ -8,8 +8,8 @@
       ".write": false,
 
       "$roomCode": {
-        ".read": true,
-        ".write": true,
+        ".read": "auth != null",
+        ".write": "auth != null",
 
         "$other": {
           ".validate": false
